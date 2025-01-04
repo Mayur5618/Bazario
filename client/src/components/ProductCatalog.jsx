@@ -323,6 +323,9 @@ const ProductCatalog = () => {
                 src={product.images[0]}
                 alt={product.name}
                 className="w-full h-48 object-cover"
+                style={{
+                  filter: product.stock <= 0 ? 'opacity(0.5)' : 'none'
+                }}
               />
             </Link>
             <div className="p-4">

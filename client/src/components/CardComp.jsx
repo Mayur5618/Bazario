@@ -307,17 +307,37 @@ const CardComponent = ({ title, products, category }) => {
             {/* First Row */}
             <div className="grid grid-cols-2 gap-4">
               {products.slice(0, 2).map((product) => (
+                // <div key={product._id} className="relative">
+                //   <Link to={`/product/${product._id}`} className="block">
+                //     <div className="overflow-hidden">
+                //       <img
+                //         src={product.images[0]}
+                //         alt={product.name}
+                //         className="w-[140px] bg-white h-[140px] object-cover"
+                //       />
+                //     </div>
+                //     <p className="text-[10px] mt-[3px]">{product.name}</p>
+                //     <p className="text-[10px] text-gray-600">₹{product.price}/{product.unitType}</p>
+                //   </Link>
+                // </div>
                 <div key={product._id} className="relative">
                   <Link to={`/product/${product._id}`} className="block">
-                    <div className="overflow-hidden">
+                    <div className="relative overflow-hidden">
                       <img
                         src={product.images[0]}
                         alt={product.name}
-                        className="w-[140px] bg-white h-[140px] object-cover"
+                        className={`w-[140px] bg-white h-[140px] object-cover transition-all duration-300 ${
+                          product.stock <= 0 ? 'opacity-50' : ''
+                        }`}
                       />
+                      {product.stock <= 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-red-500 text-white px-2 py-1 rounded text-[10px]">
+                            Out of Stock
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[10px] mt-[3px]">{product.name}</p>
-                    <p className="text-[10px] text-gray-600">₹{product.price}/{product.unitType}</p>
                   </Link>
                 </div>
               ))}
@@ -326,17 +346,46 @@ const CardComponent = ({ title, products, category }) => {
             {/* Second Row */}
             <div className="grid grid-cols-2 gap-4 mt-4">
               {products.slice(2, 4).map((product) => (
+                // <div key={product._id} className="relative">
+                //   <Link to={`/product/${product._id}`} className="block">
+                //     <div className="overflow-hidden">
+                //       <img
+                //         src={product.images[0]}
+                //         alt={product.name}
+                //         className="w-[140px] bg-white h-[140px] object-cover"
+                //       />
+                //     </div>
+                //     <p className="text-[10px] mt-[3px]">{product.name}</p>
+                //     <p className="text-[10px] text-gray-600">₹{product.price}/{product.unitType}</p>
+                //   </Link>
+                // </div>
                 <div key={product._id} className="relative">
                   <Link to={`/product/${product._id}`} className="block">
-                    <div className="overflow-hidden">
+                    <div className="relative overflow-hidden">
                       <img
                         src={product.images[0]}
                         alt={product.name}
-                        className="w-[140px] bg-white h-[140px] object-cover"
+                        className={`w-[140px] bg-white h-[140px] object-cover transition-all duration-300 ${
+                          product.stock <= 0 ? 'opacity-50 grayscale' : ''
+                        }`}
                       />
+                      {product.stock <= 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-red-500 text-white px-2 py-1 rounded text-[10px]">
+                            Out of Stock
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <p className="text-[10px] mt-[3px]">{product.name}</p>
-                    <p className="text-[10px] text-gray-600">₹{product.price}/{product.unitType}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[10px] text-gray-600">₹{product.price}/{product.unitType}</p>
+                      {product.stock > 0 && (
+                        <p className="text-[8px] text-green-600">
+                          Stock: {product.stock}
+                        </p>
+                      )}
+                    </div>
                   </Link>
                 </div>
               ))}
