@@ -416,3 +416,73 @@ export const verifyUser = async (req, res) => {
       });
     }
   };
+
+  // Add this new controller function
+  export const checkMobileExists = async (req, res) => {
+    try {
+        const { mobileno } = req.body;
+        const mobilenoString = mobileno.toString();
+
+        // Check each user type individually
+        const sellerExists = await Seller.findOne({ mobileno: mobilenoString });
+        const buyerExists = await Buyer.findOne({ mobileno: mobilenoString });
+        const agencyExists = await Agency.findOne({ mobileno: mobilenoString });
+
+        // Mobile exists if any of the queries found a user
+        const exists = !!(sellerExists || buyerExists || agencyExists);
+
+        return res.status(200).json({
+            success: true,
+            exists
+        });
+    } catch (error) {
+        console.error('Error checking mobile:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error checking mobile number',
+            error: error.message
+        });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+      const { firstname, lastname, phone, address } = req.body;
+      
+      const user = await User.findById(req.user._id);
+      
+      if (!user) {
+          return res.status(404).json({
+              success: false,
+              message: 'User not found'
+          });
+      }
+
+      // Update fields
+      user.firstname = firstname || user.firstname;
+      user.lastname = lastname || user.lastname;
+      user.phone = phone || user.phone;
+      user.address = address || user.address;
+
+      await user.save();
+
+      res.json({
+          success: true,
+          message: 'Profile updated successfully',
+          user: {
+              firstname: user.firstname,
+              lastname: user.lastname,
+              email: user.email,
+              phone: user.phone,
+              address: user.address,
+              userType: user.userType
+          }
+      });
+  } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({
+          success: false,
+          message: error.message || 'Error updating profile'
+      });
+  }
+};

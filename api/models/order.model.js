@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-    // Order ID (auto-generated unique identifier)
     orderId: {
         type: String,
         unique: true
     },
-
     // Buyer who placed the order
     buyer: {
         type: mongoose.Schema.Types.ObjectId,
@@ -52,7 +50,7 @@ const orderSchema = new mongoose.Schema({
     payment: {
         method: {
             type: String,
-            enum: ['cod', 'online'],
+            enum: ['COD', 'online'],
             required: true
         },
         status: {
@@ -60,13 +58,16 @@ const orderSchema = new mongoose.Schema({
             enum: ['pending', 'completed', 'failed'],
             default: 'pending'
         },
-        transactionId: {
-            type: String
-        }
+        // transactionId: {
+        //     type: String
+        // }
     },
 
     // Shipping details
     shippingAddress: {
+        fullName: String,
+        email: String,
+        phone: String,
         street: {
             type: String,
             required: true

@@ -102,11 +102,64 @@ export const getCart = async (req, res) => {
 };
 
 // Update cart item
+// export const updateCartItem = async (req, res) => {
+//     try {
+//         const { productId } = req.params;
+//         const { quantity } = req.body;
+        
+//         const cart = await Cart.findOne({ buyer: req.user._id });
+//         if (!cart) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Cart not found'
+//             });
+//         }
+
+//         const item = cart.items.find(
+//             item => item.product.toString() === productId
+//         );
+
+//         if (!item) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Item not found in cart'
+//             });
+//         }
+
+//         // Remove item if quantity is 0
+//         if (quantity === 0) {
+//             cart.items = cart.items.filter(
+//                 item => item.product.toString() !== productId
+//             );
+//         } else {
+//             // Update quantity
+//             item.quantity = quantity;
+//             item.subtotal = quantity * item.price;
+//         }
+
+//         await cart.save();
+//         await cart.populate('items.product', 'name images');
+
+//         res.json({
+//             success: true,
+//             cart
+//         });
+
+//     } catch (error) {
+//         res.status(400).json({
+//             success: false,
+//             message: error.message
+//         });
+//     }
+// };
+
 export const updateCartItem = async (req, res) => {
     try {
-        const { productId, quantity } = req.body;
+        const { productId } = req.params;
+        const { quantity } = req.body;
         
-        const cart = await Cart.findOne({ buyer: req.user._id });
+        // Find cart
+        let cart = await Cart.findOne({ buyer: req.user._id });
         if (!cart) {
             return res.status(404).json({
                 success: false,
@@ -114,40 +167,56 @@ export const updateCartItem = async (req, res) => {
             });
         }
 
-        const item = cart.items.find(
-            item => item.product.toString() === productId
+        // Find the item index - Compare with product ID from items array
+        const itemIndex = cart.items.findIndex(
+            item => item.product._id.toString() === productId
         );
 
-        if (!item) {
+        // For debugging
+        console.log('ProductId:', productId);
+        console.log('Cart Items:', cart.items.map(item => ({
+            itemId: item.product._id.toString(),
+            matches: item.product._id.toString() === productId
+        })));
+
+        if (itemIndex === -1) {
             return res.status(404).json({
                 success: false,
                 message: 'Item not found in cart'
             });
         }
 
-        // Remove item if quantity is 0
-        if (quantity === 0) {
-            cart.items = cart.items.filter(
-                item => item.product.toString() !== productId
-            );
-        } else {
-            // Update quantity
-            item.quantity = quantity;
-            item.subtotal = quantity * item.price;
+        // Validate quantity
+        if (quantity < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity must be at least 1'
+            });
         }
 
-        await cart.save();
-        await cart.populate('items.product', 'name images');
+        // Update quantity and recalculate subtotal
+        cart.items[itemIndex].quantity = quantity;
+        cart.items[itemIndex].subtotal = quantity * cart.items[itemIndex].price;
 
-        res.json({
+        // Save the updated cart
+        await cart.save();
+
+        // Populate the cart items with product and seller details
+        cart = await Cart.findById(cart._id)
+            .populate('items.product', 'name images price stock')
+            .populate('items.seller', 'firstname lastname');
+
+        return res.status(200).json({
             success: true,
             cart
         });
 
     } catch (error) {
-        res.status(400).json({
+        console.error('Update cart error:', error);
+        return res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error updating cart item',
+            error: error.message
         });
     }
 };

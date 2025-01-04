@@ -400,16 +400,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
-import { orderService } from '../components/services/orderService';
 // import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
-import {cartRemove, cartAdd, cartItemRemove, cartEmpty} from '../store/cartSlice';
+// import {cartRemove, cartAdd, cartItemRemove, cartEmpty} from '../store/cartSlice';
+import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
+import axios from 'axios';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector(selectCartItems);
+  const { userData } = useSelector((state) => state.user);
+  const cartItems = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
-  
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -430,11 +432,11 @@ const Checkout = () => {
 
   // Redirect if cart is empty
   useEffect(() => {
-    if (cart.length === 0) {
+    if (cartItems.length === 0) {
       navigate('/cart');
       toast.error('Your cart is empty');
     }
-  }, [cart, navigate]);
+  }, [cartItems, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -479,35 +481,162 @@ const Checkout = () => {
     }
   };
 
-  const handleBack = () => {
-    setStep(1);
-  };
+  // const handleBack = () => {
+  //   setStep(1);
+  // };
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setLoading(true);
+
+  //   try {
+  //     const orderData = {
+  //       items: cart.map(item => ({
+  //         product: item.product._id,
+  //         quantity: item.quantity,
+  //         price: item.product.price
+  //       })),
+  //       shippingAddress: formData.shippingAddress,
+  //       paymentMethod: formData.paymentMethod,
+  //       totalAmount: cartTotal
+  //     };
+
+  //     const response = await orderService.createOrder(orderData);
+  //     dispatch(clearCart());
+  //     toast.success('Order placed successfully!');
+  //     navigate(`/order-success/${response.orderId}`);
+  //   } catch (error) {
+  //     toast.error(error.response?.data?.message || 'Failed to place order');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const handlePlaceOrder = async (e) => {
+  //   e.preventDefault();
+    
+  //   try {
+  //     const response = await axios.post('/api/orders/create', {
+  //       shippingAddress: formData.shippingAddress,
+  //       paymentMethod: formData.paymentMethod,
+  //       items: cartItems.map(item => ({
+  //         product: item.product._id,
+  //         quantity: item.quantity,
+  //         price: item.price
+  //       })),
+  //       totalAmount: cartTotal
+  //     }, {
+  //       withCredentials: true,
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       }
+  //     });
+
+  //     if (response.data.success) {
+  //       toast.success('Order placed successfully!');
+  //       // Clear cart after successful order
+  //       dispatch(clearCart());
+  //       navigate(`/orders/${response.data.order._id}`);
+  //     }
+  //   } catch (error) {
+  //     console.error('Order creation error:', error);
+  //     toast.error(error.response?.data?.message || 'Failed to place order');
+  //   }
+  // };
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+    
+  //   if (step === 1) {
+  //     if (validateShippingDetails()) {
+  //       setStep(2);
+  //     }
+  //     return;
+  //   }
+
+  //   setLoading(true);
+
+  //   try {
+  //     const response = await axios.post('/api/orders/create', {
+  //       shippingAddress: {
+  //         ...formData.shippingAddress,
+  //         fullName: `${formData.shippingAddress.firstName} ${formData.shippingAddress.lastName}`
+  //       },
+  //       paymentMethod: formData.paymentMethod,
+  //       items: cartItems.map(item => ({
+  //         product: item.product._id,
+  //         quantity: item.quantity,
+  //         price: item.product.price,
+  //         seller: item.seller._id
+  //       })),
+  //       totalAmount: cartTotal
+  //     }, {
+  //       withCredentials: true,
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       }
+  //     });
+
+  //     if (response.data.success) {
+  //       // Clear cart after successful order
+  //       dispatch(clearCart());
+  //       toast.success('Order placed successfully!');
+  //       navigate(`/orders/${response.data.orders[0]._id}`); // Navigate to first order
+  //     }
+  //   } catch (error) {
+  //     console.error('Order creation error:', error);
+  //     toast.error(error.response?.data?.message || 'Failed to place order');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (step === 1) {
+        if (validateShippingDetails()) {
+            setStep(2);
+        }
+        return;
+    }
+
     setLoading(true);
 
     try {
-      const orderData = {
-        items: cart.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: item.product.price
-        })),
-        shippingAddress: formData.shippingAddress,
-        paymentMethod: formData.paymentMethod,
-        totalAmount: cartTotal
-      };
+        const response = await axios.post('/api/orders/create', {
+            shippingAddress: formData.shippingAddress,
+            paymentMethod: formData.paymentMethod,
+        }, {
+            withCredentials: true,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
-      const response = await orderService.createOrder(orderData);
-      dispatch(clearCart());
-      toast.success('Order placed successfully!');
-      navigate(`/order-success/${response.orderId}`);
+        if (response.data.success) {
+            dispatch(clearCart());
+            toast.success('Order placed successfully!');
+            // Navigate to the first order's detail page
+             // Get the order ID from the first order
+             const orderId = response.data.orders[0]._id;
+            
+             // Store order details in localStorage if needed
+             localStorage.setItem('lastOrderId', orderId);
+             
+             // Navigate to order success page or order details page
+             navigate(`/order-success/${orderId}`);
+        }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+        console.error('Order creation error:', error);
+        toast.error(error.response?.data?.message || 'Failed to place order');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
+};
+
+  const handleBack = () => {
+    setStep(1);
   };
 
   return (

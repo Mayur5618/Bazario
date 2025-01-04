@@ -38,7 +38,7 @@ const cartSchema = new mongoose.Schema({
         },
         unitType: {
             type: String,
-            enum: ['kg', 'g', 'piece'],
+            enum: ['kg', 'g','l','ml', 'piece','thali','pack','dozen','box','packet'],
             required: true
         },
 

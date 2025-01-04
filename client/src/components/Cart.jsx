@@ -135,19 +135,52 @@
 
 // export default Cart;
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-// import { removeCartItem, updateCartItemQuantity, selectCartTotal, selectCartItems } from './';
 import { toast } from 'react-hot-toast';
-// import { removeCartItem, updateCartItemQuantity, selectCartTotal, selectCartItems } from '../store/cartSlice';
-import {cartRemove, cartAdd, cartItemRemove, cartEmpty} from '../store/cartSlice';
+import {
+  cartRemove,
+  cartAdd,
+  cartItemRemove,
+  selectCartItems,
+  selectCartTotal,
+  setCartItems
+} from '../store/cartSlice';
+import axios from 'axios';
+
 const Cart = () => {
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
   const cart = useSelector(selectCartItems);
-  const cartTotal = useSelector(selectCartTotal);
+  const cartItems = useSelector(selectCartItems) || [];
+  const cartTotal = useSelector(selectCartTotal) || 0;
   const navigate = useNavigate();
+
+   // Fetch cart items when component mounts
+   useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        const response = await axios.get('/api/cart/getCartItems', {
+          withCredentials: true
+        });
+        if (response.data.success) {
+          dispatch(setCartItems(response.data.cart.items));
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        toast.error('Failed to fetch cart items');
+        dispatch(setCartItems([]));
+      }
+    };
+
+    if (userData) {
+      fetchCartItems();
+    }
+    else{
+      dispatch(setCartItems([]));
+    }
+  }, [userData, dispatch]);
 
   if (!userData) {
     return (
@@ -173,7 +206,7 @@ const Cart = () => {
           <h2 className="text-2xl font-bold mb-4">Your Cart is Empty</h2>
           <p className="text-gray-600 mb-4">Add some items to your cart</p>
           <Link
-            to="/products"
+            to="/"
             className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Continue Shopping
@@ -183,21 +216,53 @@ const Cart = () => {
     );
   }
 
-  const handleUpdateQuantity = (productId, currentQuantity, stock, newQuantity) => {
-    if (newQuantity < 1) {
-      toast.error('Quantity cannot be less than 1');
-      return;
+  const handleUpdateQuantity = async (productId, currentQuantity, stock, newQuantity) => {
+    try {
+      // Validate quantity
+      if (newQuantity < 1) {
+        toast.error('Quantity cannot be less than 1');
+        return;
+      }
+      if (newQuantity > stock) {
+        toast.error('Cannot exceed available stock');
+        return;
+      }
+
+      console.log('Updating product:', productId, 'to quantity:', newQuantity); // Debug log
+      // Make API call to update quantity
+      const response = await axios.put(
+        `/api/cart/update/${productId}`, 
+        
+          { quantity: newQuantity },
+          { withCredentials: true }
+      
+      );
+
+      if (response.data.success) {
+        // Update Redux store with new cart items
+        dispatch(setCartItems(response.data.cart.items));
+        toast.success('Cart updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      toast.error(error.response?.data?.message || 'Failed to update cart');
     }
-    if (newQuantity > stock) {
-      toast.error('Cannot exceed available stock');
-      return;
-    }
-    dispatch(updateCartItemQuantity({ productId, quantity: newQuantity }));
   };
 
-  const handleRemoveFromCart = (productId) => {
-    dispatch(removeCartItem(productId));
-    toast.success('Item removed from cart');
+  const handleRemoveFromCart = async (productId) => {
+    try {
+      const response = await axios.delete(`/api/cart/remove/${productId}`, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        dispatch(setCartItems(response.data.cart.items));
+        toast.success('Item removed from cart');
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+      toast.error('Failed to remove item from cart');
+    }
   };
 
   return (
@@ -207,13 +272,17 @@ const Cart = () => {
       <div className="grid grid-cols-1 gap-4">
         {cart.map((item) => (
           <div 
-            key={item.productId} 
+            key={item.productId || item._id} 
             className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
           >
             <img 
-              src={item.image} 
-              alt={item.name} 
+               src={item.product?.images?.[0]} 
+               alt={item.product?.name} 
               className="w-24 h-24 object-cover rounded"
+              onError={(e) => {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.src = 'path/to/fallback/image.jpg'; // Add a fallback image
+              }}
             />
             
             <div className="flex-1">
@@ -230,9 +299,9 @@ const Cart = () => {
               <div className="flex items-center gap-2 mt-2">
                 <button
                   onClick={() => handleUpdateQuantity(
-                    item.productId, 
-                    item.quantity, 
-                    item.stock, 
+                    item.product._id, // Make sure this is the correct product ID
+                    item.quantity,
+                    item.product.stock,
                     item.quantity - 1
                   )}
                   className="px-3 py-1 border rounded hover:bg-gray-100"
@@ -242,9 +311,9 @@ const Cart = () => {
                 <span className="w-12 text-center">{item.quantity}</span>
                 <button
                   onClick={() => handleUpdateQuantity(
-                    item.productId, 
-                    item.quantity, 
-                    item.stock, 
+                    item.product._id, // Make sure this is the correct product ID
+                    item.quantity,
+                    item.product.stock,
                     item.quantity + 1
                   )}
                   className="px-3 py-1 border rounded hover:bg-gray-100"

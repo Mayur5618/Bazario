@@ -993,13 +993,14 @@ const Register = () => {
 
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
-
+  
+  
   // Validation rules
   const validateField = (name, value) => {
     switch (name) {
       case "firstname":
-      case "lastname":
-        return value.trim() === ""
+        case "lastname":
+          return value.trim() === ""
           ? "This field is required"
           : value.length < 2
           ? "Must be at least 2 characters"
@@ -1008,18 +1009,18 @@ const Register = () => {
           : !/^[a-zA-Z\s]*$/.test(value)
           ? "Only letters and spaces allowed"
           : "";
-
-      case "mobileno":
+          
+          case "mobileno":
         return value.trim() === ""
           ? "Mobile number is required"
           : !/^[0-9]{10}$/.test(value)
           ? "Must be 10 digits"
           : "";
-
-      case "password":
-        return value.trim() === ""
-          ? "Password is required"
-          : value.length < 8
+          
+          case "password":
+            return value.trim() === ""
+            ? "Password is required"
+            : value.length < 8
           ? "Must be at least 8 characters"
           : !/(?=.*[a-z])/.test(value)
           ? "Must include lowercase letter"
@@ -1030,49 +1031,85 @@ const Register = () => {
           : !/(?=.*[@$!%*?&])/.test(value)
           ? "Must include special character"
           : "";
-
-      case "confirmPassword":
-        return value.trim() === ""
-          ? "Confirm Password is required"
+          
+          case "confirmPassword":
+            return value.trim() === ""
+            ? "Confirm Password is required"
           : value !== formData.password
           ? "Passwords do not match"
           : "";
 
-      case "address":
-      case "country":
+          case "address":
+            case "country":
       case "state":
       case "city":
         return value.trim() === ""
           ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required`
           : "";
-
-      case "pincode":
+          
+          case "pincode":
         return value.trim() === ""
-          ? "Pincode is required"
-          : !/^[0-9]{6}$/.test(value)
-          ? "Must be 6 digits"
+        ? "Pincode is required"
+        : !/^[0-9]{6}$/.test(value)
+        ? "Must be 6 digits"
           : "";
 
-      default:
-        return "";
-    }
+          default:
+            return "";
+          }
   };
 
-  // Handle input changes with validation
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
 
-    // Validate field
-    const error = validateField(name, value);
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
-  };
+    // Check mobile number existence when it's exactly 10 digits
+    if (name === 'mobileno' && value.length === 10) {
+      try {
+        const response = await axios.post('/api/users/check-mobile', { mobileno: value });
+        if (response.data.exists) {
+          setErrors(prev => ({
+            ...prev,
+            mobileno: "Mobile number already in use"
+          }));
+        } else {
+          // Only validate the field if mobile number doesn't exist
+          const error = validateField(name, value);
+          setErrors(prev => ({
+            ...prev,
+            mobileno: error
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking mobile number:', error);
+      }
+    } else {
+      // For all other fields and mobile numbers not 10 digits, use normal validation
+      const error = validateField(name, value);
+      setErrors((prev) => ({
+        ...prev,
+        [name]: error,
+      }));
+    }
+};
+  // Handle input changes with validation
+  // const handleChange = (e) => {
+    //   const { name, value } = e.target;
+    //   setFormData((prev) => ({
+  //     ...prev,
+  //     [name]: value,
+  //   }));
+
+  //   // Validate field
+  //   const error = validateField(name, value);
+  //   setErrors((prev) => ({
+  //     ...prev,
+  //     [name]: error,
+  //   }));
+  // };
 
   // Validate step before proceeding
   const validateStep = (stepNumber) => {
@@ -1091,8 +1128,64 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNextStep = () => {
-    if (validateStep(step)) {
+  const hasStepErrors = () => {
+    const stepFields = {
+      1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"],
+      2: ["address", "country", "state", "city", "pincode"],
+    };
+  
+    // Check if any field in current step has an error
+    return stepFields[step].some(field => errors[field]);
+  };
+  
+  // Add this function to check if all required fields are filled
+  const hasEmptyFields = () => {
+    const stepFields = {
+      1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"],
+      2: ["address", "country", "state", "city", "pincode"],
+    };
+  
+    // Check if any required field in current step is empty
+    return stepFields[step].some(field => !formData[field]);
+  };
+
+  // const handleNextStep = () => {
+  //   if (validateStep(step)) {
+  //     setStep((prev) => prev + 1);
+  //   }
+  // };
+
+  const handleNextStep = async () => {
+    // First check if there are any validation errors
+    if (!validateStep(step)) {
+      return;
+    }
+  
+    // If we're on step 1 and mobile number is filled
+    if (step === 1 && formData.mobileno) {
+      try {
+        // Check if mobile number exists
+        const response = await axios.post('/api/users/check-mobile', { 
+          mobileno: formData.mobileno 
+        });
+        
+        if (response.data.exists) {
+          // If mobile exists, set error and prevent moving to next step
+          setErrors(prev => ({
+            ...prev,
+            mobileno: "Mobile number already in use"
+          }));
+          return;
+        }
+        
+        // If mobile doesn't exist and all validations pass, proceed to next step
+        setStep((prev) => prev + 1);
+      } catch (error) {
+        console.error('Error checking mobile number:', error);
+        setServerError("Error validating mobile number");
+      }
+    } else {
+      // For other steps, just proceed if validation passes
       setStep((prev) => prev + 1);
     }
   };
@@ -1285,14 +1378,19 @@ const Register = () => {
                   </div>
 
                   <div className="flex justify-between">
-                    <button
-                      type="button"
-                      onClick={handleNextStep}
-                      className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Next
-                    </button>
-                  </div>
+    <button
+      type="button"
+      onClick={handleNextStep}
+      disabled={hasStepErrors() || hasEmptyFields()}
+      className={`inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+        ${hasStepErrors() || hasEmptyFields() 
+          ? 'bg-indigo-600 cursor-not-allowed hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' 
+          : 'bg-indigo-600 cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+        }`}
+    >
+      Next
+    </button>
+  </div>
                 </div>
               )}
 

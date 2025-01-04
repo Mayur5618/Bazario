@@ -884,7 +884,7 @@ const ProductDetail = () => {
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
   // const cartItems = useSelector(state => state.cart.items);
-
+  
   // Local states
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -899,7 +899,7 @@ const ProductDetail = () => {
   const [reviewError, setReviewError] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   // Fetch product details
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -965,15 +965,17 @@ const ProductDetail = () => {
   const [cartItems, setCartItems] = useState([]);
   const fetchCartItems = async () => {
     try {
-      const res = await fetch("/api/cart/getCartItems");
-      if (res.ok) {
-        const data = await res.json();
-        setCartItems(data.cartItems);
+      const res = await axios.get("/api/cart/getCartItems", {
+        withCredentials: true
+      });
+      if (res.data.success) {
+        setCartItems(res.data.cart?.items || []);
       } else {
         setCartItems([]);
       }
     } catch (error) {
-      console.log(error);
+      console.error('Error fetching cart items:', error);
+      setCartItems([]);
     }
   };
 
@@ -985,31 +987,37 @@ const ProductDetail = () => {
    }
  }, []);
 
-  const handleAddToCart = async (productId) => {
-    if (!userData) {
-      toast.error('Please login to add items to cart');
-      navigate('/login');
-      return;
-    }
-    try {
-      const res = await fetch("/api/cart/add", {
-        method: "POST",
-        headers: { "Content-type": "application/json" },
-        body: JSON.stringify({ productId }),
-      });
-      if (res.ok) {
-        await res.json();
-        dispatch(cartAdd());
-        fetchCartItems(); 
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+ const handleAddToCart = async (productId) => {
+  if (!userData) {
+    toast.error('Please login to add items to cart');
+    navigate('/login');
+    return;
+  }
 
-  const isProductInCart = (productId) => {
-    return cartItems.some((item) => item.productId._id === productId);
-  };
+  try {
+    const res = await axios.post("/api/cart/add", {
+      productId,
+      quantity: quantity  // Add the quantity from your state
+    }, {
+      withCredentials: true  // Important: This sends cookies with the request
+    });
+
+    if (res.data.success) {
+      dispatch(cartAdd());
+      toast.success('Added to cart successfully');
+      fetchCartItems();
+    }
+  } catch (error) {
+    console.error('Add to cart error:', error);
+    toast.error(error.response?.data?.message || 'Failed to add to cart');
+  }
+};
+
+const isProductInCart = (productId) => {
+  return cartItems && cartItems.length > 0 
+    ? cartItems.some((item) => item?.productId?._id === productId)
+    : false;
+};
 
   // Handle review submission
   const handleReviewSubmit = async (e) => {
@@ -1183,7 +1191,7 @@ const ProductDetail = () => {
               </div>
             </div>
           )}
-         <Link to="/cart">
+         {/* <Link to="/cart">
           <button
             onClick={()=>handleAddToCart(product._id)}
             disabled={product.stock === 0}
@@ -1195,7 +1203,25 @@ const ProductDetail = () => {
           >
             {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
           </button>
-          </Link>
+          </Link> */}
+          {/* Replace the Link wrapper with just the button */}
+<button
+  onClick={() => handleAddToCart(product._id)}
+  disabled={product.stock === 0 || isProductInCart(product._id)}
+  className={`w-full py-3 px-6 rounded-lg text-white font-semibold transition-colors ${
+    product.stock === 0
+      ? 'bg-gray-400 cursor-not-allowed'
+      : isProductInCart(product._id)
+      ? 'bg-green-600'
+      : 'bg-blue-600 hover:bg-blue-700'
+  }`}
+>
+  {product.stock === 0 
+    ? 'Out of Stock' 
+    : isProductInCart(product._id)
+    ? 'In Cart'
+    : 'Add to Cart'}
+</button>
 
           {/* Additional Details */}
           <div className="mt-8">

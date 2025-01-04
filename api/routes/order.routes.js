@@ -12,16 +12,18 @@ import {
 
 const router = express.Router();
 
+router.use(protect);
+
 // Buyer routes
-router.post('/create',verifyToken, createOrder);
-router.get('/my-orders',verifyToken, getMyOrders);
-router.get('/details/:orderId',verifyToken, getOrderDetails);
-router.put('/cancel/:orderId',verifyToken, cancelOrder);
+router.post('/create', createOrder);
+router.get('/my-orders', getMyOrders);
+router.get('/:id', getOrderDetails);
+router.put('/cancel/:id', cancelOrder);
 // Get all orders with details for buyer
-router.get('/my-orders-details',verifyToken, getBuyerOrdersWithDetails);
+router.get('/my-orders-details', getBuyerOrdersWithDetails);
 
 // Seller routes
-router.get('/seller-orders',verifyToken, getSellerOrders);
-router.put('/update-status/:orderId',verifyToken, updateOrderStatus);
+router.get('/seller-orders', getSellerOrders);
+router.put('/update-status/:id', updateOrderStatus);
 
 export default router; 

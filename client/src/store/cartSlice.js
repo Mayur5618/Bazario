@@ -123,6 +123,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
+  items: [],
   cart: 0,
 };
 
@@ -139,12 +140,47 @@ const cartSlice = createSlice({
     cartRemove: (state) => {
       state.cart -= 1;
     },
+    clearCart: (state) => {
+      state.items = [];
+    },
     cartItemRemove: (state, action) => {
       state.cart -= action.payload;
     },
+      // Add new reducers for cart items
+      setCartItems: (state, action) => {
+        state.items = action.payload || [];
+      },
+      updateCartItemQuantity: (state, action) => {
+        const { productId, quantity } = action.payload;
+        const item = state.items.find(item => item.product._id === productId);
+        if (item) {
+          item.quantity = quantity;
+        }
+      },
   },
 });
 
-export const { cartSetUp, cartAdd, cartItemRemove, cartRemove, cartEmpty } =
-  cartSlice.actions;
+// Export actions
+export const {
+  cartSetUp,
+  cartAdd,
+  cartRemove,
+  cartItemRemove,
+  setCartItems,
+  updateCartItemQuantity,
+  clearCart,
+} = cartSlice.actions;
+
+// Add selectors
+// Add selectors with null checks
+export const selectCartItems = (state) => state.cart?.items || [];
+export const selectCartTotal = (state) => {
+  const items = state.cart?.items || [];
+  return items.reduce((total, item) => {
+    const price = item?.product?.price || 0;
+    const quantity = item?.quantity || 0;
+    return total + (price * quantity);
+  }, 0);
+};
+
 export default cartSlice.reducer;

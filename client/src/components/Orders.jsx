@@ -27,15 +27,21 @@ const Orders = () => {
 //   };
 
 const fetchOrders = async () => {
-    try {
-      const response = await orderService.getMyOrders();
-      setOrders(response.orders);
-    } catch (error) {
-      toast.error(error.message || 'Failed to fetch orders');
-    } finally {
+  try {
+      const response = await axios.get('/api/orders/my-orders', {
+          withCredentials: true
+      });
+
+      if (response.data.success) {
+          setOrders(response.data.orders);
+      }
+  } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error(error.response?.data?.message || 'Failed to fetch orders');
+  } finally {
       setLoading(false);
-    }
-  };
+  }
+};
 
   const handleCancelOrder = async (orderId) => {
     try {
@@ -261,12 +267,12 @@ const fetchOrders = async () => {
             <p className="text-xl font-bold">₹{order.total}</p>
           </div>
           <div className="space-x-4">
-            <Link
-              to={`/order/${order.orderId}`}
-              className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
-            >
-              View Details
-            </Link>
+          <Link
+    to={`/orders/${order._id}`}  // Changed from /order/${order.orderId}
+    className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
+>
+    View Details
+</Link>
             {order.status === 'pending' && (
               <button
                 onClick={() => handleCancelOrder(order.orderId)}

@@ -2,110 +2,141 @@ import jwt from 'jsonwebtoken';
 import Seller from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
 import Agency from '../models/agency.model.js';
+import { promisify } from 'util';
 
 // Protect routes
+// export const protect = async (req, res, next) => {
+//     try {
+//         // Get token
+//         const token = req.headers.authorization?.split(' ')[1];
+        
+//         if (!token) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Please login to access this resource'
+//             });
+//         }
+
+//         // Verify token
+//         const decoded = jwt.verify(token, 'your-temporary-secret-key');
+
+//         // Find user - check all user types
+//         let user = null;
+        
+//         try {
+//             switch (decoded.userType) {
+//                 case 'seller':
+//                     user = await Seller.findById(decoded.id).select('+platformType');
+//                     break;
+//                 case 'buyer':
+//                     user = await Buyer.findById(decoded.id);
+//                     break;
+//                 case 'agency':
+//                     user = await Agency.findById(decoded.id).select('+platformType');
+//                     break;
+//                 default:
+//                     throw new Error('Invalid user type');
+//             }
+
+//             // Debug log
+//             console.log('Found user:', {
+//                 id: user?._id,
+//                 userType: user?.userType,
+//                 platformType: user?.platformType
+//             });
+
+//         } catch (error) {
+//             console.error('User find error:', error);
+//             throw error;
+//         }
+
+//         if (!user) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'User not found or session expired. Please login again.'
+//             });
+//         }
+
+//         // Ensure platformType is always an array for sellers and agencies
+//         if (['seller', 'agency'].includes(user.userType)) {
+//             user.platformType = Array.isArray(user.platformType) ? user.platformType : [user.platformType];
+//         }
+
+//         // Request-specific authorization checks
+//         if (req.baseUrl === '/api/requests') {
+//             // For request routes
+//             if (req.path === '/send' && user.userType !== 'agency') {
+//                 return res.status(403).json({
+//                     success: false,
+//                     message: 'Only agencies can send requests'
+//                 });
+//             }
+
+//             if ((req.path.includes('/accept/') || req.path.includes('/reject/')) && user.userType !== 'seller') {
+//                 return res.status(403).json({
+//                     success: false,
+//                     message: 'Only sellers can accept or reject requests'
+//                 });
+//             }
+//         }
+
+//         // Add user to request
+//         req.user = user;
+//         next();
+
+//     } catch (error) {
+//         console.error('Auth middleware error:', error);
+
+//         if (error.name === 'JsonWebTokenError') {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Invalid token. Please login again.'
+//             });
+//         }
+        
+//         if (error.name === 'TokenExpiredError') {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Your session has expired. Please login again.'
+//             });
+//         }
+
+//         res.status(401).json({
+//             success: false,
+//             message: 'Authentication failed'
+//         });
+//     }
+// };
+
 export const protect = async (req, res, next) => {
     try {
-        // Get token
-        const token = req.headers.authorization?.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'Please login to access this resource'
-            });
-        }
-
-        // Verify token
-        const decoded = jwt.verify(token, 'your-temporary-secret-key');
-
-        // Find user - check all user types
-        let user = null;
-        
-        try {
-            switch (decoded.userType) {
-                case 'seller':
-                    user = await Seller.findById(decoded.id).select('+platformType');
-                    break;
-                case 'buyer':
-                    user = await Buyer.findById(decoded.id);
-                    break;
-                case 'agency':
-                    user = await Agency.findById(decoded.id).select('+platformType');
-                    break;
-                default:
-                    throw new Error('Invalid user type');
-            }
-
-            // Debug log
-            console.log('Found user:', {
-                id: user?._id,
-                userType: user?.userType,
-                platformType: user?.platformType
-            });
-
-        } catch (error) {
-            console.error('User find error:', error);
-            throw error;
-        }
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found or session expired. Please login again.'
-            });
-        }
-
-        // Ensure platformType is always an array for sellers and agencies
-        if (['seller', 'agency'].includes(user.userType)) {
-            user.platformType = Array.isArray(user.platformType) ? user.platformType : [user.platformType];
-        }
-
-        // Request-specific authorization checks
-        if (req.baseUrl === '/api/requests') {
-            // For request routes
-            if (req.path === '/send' && user.userType !== 'agency') {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Only agencies can send requests'
-                });
-            }
-
-            if ((req.path.includes('/accept/') || req.path.includes('/reject/')) && user.userType !== 'seller') {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Only sellers can accept or reject requests'
-                });
-            }
-        }
-
-        // Add user to request
-        req.user = user;
-        next();
-
-    } catch (error) {
-        console.error('Auth middleware error:', error);
-
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token. Please login again.'
-            });
-        }
-        
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Your session has expired. Please login again.'
-            });
-        }
-
-        res.status(401).json({
-            success: false,
-            message: 'Authentication failed'
+      // Get token from cookies
+      const token = req.cookies.access_token;
+  
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Please log in to access this resource'
         });
+      }
+  
+      // Verify token
+      const decoded = await promisify(jwt.verify)(token, 'your-temporary-secret-key');
+  
+      // Add user info to request
+      req.user = {
+        _id: decoded.id,
+        userType: decoded.userType
+      };
+  
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
     }
-};
+  };
 
 // Check if user is seller with platform type access
 export const seller = (req, res, next) => {
