@@ -50,10 +50,10 @@ router.put('/update-status/:id', updateOrderStatus);
 //   });
   router.get('/check-purchase/:productId', protect, async (req, res) => {
     try {
-      const validOrderStatuses = ['delivered', 'completed'];
+      const validOrderStatuses = ['delivered', 'completed','Delivered','Completed'];
       
       const order = await Order.findOne({
-        user: req.user._id,
+        buyer: req.user._id,
         'items.product': req.params.productId,
         status: { $in: validOrderStatuses },
         // Optionally add a date restriction
@@ -61,6 +61,10 @@ router.put('/update-status/:id', updateOrderStatus);
           $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Within last 30 days
         }
       });
+
+      console.log(order);
+      console.log(req.user._id);
+      console.log(req.params.productId);
   
       if (!order) {
         return res.json({

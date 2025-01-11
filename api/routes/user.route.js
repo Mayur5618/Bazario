@@ -1,5 +1,5 @@
 import express from 'express';
-import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile } from'../controllers/user.controller.js';
+import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile, getSellerData } from'../controllers/user.controller.js';
 import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
@@ -14,5 +14,7 @@ router.get('/check-auth', checkAuth);
 router.post('/sign-out', signOut);
 router.post('/check-mobile', checkMobileExists);
 router.put('/profile', protect, updateProfile);
+
+router.get('/sellers/:id', getSellerData);
 
 export default router;

@@ -1,0 +1,80 @@
+/* Product Card Animations */
+.product-card {
+    transition: all 0.3s ease;
+  }
+  
+  .product-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  /* Image Hover Effect */
+  .product-image {
+    transition: transform 0.3s ease;
+  }
+  
+  .product-image:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Button Animations */
+  .add-to-cart-button {
+    transition: all 0.2s ease;
+  }
+  
+  .add-to-cart-button:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* Quantity Control Animations */
+  .quantity-control {
+    transition: all 0.2s ease;
+  }
+  
+  .quantity-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Category Button Animations */
+  .category-button {
+    transition: all 0.2s ease;
+  }
+  
+  .category-button:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* Loading Animation */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .loading-spinner {
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Responsive Grid */
+  @media (max-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(1, 1fr);
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 768px) {
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .products-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  @media (min-width: 1025px) {
+    .products-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }

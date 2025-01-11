@@ -1,153 +1,16 @@
-// import React from 'react';
-// // import { useCart } from '../context/CartContext';
-// // import { useCart } from '../components/context/CartContext';
-// import { Link, useNavigate } from 'react-router-dom';
-// // import { useAuth } from './context/AuthContext';
-// import { useDispatch, useSelector } from 'react-redux';
-// import { removeCartItem, updateCartItemQuantity,selectCartTotal, selectCartItems} from '../store/cartSlice';
-
-// const Cart = () => {
-//   // const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
-//   const dispatch = useDispatch();
-//   // const { user } = useAuth();
-//   const { userData } = useSelector((state) => state.user);
-//   const cart = useSelector(selectCartItems);
-//   const cartTotal = useSelector(selectCartTotal);
-//   const navigate = useNavigate();
-
-//   if (!userData) {
-//     return (
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="text-center">
-//           <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-//           <p className="text-gray-600 mb-4">Please login to view your cart</p>
-//           <Link
-//             to="/login"
-//             className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-//           >
-//             Login
-//           </Link>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   if (cart.length === 0) {
-//     return (
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="text-center">
-//           <h2 className="text-2xl font-bold mb-4">Your Cart is Empty</h2>
-//           <p className="text-gray-600 mb-4">Add some items to your cart</p>
-//           <Link
-//             to="/products"
-//             className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-//           >
-//             Continue Shopping
-//           </Link>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="container mx-auto px-4 py-8">
-//       <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-      
-//       <div className="grid grid-cols-1 gap-4">
-//         {cart.map((item) => (
-//           <div 
-//             key={item.productId} 
-//             className="flex items-center gap-4 p-4 border rounded-lg"
-//           >
-//             <img 
-//               src={item.image} 
-//               alt={item.name} 
-//               className="w-24 h-24 object-cover rounded"
-//             />
-            
-//             <div className="flex-1">
-//               <Link 
-//                 to={`/product/${item.productId}`}
-//                 className="text-lg font-semibold hover:text-blue-600"
-//               >
-//                 {item.name}
-//               </Link>
-//               <p className="text-gray-600">
-//                 ₹{item.price} per {item.unitType}
-//               </p>
-              
-//               <div className="flex items-center gap-2 mt-2">
-//                 <button
-//                   onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
-//                   className="px-2 py-1 border rounded"
-//                 >
-//                   -
-//                 </button>
-//                 <span>{item.quantity}</span>
-//                 <button
-//                   onClick={() => updateQuantity(item.productId, Math.min(item.stock, item.quantity + 1))}
-//                   className="px-2 py-1 border rounded"
-//                 >
-//                   +
-//                 </button>
-//                 <button
-//                   onClick={() => removeFromCart(item.productId)}
-//                   className="ml-4 text-red-600 hover:text-red-800"
-//                 >
-//                   Remove
-//                 </button>
-//               </div>
-//             </div>
-            
-//             <div className="text-right">
-//               <p className="text-lg font-semibold">
-//                 ₹{(item.price * item.quantity).toFixed(2)}
-//               </p>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-
-//       <div className="mt-8 border-t pt-4">
-//         <div className="flex justify-between items-center mb-4">
-//           <span className="text-xl font-semibold">Total:</span>
-//           <span className="text-xl font-bold">₹{getCartTotal().toFixed(2)}</span>
-//         </div>
-        
-//         <div className="flex justify-end gap-4">
-//           <Link 
-//             to="/products" 
-//             className="px-6 py-2 border rounded hover:bg-gray-100"
-//           >
-//             Continue Shopping
-//           </Link>
-//           <Link
-//   to="/checkout"
-//   className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-// >
-//   Proceed to Checkout
-// </Link>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Cart;
-
-import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 import {
   cartRemove,
   cartAdd,
   cartItemRemove,
   selectCartItems,
   selectCartTotal,
-  setCartItems
-} from '../store/cartSlice';
-import axios from 'axios';
+  setCartItems,
+} from "../store/cartSlice";
+import axios from "axios";
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -156,28 +19,29 @@ const Cart = () => {
   const cartItems = useSelector(selectCartItems) || [];
   const cartTotal = useSelector(selectCartTotal) || 0;
   const navigate = useNavigate();
+  const [removingItems, setRemovingItems] = useState({}); // Add this state
+  
 
-   // Fetch cart items when component mounts
-   useEffect(() => {
+  // Fetch cart items when component mounts
+  useEffect(() => {
     const fetchCartItems = async () => {
       try {
-        const response = await axios.get('/api/cart/getCartItems', {
-          withCredentials: true
+        const response = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true,
         });
         if (response.data.success) {
           dispatch(setCartItems(response.data.cart.items));
         }
       } catch (error) {
-        console.error('Error fetching cart:', error);
-        toast.error('Failed to fetch cart items');
+        console.error("Error fetching cart:", error);
+        toast.error("Failed to fetch cart items");
         dispatch(setCartItems([]));
       }
     };
 
     if (userData) {
       fetchCartItems();
-    }
-    else{
+    } else {
       dispatch(setCartItems([]));
     }
   }, [userData, dispatch]);
@@ -216,156 +80,357 @@ const Cart = () => {
     );
   }
 
-  const handleUpdateQuantity = async (productId, currentQuantity, stock, newQuantity) => {
+  const handleUpdateQuantity = async (
+    productId,
+    currentQuantity,
+    stock,
+    newQuantity
+  ) => {
     try {
       // Validate quantity
       if (newQuantity < 1) {
-        toast.error('Quantity cannot be less than 1');
-        return;
-      }
-      if (newQuantity > stock) {
-        toast.error('Cannot exceed available stock');
+        handleRemoveFromCart(productId);
+        
         return;
       }
 
-      console.log('Updating product:', productId, 'to quantity:', newQuantity); // Debug log
+      if (newQuantity > stock) {
+        toast.error("Cannot exceed available stock");
+        return;
+      }
+
+      console.log("Updating product:", productId, "to quantity:", newQuantity); // Debug log
       // Make API call to update quantity
       const response = await axios.put(
-        `/api/cart/update/${productId}`, 
-        
-          { quantity: newQuantity },
-          { withCredentials: true }
-      
+        `/api/cart/update/${productId}`,
+
+        { quantity: newQuantity },
+        { withCredentials: true }
       );
 
       if (response.data.success) {
         // Update Redux store with new cart items
         dispatch(setCartItems(response.data.cart.items));
-        toast.success('Cart updated successfully');
+        toast.success("Cart updated successfully");
       }
     } catch (error) {
-      console.error('Error updating cart:', error);
-      toast.error(error.response?.data?.message || 'Failed to update cart');
+      console.error("Error updating cart:", error);
+      toast.error(error.response?.data?.message || "Failed to update cart");
     }
   };
+  //     if (response.data.success) {
+  //       dispatch(setCartItems(response.data.cart.items));
+  //       toast.success('Item removed from cart');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error removing item:', error);
+  //     toast.error('Failed to remove item from cart');
+  //   }
+  // };
+
+  // const handleRemoveFromCart = async (productId) => {
+  //   try {
+  //     const response = await axios.delete(`/api/cart/remove/${productId}`, {
+  //       withCredentials: true
+  //     });
+
+  //     if (response.data.success) {
+  //       // Get the updated cart items with complete product information
+  //       const updatedCartResponse = await axios.get('/api/cart/getCartItems', {
+  //         withCredentials: true
+  //       });
+
+  //       if (updatedCartResponse.data.success) {
+  //         dispatch(setCartItems(updatedCartResponse.data.cart.items));
+  //         toast.success('Item removed from cart');
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error removing item:', error);
+  //     toast.error('Failed to remove item from cart');
+  //   }
+  // };
 
   const handleRemoveFromCart = async (productId) => {
     try {
+      // Start the removal animation
+
+      dispatch(cartRemove());
+      setRemovingItems((prev) => ({ ...prev, [productId]: true }));
+
+      // Wait for animation to complete
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       const response = await axios.delete(`/api/cart/remove/${productId}`, {
-        withCredentials: true
+        withCredentials: true,
       });
 
       if (response.data.success) {
-        dispatch(setCartItems(response.data.cart.items));
-        toast.success('Item removed from cart');
+        const updatedCartResponse = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true,
+        });
+
+        if (updatedCartResponse.data.success) {
+          dispatch(setCartItems(updatedCartResponse.data.cart.items));
+          toast.success("Item removed from cart");
+        }
       }
+
+      // Reset the removing state
+      setRemovingItems((prev) => ({ ...prev, [productId]: false }));
     } catch (error) {
-      console.error('Error removing item:', error);
-      toast.error('Failed to remove item from cart');
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item from cart");
+      // Reset the removing state on error
+      setRemovingItems((prev) => ({ ...prev, [productId]: false }));
     }
   };
 
   return (
+    // <div className="container mx-auto px-4 py-8">
+    //   <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
+
+    //   <div className="grid grid-cols-1 gap-4">
+    //     {cart.map((item, index) => (
+    //       <div
+    //         key={`${item.product._id}-${index}`}
+    //         className={`bg-white flex items-center gap-4 p-4 border rounded-lg  shadow-sm
+    //         transition-all duration-300 ease-in-out
+    //         ${
+    //           removingItems[item.product._id]
+    //             ? "opacity-0 transform translate-x-full"
+    //             : "opacity-100 transform translate-x-0"
+    //         }`}
+    //       >
+    //         <div
+    //           key={`${item.product._id}-${index}`}
+    //           className="flex w-full items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
+    //         >
+    //           <img
+    //             src={item.product?.images?.[0]}
+    //             alt={item.product?.name}
+    //             className="w-24 h-24 object-cover rounded"
+    //             onError={(e) => {
+    //               e.target.onerror = null; // Prevent infinite loop
+    //               e.target.src = "/images/fallback.jpg"; // Add a fallback image
+    //             }}
+    //           />
+
+    //           <div className="flex-1">
+    //             <Link
+    //               to={`/product/${item.product._id}`}
+    //               className="text-lg font-semibold hover:text-blue-600"
+    //             >
+    //               {item.product.name}
+    //             </Link>
+    //             <p className="text-gray-600">
+    //               ₹{item.price.toFixed(2)} per {item.unitType}
+    //             </p>
+
+    //             <div className="flex items-center gap-2 mt-2">
+    //               <button
+    //                 onClick={() =>
+    //                   handleUpdateQuantity(
+    //                     item.product._id, // Make sure this is the correct product ID
+    //                     item.quantity,
+    //                     item.product.stock,
+    //                     item.quantity - 1
+    //                   )
+    //                 }
+    //                 className="px-3 py-1 border rounded hover:bg-gray-100"
+    //               >
+    //                 -
+    //               </button>
+    //               <span className="w-12 text-center">{item.quantity}</span>
+    //               <button
+    //                 onClick={() =>
+    //                   handleUpdateQuantity(
+    //                     item.product._id, // Make sure this is the correct product ID
+    //                     item.quantity,
+    //                     item.product.stock,
+    //                     item.quantity + 1
+    //                   )
+    //                 }
+    //                 className="px-3 py-1 border rounded hover:bg-gray-100"
+    //               >
+    //                 +
+    //               </button>
+    //               <button
+    //                 onClick={() => handleRemoveFromCart(item.product._id)}
+    //                 className="ml-4 text-red-600 hover:text-red-800 flex items-center gap-1"
+    //               >
+    //                 <span className="hidden sm:inline">Remove</span>
+    //                 <svg
+    //                   xmlns="http://www.w3.org/2000/svg"
+    //                   className="h-5 w-5"
+    //                   viewBox="0 0 20 20"
+    //                   fill="currentColor"
+    //                 >
+    //                   <path
+    //                     fillRule="evenodd"
+    //                     d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+    //                     clipRule="evenodd"
+    //                   />
+    //                 </svg>
+    //               </button>
+    //             </div>
+    //           </div>
+
+    //           <div className="text-right">
+    //             <p className="text-lg font-semibold">
+    //               ₹{(item.price * item.quantity).toFixed(2)}
+    //             </p>
+    //             {item.quantity >= item.stock && (
+    //               <p className="text-sm text-red-600">Max stock reached</p>
+    //             )}
+    //           </div>
+    //         </div>
+    //       </div>
+    //     ))}
+    //   </div>
+
+    //   <div className="mt-8 border-t pt-4">
+    //     <div className="flex justify-between items-center mb-4">
+    //       <span className="text-xl font-semibold">Total:</span>
+    //       <span className="text-xl font-bold">₹{cartTotal.toFixed(2)}</span>
+    //     </div>
+
+    //     <div className="flex justify-end gap-4">
+    //       <Link
+    //         to="/"
+    //         className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
+    //       >
+    //         Continue Shopping
+    //       </Link>
+    //       <Link
+    //         to="/checkout"
+    //         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+    //       >
+    //         Proceed to Checkout
+    //       </Link>
+    //     </div>
+    //   </div>
+    // </div>
+
     <div className="container mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-      
-      <div className="grid grid-cols-1 gap-4">
-        {cart.map((item) => (
-          <div 
-            key={item.productId || item._id} 
-            className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
-          >
-            <img 
-               src={item.product?.images?.[0]} 
-               alt={item.product?.name} 
-              className="w-24 h-24 object-cover rounded"
+    <h2 className="text-2xl font-bold mb-4">Your Basket</h2>
+
+    {/* Checkout Summary Bar */}
+    <div className="bg-gray-900 text-white p-4 rounded-lg mb-6 flex justify-between items-center">
+      <div>
+        <span className="text-lg">Subtotal ({cart.length} items): ₹{cartTotal.toFixed(2)}</span>
+        {/* <div className="text-green-400 text-sm">
+          Savings: ₹{cart.reduce((acc, item) => 
+            acc + ((item.product.originalPrice - item.price) * item.quantity), 0).toFixed(2)}
+        </div> */}
+      </div>
+      <Link
+        to="/checkout"
+        className="px-8 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+      >
+        Checkout
+      </Link>
+    </div>
+
+    {/* Cart Items Table Header */}
+    <div className="grid grid-cols-12 gap-4 mb-4 px-4 py-2 bg-[#f3eff3] rounded-t-lg">
+      <div className="col-span-6">Items ({cart.length} items)</div>
+      <div className="col-span-3 text-center">Quantity</div>
+      <div className="col-span-3 text-right">Sub-total</div>
+    </div>
+
+    {/* Cart Items */}
+    <div className="border rounded-b-lg">
+      {cart.map((item, index) => (
+        <div
+          key={`${item.product._id}-${index}`}
+          className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0
+            transition-all duration-300 ease-in-out
+            ${removingItems[item.product._id] ? 'opacity-0 transform translate-x-full' : 'opacity-100 transform translate-x-0'}`}
+        >
+          {/* Item Details - Left Section */}
+          <div className="col-span-6 flex gap-4">
+            <img
+              src={item.product?.images?.[0]}
+              alt={item.product?.name}
+              className="w-20 h-20 object-cover rounded"
               onError={(e) => {
-                e.target.onerror = null; // Prevent infinite loop
-                e.target.src = 'path/to/fallback/image.jpg'; // Add a fallback image
+                e.target.onerror = null;
+                e.target.src = "/images/fallback.jpg";
               }}
             />
-            
-            <div className="flex-1">
-              <Link 
-                to={`/product/${item.productId}`}
+            <div className="flex flex-col justify-between">
+              <Link
+                to={`/product/${item.product._id}`}
                 className="text-lg font-semibold hover:text-blue-600"
               >
-                {item.name}
+                {item.product.name}
               </Link>
-              <p className="text-gray-600">
-                ₹{item.price.toFixed(2)} per {item.unitType}
-              </p>
-              
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={() => handleUpdateQuantity(
-                    item.product._id, // Make sure this is the correct product ID
-                    item.quantity,
-                    item.product.stock,
-                    item.quantity - 1
-                  )}
-                  className="px-3 py-1 border rounded hover:bg-gray-100"
-                >
-                  -
-                </button>
-                <span className="w-12 text-center">{item.quantity}</span>
-                <button
-                  onClick={() => handleUpdateQuantity(
-                    item.product._id, // Make sure this is the correct product ID
-                    item.quantity,
-                    item.product.stock,
-                    item.quantity + 1
-                  )}
-                  className="px-3 py-1 border rounded hover:bg-gray-100"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => handleRemoveFromCart(item.productId)}
-                  className="ml-4 text-red-600 hover:text-red-800 flex items-center gap-1"
-                >
-                  <span className="hidden sm:inline">Remove</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <p className="text-lg font-semibold">
-                ₹{(item.price * item.quantity).toFixed(2)}
-              </p>
-              {item.quantity >= item.stock && (
-                <p className="text-sm text-red-600">Max stock reached</p>
-              )}
+              <div className="text-gray-600">₹{item.price.toFixed(2)} per {item.unitType}</div>
+              <button
+                onClick={() => handleRemoveFromCart(item.product._id)}
+                className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 w-fit"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-8 border-t pt-4">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-xl font-semibold">Total:</span>
-          <span className="text-xl font-bold">₹{cartTotal.toFixed(2)}</span>
+          {/* Quantity Controls - Middle Section */}
+          <div className="col-span-3 flex items-center justify-center ">
+            <div className="flex items-center gap-2 border-[1px] border-gray-300 py-[1px] rounded-sm">
+              <button
+                onClick={() => handleUpdateQuantity(
+                  item.product._id,
+                  item.quantity,
+                  item.product.stock,
+                  item.quantity - 1
+                )}
+                className="px-3 py-1 transform transition-transform duration-200"
+              >
+                -
+              </button>
+              <span className="w-12 text-center">{item.quantity}</span>
+              <button
+                onClick={() => handleUpdateQuantity(
+                  item.product._id,
+                  item.quantity,
+                  item.product.stock,
+                  item.quantity + 1
+                )}
+                className="px-3 py-1 transform transition-transform duration-200"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Subtotal - Right Section */}
+          <div className="col-span-3 flex flex-col items-end justify-center">
+            <div className="text-lg font-semibold">
+              ₹{(item.price * item.quantity).toFixed(2)}
+            </div>
+            {item.product.originalPrice > item.price && (
+              <div className="text-green-600 text-sm">
+                Saved: ₹{((item.product.originalPrice - item.price) * item.quantity).toFixed(2)}
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="flex justify-end gap-4">
-          <Link 
-            to="/products" 
-            className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
-          >
-            Continue Shopping
-          </Link>
-          <Link
-            to="/checkout"
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Proceed to Checkout
-          </Link>
-        </div>
-      </div>
+      ))}
     </div>
+
+    {/* Continue Shopping Link */}
+    <div className="mt-6 flex justify-start">
+      <Link
+        to="/"
+        className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
+      >
+        Continue Shopping
+      </Link>
+    </div>
+  </div>
+
   );
 };
 

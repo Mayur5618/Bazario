@@ -1,0 +1,40 @@
+/* Add this to your CSS file */
+.container {
+    max-width: 1200px;
+  }
+  
+  .border {
+    border: 1px solid #e2e8f0; /* Light gray border */
+  }
+  
+  .shadow-lg {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  }
+  
+  .transition-transform {
+    transition: transform 0.2s; /* Smooth scaling effect */
+  }
+  
+  .hover\:scale-105:hover {
+    transform: scale(1.05); /* Scale effect on hover */
+  }
+  
+  select {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  /* path/to/styles.css */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.5s ease-in-out;
+}

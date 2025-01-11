@@ -8,6 +8,7 @@ import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import searchRoutes from './routes/search.route.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -32,6 +33,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/requests', requestRoutes); 
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/search', searchRoutes);
 
 app.use(errorMiddleware);
 

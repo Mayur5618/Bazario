@@ -12,6 +12,7 @@ import {
   getProducts,
   updateProduct,
 } from "../controllers/product.controller.js";
+import { createReview } from "../controllers/review.controller.js";
 
 const router = express.Router();
 
@@ -42,5 +43,7 @@ router.delete("/:id", protect, sellerOrAgency, deleteProduct);
 router.get("/b2b/products", protect, checkPlatformAccess("b2b"), getProducts);
 
 router.get("/b2c/products", protect, checkPlatformAccess("b2c"), getProducts);
+
+router.post('/:productId/reviews', protect, createReview);
 
 export default router;

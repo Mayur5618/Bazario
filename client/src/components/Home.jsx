@@ -2,6 +2,8 @@ import React from 'react';
 import CategorySection from './CategorySection';
 import ProductCatalog from './ProductCatalog';
 import Temp from './temp';
+import ProductSlider from './ProductSlider';
+
 
 const Home = () => {
   return (
@@ -12,7 +14,7 @@ const Home = () => {
           {/* <h2 className="text-xl font-bold mb-4">Explore Categories</h2> */}
           {/* <CategorySection /> */}
           <ProductCatalog />
-          
+          <ProductSlider />
         </div>
       </div>
     </div>

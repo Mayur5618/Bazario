@@ -23,6 +23,8 @@ import OrderDetail from './components/OrderDetail.jsx';
 // import { AuthProvider } from './components/context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
+import AllProducts from './pages/AllProducts.jsx';
+import SellerAccount from './pages/SellerAccount.jsx';
 
 // const App = () => {
 //   return (
@@ -171,6 +173,8 @@ const App = () => {
               <Route path="/categories" element={<CategorySection />} />
               <Route path="/product" element={<ProductDetailPage />} />
               <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/all-products" element={<AllProducts />} />
+              <Route path="/sellers/:sellerId" element={<SellerAccount />} />
               
               {/* Protected Routes */}
               <Route path="/profile" element={

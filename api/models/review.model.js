@@ -1,7 +1,213 @@
+// import mongoose from "mongoose";
+
+// const reviewSchema = new mongoose.Schema({
+//     // Product reference
+//     product: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Product',
+//         required: true
+//     },
+
+//     // Buyer who wrote the review
+//     buyer: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Buyer',
+//         required: true
+//     },
+
+//     // Seller who sold the product
+//     seller: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Seller',
+//         required: true
+//     },
+
+//     // Order reference
+//     order: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Order',
+//         required: true
+//     },
+
+//     // Review content
+//     rating: {
+//         type: Number,
+//         required: true,
+//         min: 1,
+//         max: 5
+//     },
+
+//     comment: {
+//         type: String,
+//         required: true,
+//         trim: true,
+//         minlength: 5,
+//         maxlength: 500
+//     },
+
+//     // Optional images
+//     images: [{
+//         type: String
+//     }],
+
+//     // Review status
+//     status: {
+//         type: String,
+//         enum: ['pending', 'approved', 'rejected', 'reported'],
+//         default: 'pending'
+//     },
+
+//     // Platform type
+//     platformType: {
+//         type: String,
+//         enum: ['b2b', 'b2c'],
+//         required: true
+//     },
+
+//     // Seller's response
+//     sellerResponse: {
+//         comment: String,
+//         respondedAt: Date
+//     },
+
+//     // Helpful votes
+//     helpfulVotes: [{
+//         buyer: {
+//             type: mongoose.Schema.Types.ObjectId,
+//             ref: 'Buyer'
+//         },
+//         helpful: Boolean,
+//         votedAt: {
+//             type: Date,
+//             default: Date.now
+//         }
+//     }],
+
+//     // Moderation
+//     moderation: {
+//         moderatedBy: {
+//             type: mongoose.Schema.Types.ObjectId,
+//             ref: 'User'
+//         },
+//         moderatedAt: Date,
+//         reason: String
+//     },
+
+//     // Review verification
+//     verified: {
+//         type: Boolean,
+//         default: false
+//     },
+
+//     // For B2B specific reviews
+//     businessReview: {
+//         deliveryRating: {
+//             type: Number,
+//             min: 1,
+//             max: 5
+//         },
+//         qualityRating: {
+//             type: Number,
+//             min: 1,
+//             max: 5
+//         },
+//         communicationRating: {
+//             type: Number,
+//             min: 1,
+//             max: 5
+//         },
+//         valueForMoneyRating: {
+//             type: Number,
+//             min: 1,
+//             max: 5
+//         }
+//     }
+
+// }, {
+//     timestamps: true
+// });
+
+// // Compound index to ensure one review per order per buyer
+// reviewSchema.index({ order: 1, buyer: 1 }, { unique: true });
+
+// // Method to calculate average ratings for B2B reviews
+// reviewSchema.methods.calculateB2BAverage = function() {
+//     if (this.platformType === 'b2b' && this.businessReview) {
+//         const { deliveryRating, qualityRating, communicationRating, valueForMoneyRating } = this.businessReview;
+//         const sum = deliveryRating + qualityRating + communicationRating + valueForMoneyRating;
+//         return sum / 4;
+//     }
+//     return this.rating;
+// };
+
+// // Update product rating after review save
+// reviewSchema.post('save', async function() {
+//     const Review = this.constructor;
+//     const Product = mongoose.model('Product');
+
+//     try {
+//         // Calculate new average rating
+//         const stats = await Review.aggregate([
+//             {
+//                 $match: { product: this.product, status: 'approved' }
+//             },
+//             {
+//                 $group: {
+//                     _id: '$product',
+//                     avgRating: { $avg: '$rating' },
+//                     numReviews: { $sum: 1 }
+//                 }
+//             }
+//         ]);
+
+//         // Update product
+//         if (stats.length > 0) {
+//             await Product.findByIdAndUpdate(this.product, {
+//                 rating: stats[0].avgRating,
+//                 numReviews: stats[0].numReviews
+//             });
+//         } else {
+//             await Product.findByIdAndUpdate(this.product, {
+//                 rating: 0,
+//                 numReviews: 0
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Error updating product rating:', error);
+//     }
+// });
+
+// const Review = mongoose.model('Review', reviewSchema);
+
+// export default Review;
+
 import mongoose from "mongoose";
 
+// Reply Schema for nested comments
+const replySchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Buyer',
+        required: true
+    },
+    comment: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 1,
+        maxlength: 500
+    },
+    userType: {
+        type: String,
+        enum: ['buyer', 'seller'],
+        required: true
+    }
+}, {
+    timestamps: true
+});
+
 const reviewSchema = new mongoose.Schema({
-    // Product reference
+    // Product being reviewed
     product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
@@ -15,14 +221,7 @@ const reviewSchema = new mongoose.Schema({
         required: true
     },
 
-    // Seller who sold the product
-    seller: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Seller',
-        required: true
-    },
-
-    // Order reference
+    // Order reference to verify purchase
     order: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
@@ -45,100 +244,51 @@ const reviewSchema = new mongoose.Schema({
         maxlength: 500
     },
 
-    // Optional images
+    // Optional review images
     images: [{
-        type: String
+        type: String,
+        validate: {
+            validator: function(v) {
+                // Basic URL validation
+                return /^https?:\/\/.*/.test(v);
+            },
+            message: 'Invalid image URL'
+        }
     }],
 
-    // Review status
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected', 'reported'],
-        default: 'pending'
-    },
-
-    // Platform type
-    platformType: {
-        type: String,
-        enum: ['b2b', 'b2c'],
-        required: true
-    },
-
-    // Seller's response
-    sellerResponse: {
-        comment: String,
-        respondedAt: Date
-    },
-
-    // Helpful votes
-    helpfulVotes: [{
-        buyer: {
+    likes: [{
+        user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Buyer'
+            ref: 'User'
         },
-        helpful: Boolean,
-        votedAt: {
+        createdAt: {
             type: Date,
             default: Date.now
         }
     }],
 
-    // Moderation
-    moderation: {
-        moderatedBy: {
+    likesCount: {
+        type: Number,
+        default: 0
+    },
+
+    // Replies/Comments on the review
+    replies: [replySchema],
+
+    // Helpful votes
+    helpfulVotes: [{
+        user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'Buyer'
         },
-        moderatedAt: Date,
-        reason: String
-    },
-
-    // Review verification
-    verified: {
-        type: Boolean,
-        default: false
-    },
-
-    // For B2B specific reviews
-    businessReview: {
-        deliveryRating: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        qualityRating: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        communicationRating: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        valueForMoneyRating: {
-            type: Number,
-            min: 1,
-            max: 5
-        }
-    }
-
+        helpful: Boolean
+    }]
 }, {
     timestamps: true
 });
 
-// Compound index to ensure one review per order per buyer
+// Ensure one review per order per buyer
 reviewSchema.index({ order: 1, buyer: 1 }, { unique: true });
-
-// Method to calculate average ratings for B2B reviews
-reviewSchema.methods.calculateB2BAverage = function() {
-    if (this.platformType === 'b2b' && this.businessReview) {
-        const { deliveryRating, qualityRating, communicationRating, valueForMoneyRating } = this.businessReview;
-        const sum = deliveryRating + qualityRating + communicationRating + valueForMoneyRating;
-        return sum / 4;
-    }
-    return this.rating;
-};
 
 // Update product rating after review save
 reviewSchema.post('save', async function() {
@@ -146,10 +296,9 @@ reviewSchema.post('save', async function() {
     const Product = mongoose.model('Product');
 
     try {
-        // Calculate new average rating
         const stats = await Review.aggregate([
             {
-                $match: { product: this.product, status: 'approved' }
+                $match: { product: this.product }
             },
             {
                 $group: {
@@ -160,22 +309,33 @@ reviewSchema.post('save', async function() {
             }
         ]);
 
-        // Update product
         if (stats.length > 0) {
             await Product.findByIdAndUpdate(this.product, {
                 rating: stats[0].avgRating,
                 numReviews: stats[0].numReviews
-            });
-        } else {
-            await Product.findByIdAndUpdate(this.product, {
-                rating: 0,
-                numReviews: 0
             });
         }
     } catch (error) {
         console.error('Error updating product rating:', error);
     }
 });
+
+// Add a method to handle likes
+reviewSchema.methods.toggleLike = async function(userId) {
+    const isLiked = this.likes.some(like => like.user.toString() === userId.toString());
+    
+    if (isLiked) {
+        // Remove like
+        this.likes = this.likes.filter(like => like.user.toString() !== userId.toString());
+    } else {
+        // Add like
+        this.likes.push({ user: userId });
+    }
+    
+    this.likesCount = this.likes.length;
+    await this.save();
+    return !isLiked; // returns true if liked, false if unliked
+};
 
 const Review = mongoose.model('Review', reviewSchema);
 

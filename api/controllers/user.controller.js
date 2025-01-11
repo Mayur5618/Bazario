@@ -1,4 +1,5 @@
 import Seller from '../models/seller.model.js';
+import Product from '../models/product.model.js';
 import Buyer from '../models/buyer.model.js';
 import Agency from '../models/agency.model.js';
 import jwt from 'jsonwebtoken';
@@ -484,5 +485,21 @@ export const updateProfile = async (req, res) => {
           success: false,
           message: error.message || 'Error updating profile'
       });
+  }
+};
+
+export const getSellerData = async (req, res) => {
+  try {
+    const sellerId = req.params.id;
+    const seller = await Seller.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
+    }
+
+    const products = await Product.find({ seller: sellerId }); // Fetch products by seller ID
+    res.status(200).json({ seller, products });
+  } catch (error) {
+    console.error('Error fetching seller data:', error);
+    res.status(500).json({ success: false, message: 'Error fetching seller data' });
   }
 };
