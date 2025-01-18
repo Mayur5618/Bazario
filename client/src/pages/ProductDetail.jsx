@@ -263,24 +263,32 @@ const ProductDetail = () => {
 
   const handleReviewDelete = async (reviewId) => {
     try {
-      // First find the review that's being deleted
-      const deletedReview = reviews.find(review => review._id === reviewId);
-      
-      // Remove review from UI immediately
-      const updatedReviews = reviews.filter(review => review._id !== reviewId);
-      setReviews(updatedReviews);
-      
-      // Update stats
-      setProductStats(calculateProductStats(updatedReviews));
-      
-      // Reset user's review status
-      setHasReviewed(false);
-      
-      // Optionally refresh reviews from server
-      await fetchReviews();
+        // First find the review that's being deleted
+        const deletedReview = reviews.find(review => review._id === reviewId);
+        
+        // Remove review from UI immediately
+        const updatedReviews = reviews.filter(review => review._id !== reviewId);
+        setReviews(updatedReviews);
+        
+        // Update stats
+        setProductStats(calculateProductStats(updatedReviews));
+        
+        // Reset review status to allow writing a new review
+        setHasReviewed(false);
+        setCanReview(true);
+        
+        // Optionally refresh reviews from server
+        await fetchReviews();
+        
+        // Refresh the user's review status
+        await checkUserReview();
     } catch (error) {
-      console.error('Error handling review deletion:', error);
-      toast.error('Error updating review statistics');
+        console.error('Error handling review deletion:', error);
+        toast.error('Error updating review statistics');
+        
+        // Refresh everything in case of error
+        await fetchReviews();
+        await checkUserReview();
     }
   };
 

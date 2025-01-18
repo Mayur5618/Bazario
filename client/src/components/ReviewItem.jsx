@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaStar, FaHeart, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaStar, FaHeart, FaEdit, FaTrash, FaRegHeart } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
@@ -117,68 +117,83 @@ const ReviewItem = ({
     };
 
     return (
-        <>
-            <motion.div
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="bg-white p-6 rounded-lg shadow-md mb-4"
-            >
-                <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
+        >
+            {/* Review Header */}
+            <div className="p-6 border-b border-gray-100">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl font-semibold">
+                            {review.buyer.firstname.charAt(0)}
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-gray-800">
                                 {review.buyer.firstname} {review.buyer.lastname}
                             </h4>
-                            {!isEditing && (
+                            <div className="flex items-center mt-1">
                                 <div className="flex">
                                     {[...Array(5)].map((_, index) => (
                                         <FaStar
                                             key={index}
-                                            className={`${
+                                            className={`w-4 h-4 ${
                                                 index < review.rating
                                                     ? 'text-yellow-400'
-                                                    : 'text-gray-300'
+                                                    : 'text-gray-200'
                                             }`}
                                         />
                                     ))}
                                 </div>
-                            )}
+                                <span className="text-sm text-gray-500 ml-2">
+                                    {new Date(review.createdAt).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                            </div>
                         </div>
-                        <p className="text-gray-500 text-sm">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                        </p>
                     </div>
-                    <div className="flex gap-2">
+                    
+                    <div className="flex items-center space-x-2">
                         <button
                             onClick={handleLike}
-                            className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
-                                isLiked ? 'text-red-500' : 'text-gray-400'
-                            }`}
+                            className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
                         >
-                            <FaHeart />
-                            <span className="ml-1 text-sm">{review.likes?.length || 0}</span>
+                            {isLiked ? (
+                                <FaHeart className="text-red-500 w-4 h-4" />
+                            ) : (
+                                <FaRegHeart className="text-gray-400 w-4 h-4" />
+                            )}
+                            <span className="text-sm text-gray-600">{review.likes?.length || 0}</span>
                         </button>
+                        
                         {isOwner && (
-                            <>
+                            <div className="flex space-x-2">
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors text-blue-500"
+                                    className="p-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors duration-200"
                                 >
-                                    <FaEdit />
+                                    <FaEdit className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteModal(true)}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors text-red-500"
+                                    className="p-1.5 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors duration-200"
                                 >
-                                    <FaTrash />
+                                    <FaTrash className="w-4 h-4" />
                                 </button>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
+            </div>
 
+            {/* Review Content */}
+            <div className="p-6">
                 {isEditing ? (
                     <form onSubmit={handleUpdate} className="space-y-4">
                         <div>
@@ -194,10 +209,10 @@ const ReviewItem = ({
                                         className="focus:outline-none"
                                     >
                                         <FaStar
-                                            className={`text-2xl ${
+                                            className={`w-6 h-6 ${
                                                 star <= editedRating
                                                     ? 'text-yellow-400'
-                                                    : 'text-gray-300'
+                                                    : 'text-gray-200'
                                             }`}
                                         />
                                     </button>
@@ -206,12 +221,12 @@ const ReviewItem = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Comment
+                                Your Review
                             </label>
                             <textarea
                                 value={editedComment}
                                 onChange={(e) => setEditedComment(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                                 rows="4"
                                 required
                             />
@@ -220,14 +235,14 @@ const ReviewItem = ({
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200"
                             >
                                 {isSubmitting ? 'Updating...' : 'Update Review'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setIsEditing(false)}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
                             >
                                 Cancel
                             </button>
@@ -235,22 +250,23 @@ const ReviewItem = ({
                     </form>
                 ) : (
                     <>
-                        <p className="text-gray-700">{review.comment}</p>
+                        <p className="text-gray-700 leading-relaxed">{review.comment}</p>
                         {review.images?.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                                 {review.images.map((image, index) => (
-                                    <img
-                                        key={index}
-                                        src={image}
-                                        alt={`Review ${index + 1}`}
-                                        className="w-24 h-24 object-cover rounded-lg"
-                                    />
+                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                                        <img
+                                            src={image}
+                                            alt={`Review ${index + 1}`}
+                                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </>
                 )}
-            </motion.div>
+            </div>
 
             <DeleteConfirmationModal
                 isOpen={showDeleteModal}
@@ -259,7 +275,7 @@ const ReviewItem = ({
                 title="Delete Review"
                 message="Are you sure you want to delete this review? This action cannot be undone."
             />
-        </>
+        </motion.div>
     );
 };
 
