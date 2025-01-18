@@ -207,7 +207,7 @@ const ProductSlider = () => {
             <div className="product-info p-4">
               <h3 className="text-lg font-semibold">{product.name}</h3>
               <p className="text-gray-600">₹{product.price} per kg</p>
-              <p className="text-gray-500">{product.description}</p>
+              {/* <p className="text-gray-500">{product.description}</p> */}
               <button className="add-to-cart">Add to Cart</button>
             </div>
           </div>

@@ -1342,7 +1342,7 @@ const Header = () => {
                   onMouseEnter={handleMouseEnterMenu}
                   onMouseLeave={hideMenu}
                 >
-                  <Link to="/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">Profile</Link>
+                  <Link to="/profile"  className="block px-4 py-2 text-gray-600 hover:bg-gray-100">Profile</Link>
                   <Link to="/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">Orders</Link>
                   <button 
                     onClick={handleSignout} 

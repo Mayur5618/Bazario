@@ -1,138 +1,46 @@
-// import Review from '../models/review.model.js';
-// import Product from '../models/product.model.js';
-
-// export const createReview = async (req, res) => {
-
-
-
-//   try {
-//     const { rating, comment } = req.body;
-//     const productId = req.params.productId;
-//     const userId = req.user._id;
-
-//     // Check if user has already reviewed this product
-//     const existingReview = await Review.findOne({
-//       user: userId,
-//       product: productId
-//     });
-
-//     if (existingReview) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'You have already reviewed this product'
-//       });
-//     }
-
-//     // Create new review
-//     const review = new Review({
-//       user: userId,
-//       product: productId,
-//       rating,
-//       comment
-//     });
-
-//     await review.save();
-
-//     // Update product rating
-//     const product = await Product.findById(productId);
-//     const allReviews = await Review.find({ product: productId });
-    
-//     const avgRating = allReviews.reduce((acc, item) => item.rating + acc, 0) / allReviews.length;
-    
-//     product.rating = avgRating;
-//     product.numReviews = allReviews.length;
-//     await product.save();
-
-//     // Populate user details in the review
-//     const populatedReview = await Review.findById(review._id)
-//       .populate('user', 'firstname lastname');
-
-//     res.status(201).json({
-//       success: true,
-//       review: populatedReview
-//     });
-
-//   } catch (error) {
-//     console.error('Review creation error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error creating review',
-//       error: error.message
-//     });
-//   }
-// };
-
 import Review from '../models/review.model.js';
 import Order from '../models/order.model.js';
-// import { uploadToCloudinary } from '../utils/cloudinary.js'; // Implement this
+import { uploadToFirebase, deleteFromFirebase } from '../utilities/firebase.js';
 
 export const createReview = async (req, res) => {
     try {
-        const { rating, comment } = req.body;
-        const images = req.files; // Assuming you're using multer
-        const productId = req.params.productId;
-        const buyerId = req.user._id;
+        const { productId } = req.params;
+        const { rating, comment, images } = req.body; // images will be base64 strings
+        const userId = req.user._id;
 
-        // Find completed order
-        const order = await Order.findOne({
-            buyer: buyerId,
-            'items.product': productId,
-            status: { $in: ['delivered', 'completed', 'Delivered', 'Completed'] }
-        });
-
-        if (!order) {
+        if (!rating || !comment) {
             return res.status(400).json({
                 success: false,
-                message: 'You can only review products you have purchased'
+                message: 'Rating and comment are required'
             });
         }
 
-        // Check for existing review
-        const existingReview = await Review.findOne({
-            buyer: buyerId,
-            product: productId,
-            order: order._id
-        });
-
-        if (existingReview) {
-            return res.status(400).json({
-                success: false,
-                message: 'You have already reviewed this product'
-            });
-        }
-
-        // Upload images if any
+        // Upload images to Firebase
         let imageUrls = [];
-        if (images && images.length > 0) {
-            imageUrls = await Promise.all(
-                images.map(image => uploadToCloudinary(image.path))
-            );
+        if (images?.length) {
+            const uploadPromises = images.map(base64String => uploadToFirebase(base64String));
+            imageUrls = await Promise.all(uploadPromises);
         }
 
-        // Create review
-        const review = new Review({
+        const newReview = await Review.create({
             product: productId,
-            buyer: buyerId,
-            order: order._id,
+            buyer: userId,
             rating,
             comment,
             images: imageUrls
         });
 
-        await review.save();
-
-        // Return populated review
-        const populatedReview = await Review.findById(review._id)
-            .populate('buyer', 'firstname lastname')
-            .populate('replies.user', 'firstname lastname');
+        const populatedReview = await Review.findById(newReview._id)
+            .populate('buyer', 'firstname lastname');
 
         res.status(201).json({
             success: true,
+            message: 'Review created successfully',
             review: populatedReview
         });
 
     } catch (error) {
-        console.error('Review creation error:', error);
+        console.error('Create review error:', error);
         res.status(500).json({
             success: false,
             message: 'Error creating review',
@@ -141,7 +49,6 @@ export const createReview = async (req, res) => {
     }
 };
 
-// Add reply to review
 export const addReplyToReview = async (req, res) => {
     try {
         const { comment } = req.body;
@@ -391,6 +298,113 @@ export const getReviewById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching review',
+            error: error.message
+        });
+    }
+};
+
+export const deleteReview = async (req, res) => {
+    try {
+        const { reviewId } = req.params;
+        const userId = req.user._id;
+
+        const review = await Review.findById(reviewId);
+
+        if (!review) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review not found'
+            });
+        }
+
+        // Check if the user owns the review
+        if (review.buyer.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only delete your own reviews'
+            });
+        }
+
+        // Use deleteOne() instead of remove()
+        await Review.deleteOne({ _id: reviewId });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Review deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete review error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error deleting review',
+            error: error.message
+        });
+    }
+};
+
+export const updateReview = async (req, res) => {
+    try {
+        const { reviewId } = req.params;
+        const { rating, comment, deletedImages, images } = req.body; // images will be base64 strings
+        const userId = req.user._id;
+
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review not found'
+            });
+        }
+
+        if (review.buyer.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized to update this review'
+            });
+        }
+
+        let imageUrls = [...review.images];
+
+        // Delete images if any
+        if (deletedImages?.length) {
+            for (const imageUrl of deletedImages) {
+                await deleteFromFirebase(imageUrl);
+                imageUrls = imageUrls.filter(url => url !== imageUrl);
+            }
+        }
+
+        // Upload new images
+        if (images?.length) {
+            const uploadPromises = images.map(base64String => uploadToFirebase(base64String));
+            const newImageUrls = await Promise.all(uploadPromises);
+            imageUrls = [...imageUrls, ...newImageUrls];
+        }
+
+        const updatedReview = await Review.findByIdAndUpdate(
+            reviewId,
+            {
+                $set: {
+                    rating: rating || review.rating,
+                    comment: comment || review.comment,
+                    images: imageUrls,
+                    updatedAt: Date.now()
+                }
+            },
+            { new: true }
+        ).populate('buyer', 'firstname lastname');
+
+        res.json({
+            success: true,
+            message: 'Review updated successfully',
+            review: updatedReview
+        });
+
+    } catch (error) {
+        console.error('Review update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating review',
             error: error.message
         });
     }

@@ -112,6 +112,9 @@ const userSlice = createSlice({
     UpdateUserFailure: (state, action) => {
       (state.error = action.payload), (state.loading = false);
     },
+    clearUserData: (state) => {
+      state.userData = null; // Clear user data
+    },
   },
 });
 
@@ -123,5 +126,6 @@ export const {
   UpdateUserStart,
   UpdateUserSuccess,
   UpdateUserFailure,
+  clearUserData,
 } = userSlice.actions;
 export default userSlice.reducer;

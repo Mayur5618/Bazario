@@ -1,4 +1,3 @@
-/* Product Card Animations */
 .product-card {
     transition: all 0.3s ease;
   }
@@ -7,7 +6,6 @@
     transform: translateY(-4px);
   }
   
-  /* Image Hover Effect */
   .product-image {
     transition: transform 0.3s ease;
   }
@@ -16,7 +14,6 @@
     transform: scale(1.05);
   }
   
-  /* Button Animations */
   .add-to-cart-button {
     transition: all 0.2s ease;
   }
@@ -25,7 +22,6 @@
     transform: translateY(-2px);
   }
   
-  /* Quantity Control Animations */
   .quantity-control {
     transition: all 0.2s ease;
   }
@@ -34,7 +30,7 @@
     background-color: rgba(0, 0, 0, 0.05);
   }
   
-  /* Category Button Animations */
+  
   .category-button {
     transition: all 0.2s ease;
   }
@@ -43,7 +39,7 @@
     transform: translateY(-2px);
   }
   
-  /* Loading Animation */
+  
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -54,7 +50,7 @@
     animation: spin 1s linear infinite;
   }
   
-  /* Responsive Grid */
+  
   @media (max-width: 640px) {
     .products-grid {
       grid-template-columns: repeat(1, 1fr);

@@ -431,12 +431,12 @@ const Checkout = () => {
   });
 
   // Redirect if cart is empty
-  useEffect(() => {
-    if (cartItems.length === 0) {
-      navigate('/cart');
-      toast.error('Your cart is empty');
-    }
-  }, [cartItems, navigate]);
+  // useEffect(() => {
+  //   if (cartItems.length === 0) {
+  //     navigate('/cart');
+  //     toast.error('Your cart is empty');
+  //   }
+  // }, [cartItems, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
