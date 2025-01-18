@@ -76,7 +76,7 @@ const reviewSchema = new mongoose.Schema({
     likes: [{
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'Buyer'
         },
         createdAt: {
             type: Date,

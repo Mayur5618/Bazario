@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import searchRoutes from './routes/search.route.js';
 import reviewRoutes from './routes/review.routes.js';
+import bodyParser from 'body-parser';
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
   .then(() => {
@@ -33,6 +34,14 @@ app.use('/api/products', productRoutes);
 app.use('/api/requests', requestRoutes); 
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// If you're using body-parser separately
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
 

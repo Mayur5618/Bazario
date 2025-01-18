@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStar } from "react-icons/fa";
+import { FaStar, FaShoppingCart, FaMinus, FaPlus } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { cartAdd, cartRemove } from "../store/cartSlice";
+import { cartAdd } from "../store/cartSlice";
+import { motion } from "framer-motion";
+import ProductReviewSection from "../components/ProductReviewSection";
 import YouTube from "react-youtube";
-import '../styles/catelog.css';
-import { motion, AnimatePresence } from 'framer-motion';
-import ReviewComponent from "../components/ReviewComponent";
+import ReviewItem from '../components/ReviewItem';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -16,423 +16,243 @@ const ProductDetail = () => {
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
 
-  // Local states
+  // Product states
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [imageError, setImageError] = useState({});
-
 
   // Media states
   const [selectedMedia, setSelectedMedia] = useState(0);
   const [isVideo, setIsVideo] = useState(false);
+  const [imageError, setImageError] = useState({});
 
   // Review states
-  const [hasPurchased, setHasPurchased] = useState(false);
-
-  // const [rating, setRating] = useState(0);
-  // const [hover, setHover] = useState(0);
-  // const [comment, setComment] = useState("");
-  // const [reviewError, setReviewError] = useState("");
-  // const [reviewSuccess, setReviewSuccess] = useState("");
-  // const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [comment, setComment] = useState("");
-  const [images, setImages] = useState([]);
-  const [reviewError, setReviewError] = useState("");
-  const [reviewSuccess, setReviewSuccess] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [cartItems, setCartItems] = useState([]);
-  const [purchaseStatus, setPurchaseStatus] = useState({
-    hasPurchased: false,
-    hasReviewed: false,
-    orderDate: null,
-    orderStatus: null,
+  const [reviews, setReviews] = useState([]);
+  const [productStats, setProductStats] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingCounts: {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0
+    }
   });
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [orderId, setOrderId] = useState(null);
 
-  const [cartItemsMap, setCartItemsMap] = useState({});
-  const [timeSpent, setTimeSpent] = useState(0);
-  const engagementTimeLimit = 10; // 10 seconds
+  // Cart states
+  const [cartItems, setCartItems] = useState([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  const handleViewProduct = (product) => {
-    const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-    const currentTime = new Date().getTime();
-    const timeLimit = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-
-    // Remove products older than 7 days
-    const filteredProducts = viewedProducts.filter(p => (currentTime - p.timestamp) < timeLimit);
-
-    // Check if the product is already in the recently viewed list
-    const existingProductIndex = filteredProducts.findIndex(p => p._id === product._id);
-
-    if (existingProductIndex !== -1) {
-      // If it exists, remove it and add it to the front
-      filteredProducts.splice(existingProductIndex, 1);
-    }
-
-    // Add the new product with a timestamp
-    filteredProducts.unshift({
-      ...product,
-      timestamp: currentTime // Store the current timestamp
-    });
-
-    // Limit the number of products to a maximum of 5
-    if (filteredProducts.length > 5) {
-      filteredProducts.pop(); // Remove the oldest product
-    }
-
-    localStorage.setItem('recentlyViewed', JSON.stringify(filteredProducts));
-  };
-
-   // Fetch product details
-   useEffect(() => {
-    const fetchProductDetails = async () => {
-      try {
-        const response = await axios.get(`/api/products/${id}`);
-        setProduct(response.data.product);
-        handleViewProduct(response.data.product); // Call the function here
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to fetch product details");
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchProductDetails();
-  }, [id]);
-
-    // Track time spent on the product detail page
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setTimeSpent(prev => prev + 1);
-      }, 1000);
-  
-      return () => clearInterval(timer);
-    }, []);
-  
-    // Call handleViewProduct if the user has spent enough time
-    useEffect(() => {
-      if (timeSpent >= engagementTimeLimit && product) {
-        handleViewProduct(product);
-      }
-    }, [timeSpent, product]);
-
-   // Fetch cart items when component mounts
-   useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        const response = await axios.get('/api/cart/getCartItems', {
-          withCredentials: true
-        });
-        if (response.data.success) {
-          const itemsMap = {};
-          response.data.cart.items.forEach(item => {
-            itemsMap[item.product._id] = item;
-          });
-          setCartItemsMap(itemsMap);
-        }
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-      }
-    };
-
     if (userData) {
       fetchCartItems();
-    } else {
-      setCartItemsMap({});
+      checkUserReview();
     }
-  }, [userData]);
+  }, [id, userData]);
 
-  const handleAddToCart = async (productId) => {
-    if (!userData) {
-      toast.error('Please login to add items to cart');
-      return;
-    }
-
+  const fetchProductDetails = async () => {
     try {
-      const response = await axios.post('/api/cart/add', {
-        productId,
-        quantity: 1
-      });
-      
-      if (response.data.success) {
-        dispatch(cartAdd());
-        const updatedCart = await axios.get('/api/cart/getCartItems');
-        const newItemsMap = {};
-        updatedCart.data.cart.items.forEach(item => {
-          newItemsMap[item.product._id] = item;
-        });
-        setCartItemsMap(newItemsMap);
-        toast.success('Added to cart!');
+      const response = await fetch(`/api/products/${id}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch product details');
       }
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      toast.error(error.message || 'Failed to add to cart');
+
+      setProduct(data.product);
+      if (data.product.images.length > 0) {
+        setIsVideo(isYoutubeLink(data.product.images[0]));
+      }
+      fetchReviews();
+      setLoading(false);
+    } catch (err) {
+      setError(err.message || "Failed to fetch product details");
+      setLoading(false);
     }
   };
 
-  const handleUpdateQuantity = async (productId, newQuantity, stock) => {
-    if (!userData) {
-      toast.error('Please login to update cart');
-      return;
+  const fetchReviews = async () => {
+    try {
+      const response = await fetch(`/api/reviews/products/${id}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch reviews');
+      }
+
+      setReviews(data.reviews);
+      setProductStats({
+        averageRating: parseFloat(data.stats.averageRating),
+        totalReviews: data.stats.totalReviews,
+        ratingCounts: data.stats.ratingCounts
+      });
+    } catch (error) {
+      console.error('Fetch reviews error:', error);
+      toast.error('Failed to load reviews');
+    }
+  };
+
+  const calculateProductStats = (reviewsList) => {
+    const stats = {
+      averageRating: 0,
+      totalReviews: reviewsList.length,
+      ratingCounts: {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0
+      }
+    };
+
+    reviewsList.forEach(review => {
+      stats.ratingCounts[review.rating]++;
+    });
+
+    if (stats.totalReviews > 0) {
+      const totalRating = reviewsList.reduce((sum, review) => sum + review.rating, 0);
+      stats.averageRating = (totalRating / stats.totalReviews).toFixed(1);
     }
 
+    return stats;
+  };
+
+  const checkUserReview = async () => {
     try {
-      if (newQuantity < 1) {
-        dispatch(cartRemove());
-        const response = await axios.delete(`/api/cart/remove/${productId}`);
-        if (response.data.success) {
-          const newItemsMap = { ...cartItemsMap };
-          delete newItemsMap[productId];
-          setCartItemsMap(newItemsMap);
-          toast.success('Item removed from cart');
+      const response = await fetch(`/api/reviews/user/product/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-        return;
-      }
-
-      if (newQuantity > stock) {
-        toast.error('Cannot exceed available stock');
-        return;
-      }
-
-      const response = await axios.put(`/api/cart/update/${productId}`, {
-        quantity: newQuantity
       });
+      const data = await response.json();
 
-      if (response.data.success) {
-        const updatedCart = await axios.get('/api/cart/getCartItems');
-        const newItemsMap = {};
-        updatedCart.data.cart.items.forEach(item => {
-          newItemsMap[item.product._id] = item;
-        });
-        setCartItemsMap(newItemsMap);
-        toast.success(`Quantity updated to ${newQuantity}`);
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check user review');
       }
+
+      setCanReview(data.canReview);
+      setHasReviewed(data.hasReviewed);
+      setOrderId(data.orderId);
     } catch (error) {
-      toast.error('Failed to update quantity');
+      console.error("Error checking user review:", error);
+      setCanReview(false);
+      setHasReviewed(false);
     }
   };
 
-  // Add this function to check if user has purchased the product
-  const checkPurchaseHistory = async () => {
+  const fetchCartItems = async () => {
     try {
-      const response = await axios.get(`/api/orders/check-purchase/${id}`, {
-        withCredentials: true,
+      const response = await fetch("/api/cart/getCartItems", {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
-      setPurchaseStatus(response.data);
-    } catch (error) {
-      setPurchaseStatus({
-        hasPurchased: false,
-        hasReviewed: false,
-        orderDate: null,
-        orderStatus: null,
-      });
-    }
-  };
-  //   if (!userData) {
-  //     toast.error('Please login to submit a review');
-  //     navigate('/login');
-  //     return;
-  //   }
+      const data = await response.json();
 
-  //   if (rating === 0) {
-  //     setReviewError('Please select a rating');
-  //     return;
-  //   }
-
-  //   if (!comment.trim()) {
-  //     setReviewError('Please write a review');
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setReviewError('');
-  //   setReviewSuccess('');
-
-  //   try {
-  //     const response = await axios.post(
-  //       `/api/products/${id}/reviews`,
-  //       {
-  //         rating,
-  //         comment
-  //       },
-  //       {
-  //         withCredentials: true
-  //       }
-  //     );
-
-  //     if (response.data.success) {
-  //       // Update product with new review
-  //       setProduct(prevProduct => ({
-  //         ...prevProduct,
-  //         reviews: [...prevProduct.reviews, response.data.review]
-  //       }));
-
-  //       // Reset form
-  //       setRating(0);
-  //       setComment('');
-  //       setReviewSuccess('Review submitted successfully!');
-  //       toast.success('Review submitted successfully!');
-
-  //       // Update purchase status to show that user has reviewed
-  //       setPurchaseStatus(prev => ({
-  //         ...prev,
-  //         hasReviewed: true
-  //       }));
-  //     }
-  //   } catch (error) {
-  //     setReviewError(error.response?.data?.message || 'Failed to submit review');
-  //     toast.error(error.response?.data?.message || 'Failed to submit review');
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setImages(files);
-};
-
-const handleReviewSubmit = async (e) => {
-  e.preventDefault();
-
-  if (rating === 0) {
-      setReviewError("Please select a rating");
-      return;
-  }
-
-  if (!comment.trim()) {
-      setReviewError("Please write a review");
-      return;
-  }
-
-  setIsSubmitting(true);
-  setReviewError("");
-  setReviewSuccess("");
-
-  const formData = new FormData();
-  formData.append("rating", rating);
-  formData.append("comment", comment);
-  images.forEach((image) => {
-      formData.append("images", image); // Append each image file
-  });
-
-  try {
-      const response = await axios.post(
-          `/api/reviews/products/${id}/reviews`,
-          // /products/:productId/reviews
-          formData,
-          {
-              withCredentials: true,
-              headers: {
-                  "Content-Type": "multipart/form-data", // Set the content type for file uploads
-              },
-          }
-      );
-
-      if (response.data.success) {
-          // Reset form
-          setRating(0);
-          setComment("");
-          setImages([]); // Reset images
-          setReviewSuccess("Review submitted successfully!");
-          toast.success("Review submitted successfully!");
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch cart items');
       }
-  } catch (error) {
-      setReviewError(error.response?.data?.message || "Failed to submit review");
-      toast.error(error.response?.data?.message || "Failed to submit review");
-  } finally {
-      setIsSubmitting(false);
-  }
-};
 
-  // const handleReviewSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   if (!userData) {
-  //     toast.error("Please login to submit a review");
-  //     navigate("/login");
-  //     return;
-  //   }
-
-  //   if (rating === 0) {
-  //     setReviewError("Please select a rating");
-  //     return;
-  //   }
-
-  //   if (!comment.trim()) {
-  //     setReviewError("Please write a review");
-  //     return;
-  //   }
-
-  //   if (comment.length < 5) {
-  //     setReviewError("Review must be at least 5 characters long");
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setReviewError("");
-  //   setReviewSuccess("");
-
-  //   try {
-  //     const response = await axios.post(
-  //       `/api/products/${id}/reviews`,
-  //       {
-  //         rating,
-  //         comment,
-  //       },
-  //       {
-  //         withCredentials: true,
-  //       }
-  //     );
-
-  //     if (response.data.success) {
-  //       // Update product with new review
-  //       setProduct((prevProduct) => ({
-  //         ...prevProduct,
-  //         reviews: [...prevProduct.reviews, response.data.review],
-  //       }));
-
-  //       // Reset form
-  //       setRating(0);
-  //       setComment("");
-  //       setReviewSuccess("Review submitted successfully and pending approval!");
-  //       toast.success("Review submitted successfully!");
-
-  //       // Update purchase status to show that user has reviewed
-  //       setPurchaseStatus((prev) => ({
-  //         ...prev,
-  //         hasReviewed: true,
-  //       }));
-  //     }
-  //   } catch (error) {
-  //     setReviewError(
-  //       error.response?.data?.message || "Failed to submit review"
-  //     );
-  //     toast.error(error.response?.data?.message || "Failed to submit review");
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
-  // Add this to your useEffect that loads product details
-  useEffect(() => {
-    if (userData) {
-      checkPurchaseHistory();
+      setCartItems(data.cart?.items || []);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      toast.error("Failed to load cart items");
     }
-  }, [userData, id]);
-
-  // Function to check if URL is a YouTube link
-  const isYoutubeLink = (url) => {
-    if (!url) return false;
-    return url.includes("youtube.com") || url.includes("youtu.be");
   };
 
-  // Function to extract YouTube video ID
+  const handleAddToCart = async () => {
+    if (!userData) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
+
+    setIsAddingToCart(true);
+    try {
+      const response = await fetch("/api/cart/add", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          productId: id,
+          quantity
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add to cart');
+      }
+
+      if (data.success) {
+        dispatch(cartAdd());
+        toast.success("Added to cart!");
+        fetchCartItems();
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to add to cart");
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleQuantityChange = (value) => {
+    const newQuantity = quantity + value;
+    if (newQuantity >= 1 && newQuantity <= product.stock) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  const handleReviewSubmit = async (formData) => {
+    try {
+      console.log('Submitting review:', formData);
+
+      const response = await fetch(`/api/reviews/products/${id}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          rating: formData.rating,
+          comment: formData.comment,
+          images: formData.images,
+          orderId: formData.orderId
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit review');
+      }
+
+      console.log('Review submission response:', data);
+
+      if (data.success) {
+        toast.success('Review submitted successfully!');
+        fetchReviews();
+        setHasReviewed(true);
+      }
+    } catch (error) {
+      console.error('Review submission error:', error);
+      toast.error(error.message || 'Failed to submit review');
+      throw error;
+    }
+  };
+
+  const isYoutubeLink = (url) => {
+    return url?.includes("youtube.com") || url?.includes("youtu.be");
+  };
+
   const getYoutubeVideoId = (url) => {
     if (!url) return null;
     const regExp =
@@ -441,171 +261,132 @@ const handleReviewSubmit = async (e) => {
     return match && match[2].length === 11 ? match[2] : null;
   };
 
-  // Handle thumbnail click
-  const handleMediaSelect = (index, mediaUrl) => {
-    setSelectedMedia(index);
-    setIsVideo(isYoutubeLink(mediaUrl));
-  };
-
-  // Fetch product details
-  useEffect(() => {
-    const fetchProductDetails = async () => {
-      try {
-        const response = await axios.get(`/api/products/${id}`);
-        setProduct(response.data.product);
-        // Check if first media is video
-        if (response.data.product.images.length > 0) {
-          setIsVideo(isYoutubeLink(response.data.product.images[0]));
-        }
-        setLoading(false);
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to fetch product details"
-        );
-        setLoading(false);
-      }
-    };
-
-    fetchProductDetails();
-  }, [id]);
-
-  // Fetch cart items<div className="mt-12 border-t pt-8">
-  const fetchCartItems = async () => {
+  const handleReviewDelete = async (reviewId) => {
     try {
-      const res = await axios.get("/api/cart/getCartItems", {
-        withCredentials: true,
-      });
-      if (res.data.success) {
-        setCartItems(res.data.cart?.items || []);
-      } else {
-        setCartItems([]);
-      }
+      // First find the review that's being deleted
+      const deletedReview = reviews.find(review => review._id === reviewId);
+      
+      // Remove review from UI immediately
+      const updatedReviews = reviews.filter(review => review._id !== reviewId);
+      setReviews(updatedReviews);
+      
+      // Update stats
+      setProductStats(calculateProductStats(updatedReviews));
+      
+      // Reset user's review status
+      setHasReviewed(false);
+      
+      // Optionally refresh reviews from server
+      await fetchReviews();
     } catch (error) {
-      setCartItems([]);
+      console.error('Error handling review deletion:', error);
+      toast.error('Error updating review statistics');
     }
   };
 
-  useEffect(() => {
-    if (userData) {
-      fetchCartItems();
-    }
-  }, [userData]);
+  const handleReviewLike = async (reviewId, isLiked) => {
+    // Find the review that's being liked/unliked
+    const reviewToUpdate = reviews.find(review => review._id === reviewId);
+    if (!reviewToUpdate) return;
 
-  // Handle quantity change
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value);
-    if (value > 0 && value <= product.stock) {
-      setQuantity(value);
+    // Check if user has already liked
+    const hasLiked = reviewToUpdate.likes?.includes(userData._id);
+
+    // Update the reviews state optimistically
+    setReviews(prev => prev.map(review => {
+        if (review._id === reviewId) {
+            const updatedLikes = hasLiked
+                ? review.likes.filter(id => id !== userData._id) // Remove like
+                : [...(review.likes || []), userData._id];       // Add like
+            
+            return {
+                ...review,
+                likes: updatedLikes,
+                likesCount: updatedLikes.length
+            };
+        }
+        return review;
+    }));
+
+    try {
+        const response = await fetch(`/api/reviews/${reviewId}/like`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) {
+            // If the API call fails, revert the optimistic update
+            await fetchReviews();
+            throw new Error('Failed to update like');
+        }
+    } catch (error) {
+        console.error('Like error:', error);
+        toast.error('Failed to update like');
+        // Revert changes on error
+        await fetchReviews();
     }
   };
 
-  const incrementQuantity = () => {
-    if (quantity < product.stock) {
-      setQuantity((prev) => prev + 1);
-    } else {
-      toast.error("Maximum stock limit reached");
-    }
-  };
-
-  const decrementQuantity = () => {
-    if (quantity > 1) {
-      setQuantity((prev) => prev - 1);
-    }
-  };
-
-  // Handle add to cart
-  // const handleAddToCart = async (productId) => {
-  //   if (!userData) {
-  //     toast.error("Please login to add items to cart");
-  //     navigate("/login");
-  //     return;
-  //   }
-
-  //   try {
-  //     const res = await axios.post(
-  //       "/api/cart/add",
-  //       {
-  //         productId,
-  //         quantity: quantity,
-  //       },
-  //       {
-  //         withCredentials: true,
-  //       }
-  //     );
-
-  //     if (res.data.success) {
-  //       dispatch(cartAdd());
-  //       toast.success("Added to cart successfully");
-  //       fetchCartItems();
-  //     }
-  //   } catch (error) {
-  //     toast.error(error.response?.data?.message || "Failed to add to cart");
-  //   }
-  // };
-
-  const isProductInCart = (productId) => {
-    return cartItems && cartItems.length > 0
-      ? cartItems.some((item) => item?.productId?._id === productId)
-      : false;
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!product) return <div>Product not found</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Left Column - Images */}
-        <div className="md:w-1/2">
-          <div className="mb-4 relative h-[400px]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Product Section */}
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Media Gallery */}
+        <div className="lg:w-1/2">
+          <div className="mb-4 relative h-[400px] md:h-[500px]">
             {isVideo ? (
               <YouTube
                 videoId={getYoutubeVideoId(product.images[selectedMedia])}
                 opts={{
                   width: "100%",
-                  height: "400",
-                  playerVars: {
-                    autoplay: 0,
-                  },
+                  height: "100%",
+                  playerVars: { autoplay: 0 },
                 }}
-                className="w-full h-full"
+                className="w-full h-full rounded-lg overflow-hidden"
               />
             ) : (
-              <img
+              <motion.img
                 src={product.images[selectedMedia]}
                 alt={product.name}
-                className={`w-full h-full object-contain ${
+                className={`w-full h-full object-contain rounded-lg ${
                   product.stock <= 0 ? "opacity-50 grayscale" : ""
                 }`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
                 onError={(e) => {
                   setImageError((prev) => ({ ...prev, [selectedMedia]: true }));
-                  e.target.src = "/placeholder-image.jpg"; // Add a placeholder image
+                  e.target.src = "/placeholder-image.jpg";
                 }}
               />
-            )}
-            {product.stock <= 0 && !isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-white text-gray-600 px-16 py-2 opacity-80 rounded-3xl border-2 border-gray-400 text-[15px]">
-                  Currently Unavailable
-                </span>
-              </div>
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          {/* Thumbnails */}
+          <div className="grid grid-cols-5 gap-2">
             {product.images.map((image, index) => (
-              <button
+              <motion.button
                 key={index}
-                onClick={() => handleMediaSelect(index, image)}
-                className={`border-2 rounded-md overflow-hidden relative aspect-square ${
+                onClick={() => {
+                  setSelectedMedia(index);
+                  setIsVideo(isYoutubeLink(image));
+                }}
+                className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                   selectedMedia === index
                     ? "border-blue-500"
                     : "border-gray-200"
                 }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 {isYoutubeLink(image) ? (
-                  <div className="relative w-full h-20">
+                  <div className="relative w-full h-full">
                     <img
                       src={`https://img.youtube.com/vi/${getYoutubeVideoId(
                         image
@@ -614,43 +395,48 @@ const handleReviewSubmit = async (e) => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
-                      <svg
-                        className="w-8 h-8 text-white"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
+                      <FaPlay className="text-white text-xl" />
                     </div>
                   </div>
                 ) : (
                   <img
                     src={image}
                     alt={`${product.name} thumbnail ${index + 1}`}
-                    className={`w-full h-20 object-contain ${
-                      product.stock <= 0 ? "opacity-50 grayscale" : ""
-                    }`}
-                    onError={(e) => {
-                      setImageError((prev) => ({ ...prev, [index]: true }));
-                      e.target.src = "/placeholder-image.jpg"; // Add a placeholder image
-                    }}
+                    className="w-full h-full object-cover"
                   />
                 )}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
 
-        {/* Right Column - Product Details */}
-        <div className="md:w-1/2">
+        {/* Product Info */}
+        <div className="lg:w-1/2">
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-          <div className="mb-4">
-            <span className="text-2xl font-semibold">₹{product.price}</span>
+          
+          {/* Rating Summary */}
+          <div className="flex items-center mb-4">
+            <div className="flex text-yellow-400">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <FaStar
+                  key={star}
+                  className={star <= productStats.averageRating ? "text-yellow-400" : "text-gray-300"}
+                />
+              ))}
+            </div>
+            <span className="ml-2 text-gray-600">
+              ({productStats.totalReviews} reviews)
+            </span>
+          </div>
+
+          {/* Price */}
+          <div className="mb-6">
+            <span className="text-3xl font-bold">₹{product.price}</span>
             <span className="text-gray-600 ml-2">per {product.unitType}</span>
           </div>
 
           {/* Stock Status */}
-          <div className="mb-4">
+          <div className="mb-6">
             <span
               className={`${
                 product.stock > 0 ? "text-green-600" : "text-red-600"
@@ -672,458 +458,129 @@ const handleReviewSubmit = async (e) => {
           </div>
 
           {/* Quantity Selector */}
-          {/* {product.stock > 0 && (
+          {product.stock > 0 && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quantity ({product.unitType})
+                Quantity
               </label>
-              <div className="flex items-center">
+              <div className="flex items-center space-x-4">
                 <button
-                  onClick={decrementQuantity}
-                  className="px-3 py-1 border rounded-l bg-gray-100 hover:bg-gray-200 transition-colors"
+                  onClick={() => handleQuantityChange(-1)}
+                  className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
                 >
-                  -
+                  <FaMinus />
                 </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={handleQuantityChange}
-                  className="w-20 text-center border-t border-b"
-                  min="1"
-                  max={product.stock}
-                />
+                <span className="text-xl font-medium">{quantity}</span>
                 <button
-                  onClick={incrementQuantity}
-                  className="px-3 py-1 border rounded-r bg-gray-100 hover:bg-gray-200 transition-colors"
+                  onClick={() => handleQuantityChange(1)}
+                  className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
                 >
-                  +
+                  <FaPlus />
                 </button>
               </div>
             </div>
-          )} */}
+          )}
 
           {/* Add to Cart Button */}
-          {/* <button
-            onClick={() => handleAddToCart(product._id)}
-            disabled={product.stock === 0 || isProductInCart(product._id)}
-            className={`w-full py-3 px-6 rounded-lg text-white font-semibold transition-colors ${
+          <motion.button
+            onClick={handleAddToCart}
+            disabled={product.stock === 0 || isAddingToCart}
+            className={`w-full py-3 px-6 rounded-lg flex items-center justify-center space-x-2 ${
               product.stock === 0
                 ? "bg-gray-400 cursor-not-allowed"
-                : isProductInCart(product._id)
-                ? "bg-green-600"
                 : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            } text-white font-medium`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            {product.stock <=0
-              ? "Out of Stock"
-              : isProductInCart(product._id)
-              ? "In Cart"
-              : "Add to Cart"}
-          </button> */}
-
-          {/* Add to Cart Section */}
-          {product.stock > 0 ? (
-                <AnimatePresence mode="wait">
-                  {cartItemsMap[product._id] ? (
-                    <motion.div
-                      key="quantity-controls"
-                      className="flex items-center border-2 w-[50%] border-red-600 justify-between rounded-md overflow-hidden"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "backOut" }}
-                    >
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleUpdateQuantity(
-                          product._id,
-                          cartItemsMap[product._id].quantity - 1,
-                          product.stock
-                        )}
-                        className="px-6 py-2 bg-red-600 text-white font-medium text-xl"
-                      >
-                        -
-                      </motion.button>
-                      
-                      <div className="relative flex items-center justify-center min-w-[60px]">
-                        <AnimatePresence mode="wait">
-                          {/* Background Pulse */}
-                          <motion.div
-                            key={`pulse-${cartItemsMap[product._id].quantity}`}
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{
-                              scale: [1, 1.5],
-                              opacity: [0.3, 0],
-                            }}
-                            transition={{
-                              duration: 0.4,
-                              ease: "easeOut",
-                            }}
-                            className="absolute inset-0 bg-red-100 rounded-full"
-                          />
-                          
-                          {/* Quantity Number */}
-                          <motion.span
-                            key={cartItemsMap[product._id].quantity}
-                            initial={{ scale: 0.5, y: 20, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.5, y: -20, opacity: 0 }}
-                            transition={{ 
-                              duration: 0.3,
-                              ease: "backOut"
-                            }}
-                            className="absolute font-medium text-lg z-10"
-                          >
-                            {cartItemsMap[product._id].quantity}
-                          </motion.span>
-                        </AnimatePresence>
-                      </div>
-
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleUpdateQuantity(
-                          product._id,
-                          cartItemsMap[product._id].quantity + 1,
-                          product.stock
-                        )}
-                        className="px-6 py-2 bg-red-600 text-white font-medium text-xl"
-                      >
-                        +
-                      </motion.button>
-                    </motion.div>
-                  ) : (
-                    <motion.button
-                      key="add-button"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "backOut" }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAddToCart(product._id)}
-                      className="w-[70%] py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 overflow-hidden"
-                    >
-                      <motion.span
-                        initial={{ y: 20 }}
-                        animate={{ y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        Add to Cart
-                      </motion.span>
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              ) : (
-                <div className="text-red-500 text-center py-2">
-                  Out of Stock
-                </div>
-              )}
-
-          {/* Product Details */}
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Product Details</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">Category</p>
-                <p className="font-medium">{product.category}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Unit Size</p>
-                <p className="font-medium">
-                  {product.unitSize} {product.unitType}
-                </p>
-              </div>
-              {/* <div>
-                <p className="text-gray-600">Seller</p>
-                <p className="font-medium">
-                  {product.seller.firstname} {product.seller.lastname}
-                </p>
-              </div> */}
-              <div className="mb-4">
-      <h2 className="text-xl font-semibold">Seller Information</h2>
-      <Link to={`/sellers/${product.seller._id}`} className="text-blue-500">
-        {product.seller.firstname} {product.seller.lastname}
-      </Link>
-    </div>
-              {product.platformType.includes("b2b") && (
-                <>
-                  <div>
-                    <p className="text-gray-600">Min Order Quantity</p>
-                    <p className="font-medium">{product.minOrderQuantity}</p>
-                  </div>
-                  {product.maxOrderQuantity && (
-                    <div>
-                      <p className="text-gray-600">Max Order Quantity</p>
-                      <p className="font-medium">{product.maxOrderQuantity}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+            <FaShoppingCart />
+            <span>
+              {isAddingToCart
+                ? "Adding..."
+                : product.stock === 0
+                ? "Out of Stock"
+                : "Add to Cart"}
+            </span>
+          </motion.button>
         </div>
       </div>
 
       {/* Reviews Section */}
-      {/* <div className="mt-12 border-t pt-8">
-        <h2 className="text-2xl font-semibold mb-6">Customer Reviews</h2>
-
-        {userData ? (
-          purchaseStatus.hasPurchased ? (
-            purchaseStatus.hasReviewed ? (
-              <div className="mb-8 p-4 bg-gray-50 rounded-md">
-                <p className="text-gray-600">
-                  You have already reviewed this product.
-                </p>
+      <div className="mt-16">
+        <h2 className="text-3xl font-bold mb-8">Customer Reviews</h2>
+        
+        {/* Review Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center mb-4">
+              <span className="text-4xl font-bold">{productStats.averageRating}</span>
+              <div className="ml-4">
+                <div className="flex text-yellow-400">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={star <= productStats.averageRating ? "text-yellow-400" : "text-gray-300"}
+                    />
+                  ))}
+                </div>
+                <p className="text-gray-600 mt-1">{productStats.totalReviews} reviews</p>
               </div>
-            ) : (
-              <form onSubmit={handleReviewSubmit} className="mb-8">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rating
-                  </label>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, index) => {
-                      const ratingValue = index + 1;
-                      return (
-                        <button
-                          type="button"
-                          key={ratingValue}
-                          className={`text-2xl transition-colors ${
-                            ratingValue <= (hover || rating)
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                          onClick={() => setRating(ratingValue)}
-                          onMouseEnter={() => setHover(ratingValue)}
-                          onMouseLeave={() => setHover(0)}
-                        >
-                          <FaStar />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label
-                    htmlFor="comment"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Your Review
-                  </label>
-                  <textarea
-                    id="comment"
-                    rows="4"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Write your review here..."
-                  />
-                </div>
-
-                {reviewError && (
-                  <div className="mb-4 text-red-600">{reviewError}</div>
-                )}
-
-                {reviewSuccess && (
-                  <div className="mb-4 text-green-600">{reviewSuccess}</div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 rounded-md text-white font-medium transition-colors ${
-                    isSubmitting
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {isSubmitting ? "Submitting..." : "Submit Review"}
-                </button>
-              </form>
-            )
-          ) : (
-            <div className="mb-8 p-4 bg-gray-50 rounded-md">
-              <p className="text-gray-600">
-                Only customers who have purchased this product can leave a
-                review.
-              </p>
             </div>
-          )
-        ) : (
-          <div className="mb-8 p-4 bg-gray-50 rounded-md">
-            <p className="text-gray-600">
-              Please{" "}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                login
-              </Link>{" "}
-              to leave a review.
+            
+            {/* Rating Breakdown */}
+            <div className="space-y-2">
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <div key={rating} className="flex items-center">
+                  <span className="w-12">{rating} star</span>
+                  <div className="flex-1 mx-4 h-2 bg-gray-200 rounded">
+                    <div
+                      className="h-2 bg-yellow-400 rounded"
+                      style={{
+                        width: `${(productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0}%`
+                      }}
+                    />
+                  </div>
+                  <span className="w-12 text-right">
+                    {Math.round((productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Review Form */}
+        {userData && canReview && !hasReviewed && (
+          <ProductReviewSection
+            productId={id}
+            userId={userData._id}
+            orderId={orderId}
+            onReviewSubmit={handleReviewSubmit}
+          />
+        )}
+
+        {userData && !canReview && !hasReviewed && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+            <p className="text-yellow-700">
+              You need to purchase and receive this product before you can write a review.
             </p>
           </div>
         )}
 
+        {/* Review List */}
         <div className="space-y-6">
-          {product.reviews && product.reviews.length > 0 ? (
-            product.reviews.map((review) => (
-              <div key={review._id} className="border-b pb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <span className="font-medium mr-2">
-                      {review.user.firstname} {review.user.lastname}
-                    </span>
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, index) => (
-                        <FaStar
-                          key={index}
-                          className={
-                            index < review.rating
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-gray-700">{review.comment}</p>
-                <div className="mt-2">
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                    Verified Purchase
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No reviews yet.</p>
-          )}
+          {reviews.map((review) => (
+            <ReviewItem
+              key={review._id}
+              review={review}
+              currentUserId={userData?._id}
+              onDelete={handleReviewDelete}
+              onLike={handleReviewLike}
+              refreshReviews={fetchReviews}
+            />
+          ))}
         </div>
-      </div> */}
-
-<div className="mt-12 border-t pt-8">
-            <h2 className="text-2xl font-semibold mb-6">Customer Reviews</h2>
-
-            <form onSubmit={handleReviewSubmit} className="mb-8">
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Rating
-                    </label>
-                    <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, index) => {
-                            const ratingValue = index + 1;
-                            return (
-                                <button
-                                    type="button"
-                                    key={ratingValue}
-                                    className={`text-2xl transition-colors ${
-                                        ratingValue <= (hover || rating)
-                                            ? "text-yellow-400"
-                                            : "text-gray-300"
-                                    }`}
-                                    onClick={() => setRating(ratingValue)}
-                                    onMouseEnter={() => setHover(ratingValue)}
-                                    onMouseLeave={() => setHover(0)}
-                                >
-                                    <FaStar />
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="mb-4">
-                    <label
-                        htmlFor="comment"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                        Your Review
-                    </label>
-                    <textarea
-                        id="comment"
-                        rows="4"
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Write your review here..."
-                    />
-                </div>
-
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Upload Images
-                    </label>
-                    <input
-                        type="file"
-                        multiple
-                        onChange={handleImageChange}
-                        className="border border-gray-300 rounded-md p-2"
-                    />
-                </div>
-
-                {reviewError && (
-                    <div className="mb-4 text-red-600">{reviewError}</div>
-                )}
-
-                {reviewSuccess && (
-                    <div className="mb-4 text-green-600">{reviewSuccess}</div>
-                )}
-
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`px-4 py-2 rounded-md text-white font-medium transition-colors ${
-                        isSubmitting
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                >
-                    {isSubmitting ? "Submitting..." : "Submit Review"}
-                </button>
-            </form>
-
-            {/* Render existing reviews */}
-            {/* <div className="space-y-6">
-                {product.reviews && product.reviews.length > 0 ? (
-                    product.reviews.map((review) => (
-                        <div key={review._id} className="border-b pb-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center">
-                                    <span className="font-medium mr-2">
-                                        {review.buyer ? `${review.buyer.firstname} ${review.buyer.lastname}` : "Anonymous"}
-                                    </span>
-                                    <div className="flex text-yellow-400">
-                                        {[...Array(5)].map((_, index) => (
-                                            <FaStar
-                                                key={index}
-                                                className={
-                                                    index < review.rating
-                                                        ? "text-yellow-400"
-                                                        : "text-gray-300"
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                    {new Date(review.createdAt).toLocaleDateString()}
-                                </span>
-                            </div>
-                            <p className="text-gray-700">{review.comment}</p>
-                            <div className="mt-2">
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                    Verified Purchase
-                                </span>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-gray-500">No reviews yet.</p>
-                )}
-            </div> */}
-            <ReviewComponent productId={product._id} userId={userData._id} />
-        </div>
+      </div>
     </div>
   );
 };
