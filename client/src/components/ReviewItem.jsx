@@ -1,8 +1,55 @@
 import React, { useState } from 'react';
 import { FaStar, FaHeart, FaEdit, FaTrash, FaRegHeart } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+
+const ImageWithSkeleton = ({ src, alt }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    return (
+        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+            {/* Skeleton loader */}
+            <AnimatePresence>
+                {isLoading && (
+                    <motion.div
+                        initial={{ opacity: 0.6 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200"
+                        style={{
+                            backgroundSize: '200% 100%',
+                            animation: 'shimmer 1.5s infinite linear',
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Actual image */}
+            <img
+                src={src}
+                alt={alt}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    isLoading ? 'opacity-0' : 'opacity-100'
+                } hover:scale-105 transition-transform duration-300`}
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                    setIsLoading(false);
+                    setError(true);
+                }}
+            />
+
+            {/* Error state */}
+            {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+                    <span>Failed to load image</span>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ReviewItem = ({ 
     review, 
@@ -254,13 +301,11 @@ const ReviewItem = ({
                         {review.images?.length > 0 && (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                                 {review.images.map((image, index) => (
-                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
-                                        <img
-                                            src={image}
-                                            alt={`Review ${index + 1}`}
-                                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                        />
-                                    </div>
+                                    <ImageWithSkeleton
+                                        key={index}
+                                        src={image}
+                                        alt={`Review ${index + 1}`}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -278,5 +323,22 @@ const ReviewItem = ({
         </motion.div>
     );
 };
+
+// Add shimmer animation keyframes to your global CSS or style tag
+const shimmerStyles = `
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+`;
+
+// Add style tag to document head
+const styleSheet = document.createElement("style");
+styleSheet.innerText = shimmerStyles;
+document.head.appendChild(styleSheet);
 
 export default ReviewItem; 
