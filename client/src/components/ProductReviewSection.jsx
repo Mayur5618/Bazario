@@ -11,6 +11,12 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
     const [hoverRating, setHoverRating] = useState(0);
 
     const compressImage = async (file) => {
+        // Check file size before compression (5MB limit)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error('Image size should be less than 5MB');
+        }
+
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -20,9 +26,9 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
                     let width = img.width;
                     let height = img.height;
 
-                    // Max dimensions
-                    const MAX_WIDTH = 1024;
-                    const MAX_HEIGHT = 1024;
+                    // Max dimensions - reduced for better compression
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
 
                     if (width > height) {
                         if (width > MAX_WIDTH) {
@@ -42,15 +48,32 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Get base64 string without the data URL prefix
-                    canvas.toBlob((blob) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64String = reader.result;
-                            resolve(base64String);
-                        };
-                        reader.readAsDataURL(blob);
-                    }, 'image/jpeg', 0.7);
+                    // Compress with lower quality and maximum size check
+                    const compressImage = (quality = 0.7) => {
+                        return new Promise((resolve) => {
+                            canvas.toBlob((blob) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    const base64String = reader.result;
+                                    // Check if the compressed size is still too large
+                                    if (base64String.length > 1024 * 1024) { // If larger than 1MB
+                                        if (quality > 0.1) {
+                                            // Try again with lower quality
+                                            resolve(compressImage(quality - 0.1));
+                                        } else {
+                                            resolve(base64String); // Use the smallest possible size
+                                        }
+                                    } else {
+                                        resolve(base64String);
+                                    }
+                                };
+                                reader.readAsDataURL(blob);
+                            }, 'image/jpeg', quality);
+                        });
+                    };
+
+                    // Start compression with initial quality
+                    compressImage().then(resolve);
                 };
                 img.src = event.target.result;
             };
@@ -66,22 +89,57 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
             return;
         }
 
+        // Check total size of all files
+        const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+        if (totalSize > 10 * 1024 * 1024) { // 10MB total limit
+            toast.error('Total image size should be less than 10MB');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const compressedImages = await Promise.all(
                 files.map(async (file) => {
-                    const compressedBase64 = await compressImage(file);
-                    return {
-                        url: compressedBase64,
-                        file: file
-                    };
+                    try {
+                        // Additional file type validation
+                        if (!file.type.startsWith('image/')) {
+                            toast.error(`${file.name} is not a valid image file`);
+                            return null;
+                        }
+
+                        const compressedBase64 = await compressImage(file);
+                        
+                        // Check compressed size
+                        if (compressedBase64.length > 2 * 1024 * 1024) { // 2MB limit after compression
+                            toast.error(`${file.name} is too large even after compression`);
+                            return null;
+                        }
+
+                        return {
+                            url: compressedBase64,
+                            file: file
+                        };
+                    } catch (error) {
+                        toast.error(`Error processing ${file.name}: ${error.message}`);
+                        return null;
+                    }
                 })
             );
 
-            setImages(prev => [...prev, ...compressedImages]);
+            // Filter out failed compressions
+            const validImages = compressedImages.filter(img => img !== null);
+            
+            // Check if any images were successfully processed
+            if (validImages.length === 0) {
+                toast.error('No valid images were processed');
+                return;
+            }
+
+            setImages(prev => [...prev, ...validImages]);
+            toast.success(`Successfully added ${validImages.length} image${validImages.length > 1 ? 's' : ''}`);
         } catch (error) {
             console.error('Error processing images:', error);
-            toast.error('Error processing images');
+            toast.error('Error processing images. Please try smaller images.');
         } finally {
             setIsSubmitting(false);
         }

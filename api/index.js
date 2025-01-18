@@ -11,6 +11,7 @@ import cors from "cors";
 import searchRoutes from './routes/search.route.js';
 import reviewRoutes from './routes/review.routes.js';
 import bodyParser from 'body-parser';
+
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
   .then(() => {
@@ -20,31 +21,31 @@ mongoose
     console.log(error);
   });
 
-
 const app = express();
-app.use(cookieParser())
+
+// Configure middleware BEFORE routes
+app.use(cookieParser());
 app.use(cors({
     origin: 'http://localhost:5173',
     credentials: true
-}))
-app.use(express.json());
+}));
 
+// Set body size limits BEFORE any routes
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Define routes AFTER middleware
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/requests', requestRoutes); 
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-// If you're using body-parser separately
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
 
+// Error handling middleware should be last
 app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
