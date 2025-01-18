@@ -93,12 +93,20 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Client-side validation
         if (!rating) {
             toast.error('Please select a rating');
             return;
         }
+        
         if (!comment.trim()) {
             toast.error('Please write a review');
+            return;
+        }
+
+        if (comment.trim().length < 5) {
+            toast.error('Review must be at least 5 characters long');
             return;
         }
 
@@ -118,8 +126,18 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
             setComment('');
             setImages([]);
         } catch (error) {
-            console.error('Submit review error:', error);
-            toast.error(error.message || 'Failed to submit review');
+            // Extract meaningful error message
+            let errorMessage = 'Failed to submit review';
+            
+            if (error.message.includes('validation failed')) {
+                if (error.message.includes('comment')) {
+                    errorMessage = 'Review must be at least 5 characters long';
+                } else if (error.message.includes('rating')) {
+                    errorMessage = 'Please select a valid rating (1-5)';
+                }
+            }
+            
+            toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

@@ -213,39 +213,44 @@ const ProductDetail = () => {
 
   const handleReviewSubmit = async (formData) => {
     try {
-      console.log('Submitting review:', formData);
+        const response = await fetch(`/api/reviews/products/${id}/reviews`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                rating: formData.rating,
+                comment: formData.comment,
+                images: formData.images,
+                orderId: formData.orderId
+            })
+        });
 
-      const response = await fetch(`/api/reviews/products/${id}/reviews`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          rating: formData.rating,
-          comment: formData.comment,
-          images: formData.images,
-          orderId: formData.orderId
-        })
-      });
+        const data = await response.json();
 
-      const data = await response.json();
+        if (!response.ok) {
+            let errorMessage = data.message || 'Failed to submit review';
+            
+            // Handle specific validation errors
+            if (data.error?.includes('validation failed')) {
+                if (data.error.includes('comment')) {
+                    errorMessage = 'Review must be at least 5 characters long';
+                } else if (data.error.includes('rating')) {
+                    errorMessage = 'Please select a valid rating (1-5)';
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit review');
-      }
-
-      console.log('Review submission response:', data);
-
-      if (data.success) {
-        toast.success('Review submitted successfully!');
-        fetchReviews();
-        setHasReviewed(true);
-      }
+        if (data.success) {
+            toast.success('Review submitted successfully!');
+            fetchReviews();
+            setHasReviewed(true);
+        }
     } catch (error) {
-      console.error('Review submission error:', error);
-      toast.error(error.message || 'Failed to submit review');
-      throw error;
+        throw error; // Let ProductReviewSection handle the error
     }
   };
 
