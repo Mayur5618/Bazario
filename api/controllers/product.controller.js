@@ -492,4 +492,34 @@ export const getProduct = async (req, res) => {
 //     }
 // };
 
+// Add this new controller function
+export const getBulkProducts = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+
+    if (!Array.isArray(productIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product IDs must be provided as an array'
+      });
+    }
+
+    const products = await Product.find({
+      '_id': { $in: productIds }
+    }).populate('seller', 'firstname lastname');
+
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    console.error('Bulk products fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch products',
+      error: error.message
+    });
+  }
+};
+
 export default router;

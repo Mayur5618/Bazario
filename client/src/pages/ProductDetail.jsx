@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay } from "react-icons/fa";
+import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { cartAdd } from "../store/cartSlice";
-import { motion } from "framer-motion";
+import { cartAdd, cartRemove } from "../store/cartSlice";
+import { motion, AnimatePresence } from "framer-motion";
 import ProductReviewSection from "../components/ProductReviewSection";
 import YouTube from "react-youtube";
 import ReviewItem from '../components/ReviewItem';
+import { addToWishlist, removeFromWishlist } from "../store/wishlistSlice";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const isInWishlist = wishlistItems.includes(id);
 
   // Product states
   const [product, setProduct] = useState(null);
@@ -47,12 +50,14 @@ const ProductDetail = () => {
   // Cart states
   const [cartItems, setCartItems] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartItem, setCartItem] = useState(null);
 
   useEffect(() => {
     fetchProductDetails();
     if (userData) {
       fetchCartItems();
       checkUserReview();
+      fetchCartItem();
     }
   }, [id, userData]);
 
@@ -166,6 +171,22 @@ const ProductDetail = () => {
     }
   };
 
+  const fetchCartItem = async () => {
+    try {
+      const response = await axios.get("/api/cart/getCartItems", {
+        withCredentials: true,
+      });
+      if (response.data.success) {
+        const foundItem = response.data.cart.items.find(
+          item => item.product._id === id
+        );
+        setCartItem(foundItem);
+      }
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!userData) {
       toast.error("Please login to add items to cart");
@@ -174,33 +195,63 @@ const ProductDetail = () => {
 
     setIsAddingToCart(true);
     try {
-      const response = await fetch("/api/cart/add", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          productId: id,
-          quantity
-        })
+      const response = await axios.post("/api/cart/add", {
+        productId: id,
+        quantity: 1,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to add to cart');
-      }
-
-      if (data.success) {
+      if (response.data.success) {
         dispatch(cartAdd());
+        const updatedCart = await axios.get("/api/cart/getCartItems");
+        const updatedItem = updatedCart.data.cart.items.find(
+          item => item.product._id === id
+        );
+        setCartItem(updatedItem);
         toast.success("Added to cart!");
-        fetchCartItems();
       }
     } catch (error) {
-      toast.error(error.message || "Failed to add to cart");
+      toast.error(error.response?.data?.message || "Failed to add to cart");
     } finally {
       setIsAddingToCart(false);
+    }
+  };
+
+  const handleUpdateQuantity = async (newQuantity) => {
+    if (!userData) {
+      toast.error("Please login to update cart");
+      return;
+    }
+
+    try {
+      if (newQuantity < 1) {
+        dispatch(cartRemove());
+        const response = await axios.delete(`/api/cart/remove/${id}`);
+        if (response.data.success) {
+          setCartItem(null);
+          toast.success("Item removed from cart");
+        }
+        return;
+      }
+
+      if (newQuantity > product.stock) {
+        toast.error("Cannot exceed available stock");
+        return;
+      }
+
+      const response = await axios.put(`/api/cart/update/${id}`, {
+        quantity: newQuantity,
+      });
+
+      if (response.data.success) {
+        const updatedCart = await axios.get("/api/cart/getCartItems");
+        const updatedItem = updatedCart.data.cart.items.find(
+          item => item.product._id === id
+        );
+        setCartItem(updatedItem);
+        toast.success(`Quantity updated to ${newQuantity}`);
+      }
+    } catch (error) {
+      toast.error("Failed to update quantity");
     }
   };
 
@@ -342,6 +393,21 @@ const ProductDetail = () => {
     }
   };
 
+  const handleWishlist = () => {
+    if (!userData) {
+      toast.error("Please login to manage wishlist");
+      return;
+    }
+
+    if (isInWishlist) {
+      dispatch(removeFromWishlist(id));
+      toast.success("Removed from wishlist");
+    } else {
+      dispatch(addToWishlist(id));
+      toast.success("Added to wishlist");
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>;
@@ -452,20 +518,146 @@ const ProductDetail = () => {
               <span className="text-gray-600 ml-2">per {product.unitType}</span>
             </div>
 
-            {/* Stock Status */}
-            <div className="mb-6">
-              <span
-                className={`${
-                  product.stock > 0 ? "text-green-600" : "text-red-600"
-                } font-semibold`}
+            {/* Stock Status - Improved */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Stock Status</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {product.stock > 0 ? (
+                      <>
+                        <span className="text-green-600 font-medium">{product.stock}</span>
+                        <span> {product.unitType}s available</span>
+                      </>
+                    ) : (
+                      <span className="text-red-600">Out of Stock</span>
+                    )}
+                  </p>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {product.stock > 10 
+                    ? "Plenty in stock"
+                    : product.stock > 5 
+                    ? "Limited stock"
+                    : product.stock > 0 
+                    ? "Low stock"
+                    : "Currently unavailable"}
+                </div>
+              </div>
+            </div>
+
+            {/* Cart and Wishlist Controls */}
+            <div className="mt-6 flex gap-3">
+              <div className="flex-1">
+                {product.stock > 0 ? (
+                  <AnimatePresence mode="wait">
+                    {cartItem ? (
+                      <motion.div
+                        key="quantity-controls"
+                        className="flex items-center border-2 border-blue-600 justify-between rounded-xl overflow-hidden"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "backOut" }}
+                      >
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleUpdateQuantity(cartItem.quantity - 1)}
+                          className="px-6 py-3 bg-blue-600 text-white font-medium text-xl"
+                        >
+                          -
+                        </motion.button>
+
+                        <div className="relative flex items-center justify-center min-w-[60px]">
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={`pulse-${cartItem.quantity}`}
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{
+                                scale: [1, 1.5],
+                                opacity: [0.3, 0],
+                              }}
+                              transition={{
+                                duration: 0.4,
+                                ease: "easeOut",
+                              }}
+                              className="absolute inset-0 bg-blue-100 rounded-full"
+                            />
+                            <motion.span
+                              key={cartItem.quantity}
+                              initial={{ scale: 0.5, y: 20, opacity: 0 }}
+                              animate={{ scale: 1, y: 0, opacity: 1 }}
+                              exit={{ scale: 0.5, y: -20, opacity: 0 }}
+                              transition={{
+                                duration: 0.3,
+                                ease: "backOut",
+                              }}
+                              className="absolute font-medium text-xl z-10"
+                            >
+                              {cartItem.quantity}
+                            </motion.span>
+                          </AnimatePresence>
+                        </div>
+
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleUpdateQuantity(cartItem.quantity + 1)}
+                          className="px-6 py-3 bg-blue-600 text-white font-medium text-xl"
+                          disabled={cartItem.quantity >= product.stock}
+                        >
+                          +
+                        </motion.button>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="add-button"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "backOut" }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAddToCart}
+                        className="w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                        disabled={isAddingToCart}
+                      >
+                        {isAddingToCart ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                          />
+                        ) : (
+                          <>
+                            <FaShoppingCart className="text-xl" />
+                            <span>Add to Cart</span>
+                          </>
+                        )}
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                ) : (
+                  <div className="text-red-500 text-center py-3 bg-red-50 rounded-xl">
+                    Out of Stock
+                  </div>
+                )}
+              </div>
+
+              {/* Wishlist Button */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleWishlist}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl border-2 transition-colors ${
+                  isInWishlist 
+                    ? 'border-red-500 bg-red-50 text-red-500' 
+                    : 'border-gray-200 hover:border-red-500 hover:bg-red-50 text-gray-400 hover:text-red-500'
+                }`}
               >
-                {product.stock > 0 ? "In Stock" : "Out of Stock"}
-              </span>
-              {product.stock > 0 && (
-                <span className="text-gray-600 ml-2">
-                  ({product.stock} {product.unitType}s available)
-                </span>
-              )}
+                {isInWishlist ? (
+                  <FaHeart className="text-xl" />
+                ) : (
+                  <FaRegHeart className="text-xl" />
+                )}
+              </motion.button>
             </div>
 
             {/* Description */}
@@ -473,52 +665,6 @@ const ProductDetail = () => {
               <h2 className="text-xl font-semibold mb-2">Description</h2>
               <p className="text-gray-700">{product.description}</p>
             </div>
-
-            {/* Quantity Selector */}
-            {product.stock > 0 && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => handleQuantityChange(-1)}
-                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
-                  >
-                    <FaMinus />
-                  </button>
-                  <span className="text-xl font-medium">{quantity}</span>
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
-                  >
-                    <FaPlus />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Add to Cart Button */}
-            <motion.button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0 || isAddingToCart}
-              className={`w-full py-3 px-6 rounded-lg flex items-center justify-center space-x-2 ${
-                product.stock === 0
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } text-white font-medium`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <FaShoppingCart />
-              <span>
-                {isAddingToCart
-                  ? "Adding..."
-                  : product.stock === 0
-                  ? "Out of Stock"
-                  : "Add to Cart"}
-              </span>
-            </motion.button>
           </div>
         </div>
       </div>

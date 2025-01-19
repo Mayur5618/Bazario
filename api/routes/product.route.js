@@ -11,6 +11,7 @@ import {
   getProduct,
   getProducts,
   updateProduct,
+  getBulkProducts,
 } from "../controllers/product.controller.js";
 import { createReview } from "../controllers/review.controller.js";
 
@@ -45,5 +46,7 @@ router.get("/b2b/products", protect, checkPlatformAccess("b2b"), getProducts);
 router.get("/b2c/products", protect, checkPlatformAccess("b2c"), getProducts);
 
 router.post('/:productId/reviews', protect, createReview);
+
+router.post('/bulk', getBulkProducts);
 
 export default router;
