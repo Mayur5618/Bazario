@@ -112,74 +112,76 @@ const Wishlist = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wishlistProducts.map((product) => (
-            <motion.div
-              key={product._id}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
-            >
-              <Link to={`/product/${product._id}`} className="block relative">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="absolute top-2 right-2">
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleRemoveFromWishlist(product._id);
-                    }}
-                    className="p-2 rounded-full bg-white shadow-md text-red-500 hover:bg-red-50"
-                  >
-                    <FaHeart className="w-5 h-5" />
-                  </motion.button>
-                </div>
-              </Link>
-
-              <div className="p-4">
-                <Link to={`/product/${product._id}`}>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {product.name}
-                  </h3>
-                </Link>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-xl font-bold text-gray-900">
-                    ₹{product.price}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    per {product.unitType}
-                  </div>
-                </div>
-
-                {product.stock > 0 ? (
-                  cartItemsMap[product._id] ? (
-                    <div className="text-green-600 text-sm font-medium">
-                      ✓ Added to Cart
-                    </div>
-                  ) : (
+        <div className="flex justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max justify-items-center">
+            {wishlistProducts.map((product) => (
+              <motion.div
+                key={product._id}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 w-full max-w-[300px]"
+              >
+                <Link to={`/product/${product._id}`} className="block relative">
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 right-2">
                     <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAddToCart(product._id)}
-                      className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRemoveFromWishlist(product._id);
+                      }}
+                      className="p-2 rounded-full bg-white shadow-md text-red-500 hover:bg-red-50"
                     >
-                      <FaShoppingCart />
-                      <span>Add to Cart</span>
+                      <FaHeart className="w-5 h-5" />
                     </motion.button>
-                  )
-                ) : (
-                  <div className="text-red-500 text-sm font-medium">
-                    Out of Stock
                   </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
+                </Link>
+
+                <div className="p-4">
+                  <Link to={`/product/${product._id}`}>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {product.name}
+                    </h3>
+                  </Link>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-xl font-bold text-gray-900">
+                      ₹{product.price}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      per {product.unitType}
+                    </div>
+                  </div>
+
+                  {product.stock > 0 ? (
+                    cartItemsMap[product._id] ? (
+                      <div className="text-green-600 text-sm font-medium">
+                        ✓ Added to Cart
+                      </div>
+                    ) : (
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleAddToCart(product._id)}
+                        className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                      >
+                        <FaShoppingCart />
+                        <span>Add to Cart</span>
+                      </motion.button>
+                    )
+                  ) : (
+                    <div className="text-red-500 text-sm font-medium">
+                      Out of Stock
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       )}
     </div>
