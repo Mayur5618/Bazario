@@ -8,6 +8,8 @@ import { cartAdd, cartRemove } from "../store/cartSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/catelog.css";
 import "../styles/recentlyViewed.css";
+import { addToWishlist, removeFromWishlist } from '../store/wishlistSlice';
+import { FaHeart, FaRegHeart } from 'react-icons/fa';
 
 const ProductCatalog = () => {
   const [products, setProducts] = useState([]);
@@ -17,6 +19,7 @@ const ProductCatalog = () => {
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
   const [cartItemsMap, setCartItemsMap] = useState({});
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
 
   // Fetch cart items when component mounts
   useEffect(() => {
@@ -114,6 +117,23 @@ const ProductCatalog = () => {
     }
   };
 
+  const handleWishlist = (e, productId) => {
+    e.preventDefault();
+    
+    if (!userData) {
+      toast.error("Please login to manage wishlist");
+      return;
+    }
+
+    if (wishlistItems.includes(productId)) {
+      dispatch(removeFromWishlist(productId));
+      toast.success("Removed from wishlist");
+    } else {
+      dispatch(addToWishlist(productId));
+      toast.success("Added to wishlist");
+    }
+  };
+
   // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
@@ -169,310 +189,109 @@ const ProductCatalog = () => {
 
   return (
     <>
-    <div className="container mx-auto px-4 pt-8">
-      {/* Category Filter */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Product Categories</h2>
-        <div className="flex flex-wrap gap-4">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`px-6 py-2 rounded-full text-sm ${
-                selectedCategory === category.id
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
+      <div className="container mx-auto px-4 pt-8">
+        {/* Category Filter */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-4">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`px-6 py-2 rounded-full text-sm ${
+                  selectedCategory === category.id
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      </div>
 
-    
-      <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-6 bg-gray-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-4">
         {products.map((product) => (
-          // <div
-          //   key={product._id}
-          //   className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
-          // >
-          //   {/* Product Image */}
-          //   <Link to={`/product/${product._id}`}>
-          //     <div className="h-48 overflow-hidden">
-          //       <img
-          //         src={product.images[0]}
-          //         alt={product.name}
-          //         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          //       />
-          //     </div>
-          //   </Link>
+          <div key={product._id} className="bg-white rounded-lg overflow-hidden flex flex-col">
+            <div className="relative w-full pb-[100%]">
+              <Link to={`/product/${product._id}`} className="absolute inset-0">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              </Link>
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleWishlist(e, product._id);
+                }}
+                className="absolute top-3 right-3 z-10"
+              >
+                <div className="w-8 h-8 flex items-center justify-center">
+                  {wishlistItems.includes(product._id) ? (
+                    <FaHeart className="w-6 h-6 text-red-500" />
+                  ) : (
+                    <FaRegHeart className="w-6 h-6 text-gray-400" />
+                  )}
+                </div>
+              </button>
+            </div>
 
-          //   {/* Product Details */}
-          //   <div className="p-4">
-          //     {/* Product Name */}
-          //     <Link to={`/product/${product._id}`}>
-          //       <h3 className="text-lg font-medium text-gray-800 mb-2">
-          //         {product.name}
-          //       </h3>
-          //     </Link>
+            <div className="p-3 flex flex-col flex-grow">
+              <Link to={`/product/${product._id}`}>
+                <h3 className="text-base font-medium text-gray-900 mb-2">
+                  {product.name}
+                </h3>
+              </Link>
 
-          //     {/* Price and Unit Section */}
-          //     <div className="flex items-center justify-between mb-4">
-          //       <div>
-          //         <span className="text-xl font-bold">₹{product.price}</span>
-          //         <span className="text-sm text-gray-500 ml-2">
-          //           per {product.unitSize} {product.unitType}
-          //         </span>
-          //       </div>
-          //     </div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-lg font-bold">₹{product.price}</span>
+                <span className="text-sm text-gray-500">
+                  per {product.unitSize} {product.unitType}
+                </span>
+              </div>
 
-          //     {/* Add to Cart Section */}
-          //     {product.stock > 0 ? (
-          //       <AnimatePresence mode="wait">
-          //         {cartItemsMap[product._id] ? (
-          //           <motion.div
-          //             key="quantity-controls"
-          //             className="flex items-center border-2 border-red-600 justify-between rounded-md overflow-hidden"
-          //             initial={{ scale: 0, opacity: 0 }}
-          //             animate={{ scale: 1, opacity: 1 }}
-          //             exit={{ scale: 0, opacity: 0 }}
-          //             transition={{ duration: 0.3, ease: "backOut" }}
-          //           >
-          //             <motion.button
-          //               whileTap={{ scale: 0.95 }}
-          //               onClick={() =>
-          //                 handleUpdateQuantity(
-          //                   product._id,
-          //                   cartItemsMap[product._id].quantity - 1,
-          //                   product.stock
-          //                 )
-          //               }
-          //               className="px-6 py-1 bg-red-600 text-white font-medium text-xl"
-          //             >
-          //               -
-          //             </motion.button>
-
-          //             <div className="relative flex items-center justify-center min-w-[60px]">
-          //               <AnimatePresence mode="wait">
-          //                 {/* Background Pulse */}
-          //                 <motion.div
-          //                   key={`pulse-${cartItemsMap[product._id].quantity}`}
-          //                   initial={{ scale: 0.8, opacity: 0 }}
-          //                   animate={{
-          //                     scale: [1, 1.5],
-          //                     opacity: [0.3, 0],
-          //                   }}
-          //                   transition={{
-          //                     duration: 0.4,
-          //                     ease: "easeOut",
-          //                   }}
-          //                   className="absolute inset-0 bg-red-100 rounded-full"
-          //                 />
-
-          //                 {/* Quantity Number */}
-          //                 <motion.span
-          //                   key={cartItemsMap[product._id].quantity}
-          //                   initial={{ scale: 0.5, y: 20, opacity: 0 }}
-          //                   animate={{ scale: 1, y: 0, opacity: 1 }}
-          //                   exit={{ scale: 0.5, y: -20, opacity: 0 }}
-          //                   transition={{
-          //                     duration: 0.3,
-          //                     ease: "backOut",
-          //                   }}
-          //                   className="absolute font-medium text-lg z-10"
-          //                 >
-          //                   {cartItemsMap[product._id].quantity}
-          //                 </motion.span>
-          //               </AnimatePresence>
-          //             </div>
-
-          //             <motion.button
-          //               whileTap={{ scale: 0.95 }}
-          //               onClick={() =>
-          //                 handleUpdateQuantity(
-          //                   product._id,
-          //                   cartItemsMap[product._id].quantity + 1,
-          //                   product.stock
-          //                 )
-          //               }
-          //               className="px-6 py-1 bg-red-600 text-white font-medium text-xl"
-          //             >
-          //               +
-          //             </motion.button>
-          //           </motion.div>
-          //         ) : (
-          //           <motion.button
-          //             key="add-button"
-          //             initial={{ scale: 0, opacity: 0 }}
-          //             animate={{ scale: 1, opacity: 1 }}
-          //             exit={{ scale: 0, opacity: 0 }}
-          //             transition={{ duration: 0.3, ease: "backOut" }}
-          //             whileTap={{ scale: 0.95 }}
-          //             onClick={() => handleAddToCart(product._id)}
-          //             className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 overflow-hidden"
-          //           >
-          //             <motion.span
-          //               initial={{ y: 20 }}
-          //               animate={{ y: 0 }}
-          //               transition={{ duration: 0.3 }}
-          //             >
-          //               Add to Cart
-          //             </motion.span>
-          //           </motion.button>
-          //         )}
-          //       </AnimatePresence>
-          //     ) : (
-          //       <div className="text-red-500 text-center py-2">
-          //         Out of Stock
-          //       </div>
-          //     )}
-          //   </div>
-          // </div>
-
-          <div
-          key={product._id}
-          onClick={() => handleProductClick(product)}
-          className="product-card flex-none w-64 rounded-lg shadow-lg overflow-hidden transform transition hover:scale-105 hover:shadow-xl cursor-pointer"
-        >
-          <Link to={`/product/${product._id}`}>
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="product-image rounded-lg h-40 w-full object-cover"
-          />
-          </Link>
-          <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-                 <div>
-                 <Link to={`/product/${product._id}`}>
-                 <h3 className="text-base line-clamp-1 font-medium text-gray-800 mb-2">
-                   {product.name}
-                 </h3>
-               </Link>
-                   <span className="text-xl font-bold">₹{product.price}</span>
-                   <span className="text-sm text-gray-500 ml-2">
-                     per {product.unitSize} {product.unitType}
-                   </span>
-                 </div>
-               </div>
-            {/* <p className="product-price text-gray-600 text-sm mt-1">Price: ₹{product.price}</p>
-            <p className="product-unit text-gray-600 text-sm">Unit: {product.unitSize} {product.unitType}</p>
-            <p className="product-rating text-sm text-yellow-500 mt-1">
-              🌟 {product.rating} ({product.reviews?.length || 0} Reviews)
-            </p> */}
-            {/* <p
-              className={`mt-2 text-sm font-medium ${
-                product.stock > 0 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-            </p> */}
-            {product.stock > 0 ? (
+              {product.stock > 0 ? (
                 <AnimatePresence mode="wait">
                   {cartItemsMap[product._id] ? (
-                    <motion.div
-                      key="quantity-controls"
-                      className="flex items-center border-2 border-red-600 justify-between rounded-md overflow-hidden"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "backOut" }}
-                    >
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() =>
-                          handleUpdateQuantity(
-                            product._id,
-                            cartItemsMap[product._id].quantity - 1,
-                            product.stock
-                          )
-                        }
-                        className="px-6 py-1 bg-red-600 text-white font-medium text-xl"
+                    <div className="flex items-center justify-between bg-red-500 rounded-md overflow-hidden">
+                      <button
+                        onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity - 1)}
+                        className="w-12 h-10 flex items-center justify-center text-white text-xl font-bold"
                       >
                         -
-                      </motion.button>
-
-                      <div className="relative flex items-center justify-center min-w-[60px]">
-                        <AnimatePresence mode="wait">
-                          {/* Background Pulse */}
-                          <motion.div
-                            key={`pulse-${cartItemsMap[product._id].quantity}`}
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{
-                              scale: [1, 1.5],
-                              opacity: [0.3, 0],
-                            }}
-                            transition={{
-                              duration: 0.4,
-                              ease: "easeOut",
-                            }}
-                            className="absolute inset-0 bg-red-100 rounded-full"
-                          />
-
-                          {/* Quantity Number */}
-                          <motion.span
-                            key={cartItemsMap[product._id].quantity}
-                            initial={{ scale: 0.5, y: 20, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.5, y: -20, opacity: 0 }}
-                            transition={{
-                              duration: 0.3,
-                              ease: "backOut",
-                            }}
-                            className="absolute font-medium text-lg z-10"
-                          >
-                            {cartItemsMap[product._id].quantity}
-                          </motion.span>
-                        </AnimatePresence>
-                      </div>
-
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() =>
-                          handleUpdateQuantity(
-                            product._id,
-                            cartItemsMap[product._id].quantity + 1,
-                            product.stock
-                          )
-                        }
-                        className="px-6 py-1 bg-red-600 text-white font-medium text-xl"
+                      </button>
+                      <span className="text-white font-medium">
+                        {cartItemsMap[product._id].quantity}
+                      </span>
+                      <button
+                        onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity + 1, product.stock)}
+                        className="w-12 h-10 flex items-center justify-center text-white text-xl font-bold"
                       >
                         +
-                      </motion.button>
-                    </motion.div>
+                      </button>
+                    </div>
                   ) : (
-                    <motion.button
-                      key="add-button"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "backOut" }}
-                      whileTap={{ scale: 0.95 }}
+                    <button
                       onClick={() => handleAddToCart(product._id)}
-                      className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 overflow-hidden"
+                      className="w-full py-2.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                     >
-                      <motion.span
-                        initial={{ y: 20 }}
-                        animate={{ y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        Add to Cart
-                      </motion.span>
-                    </motion.button>
+                      Add to Cart
+                    </button>
                   )}
                 </AnimatePresence>
               ) : (
-                <div className="text-red-500 text-center py-2">
+                <div className="text-center py-2.5 text-red-500 font-medium">
                   Out of Stock
                 </div>
               )}
+            </div>
           </div>
-        </div>
         ))}
       </div>
-      </>
+    </>
   );
 };
 

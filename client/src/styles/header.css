@@ -29,3 +29,9 @@
     font-size: 16px; /* Font size for the arrow */
     color: #007bff; /* Color for the arrow */
   }
+
+/* If you have a separate CSS file for header styles */
+.header {
+  padding: 0.5rem 1rem; /* Reduced padding */
+  height: 70px; /* Reduced fixed height */
+}

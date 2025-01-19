@@ -1,419 +1,24 @@
-// import React, { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// // import { useCart } from '../context/CartContext';
-// // import { useCart } from '../components/CartContext';
-// import { toast } from 'react-hot-toast';
-// import { orderService } from './services/orderService';
-
-// const Checkout = () => {
-//   const navigate = useNavigate();
-//   const { cart, getCartTotal, clearCart } = useCart();
-//   const [step, setStep] = useState(1);
-//   const [loading, setLoading] = useState(false);
-  
-//   const [formData, setFormData] = useState({
-//     shippingAddress: {
-//       firstName: '',
-//       lastName: '',
-//       email: '',
-//       phone: '',
-//       street: '',
-//       city: '',
-//       state: '',
-//       pincode: '',
-//       country: 'India'
-//     },
-//     paymentMethod: 'COD' // or 'online'
-//   });
-
-//   // Redirect if cart is empty
-//   React.useEffect(() => {
-//     if (cart.length === 0) {
-//       navigate('/cart');
-//       toast.error('Your cart is empty');
-//     }
-//   }, [cart, navigate]);
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData(prev => ({
-//       ...prev,
-//       [name]: value
-//     }));
-//   };
-
-//   const validateShippingDetails = () => {
-//     const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'pincode'];
-//     for (let field of required) {
-//       if (!formData[field]) {
-//         toast.error(`Please enter your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-//         return false;
-//       }
-//     }
-//     // Basic email validation
-//     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-//       toast.error('Please enter a valid email address');
-//       return false;
-//     }
-//     // Basic phone validation
-//     if (!/^\d{10}$/.test(formData.phone)) {
-//       toast.error('Please enter a valid 10-digit phone number');
-//       return false;
-//     }
-//     return true;
-//   };
-
-//   const validatePaymentDetails = () => {
-//     const required = ['cardNumber', 'cardName', 'expiryDate', 'cvv'];
-//     for (let field of required) {
-//       if (!formData[field]) {
-//         toast.error(`Please enter your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-//         return false;
-//       }
-//     }
-//     // Basic card number validation
-//     if (!/^\d{16}$/.test(formData.cardNumber.replace(/\s/g, ''))) {
-//       toast.error('Please enter a valid 16-digit card number');
-//       return false;
-//     }
-//     // Basic CVV validation
-//     if (!/^\d{3,4}$/.test(formData.cvv)) {
-//       toast.error('Please enter a valid CVV');
-//       return false;
-//     }
-//     return true;
-//   };
-
-//   const handleNext = () => {
-//     if (step === 1 && validateShippingDetails()) {
-//       setStep(2);
-//     }
-//   };
-
-//   const handleBack = () => {
-//     setStep(1);
-//   };
-
-// //   const handleSubmit = async (e) => {
-// //     e.preventDefault();
-    
-// //     if (!validatePaymentDetails()) {
-// //       return;
-// //     }
-
-// //     try {
-// //       // Here you would typically make an API call to process the order
-// //       const orderData = {
-// //         items: cart,
-// //         totalAmount: getCartTotal(),
-// //         shippingDetails: {
-// //           firstName: formData.firstName,
-// //           lastName: formData.lastName,
-// //           email: formData.email,
-// //           phone: formData.phone,
-// //           address: formData.address,
-// //           city: formData.city,
-// //           state: formData.state,
-// //           pincode: formData.pincode,
-// //         },
-// //         // In a real application, you would handle payment details securely
-// //         // and probably use a payment gateway
-// //       };
-
-// //       // Simulate API call
-// //       await new Promise(resolve => setTimeout(resolve, 1500));
-
-// //       // Clear cart and redirect to success page
-// //       clearCart();
-// //       navigate('/order-success');
-// //       toast.success('Order placed successfully!');
-// //     } catch (error) {
-// //       toast.error('Failed to place order. Please try again.');
-// //     }
-// //   };
-
-// const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     setLoading(true);
-
-//     try {
-//       const orderData = {
-//         ...formData,
-//         items: cart.map(item => ({
-//           product: item.productId,
-//           quantity: item.quantity,
-//           price: item.price
-//         }))
-//       };
-
-//       const response = await orderService.createOrder(orderData);
-//       clearCart();
-//       toast.success('Order placed successfully!');
-//       navigate(`/order-success/${response.orders[0].orderId}`);
-//     } catch (error) {
-//       toast.error(error.message || 'Failed to place order');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-  
-//   return (
-//     <div className="container mx-auto px-4 py-8">
-//       {/* Progress Steps */}
-//       <div className="flex items-center justify-center mb-8">
-//         <div className={`h-1 w-32 ${step === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-//         <div className={`h-1 w-32 ${step === 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-//       </div>
-
-//       <div className="max-w-3xl mx-auto">
-//         <form onSubmit={handleSubmit}>
-//           {step === 1 ? (
-//             /* Shipping Details Form */
-//             <div className="bg-white p-6 rounded-lg shadow-md">
-//               <h2 className="text-2xl font-semibold mb-6">Shipping Details</h2>
-              
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     First Name
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="firstName"
-//                     value={formData.firstName}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Last Name
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="lastName"
-//                     value={formData.lastName}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Email
-//                   </label>
-//                   <input
-//                     type="email"
-//                     name="email"
-//                     value={formData.email}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Phone
-//                   </label>
-//                   <input
-//                     type="tel"
-//                     name="phone"
-//                     value={formData.phone}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div className="md:col-span-2">
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Address
-//                   </label>
-//                   <textarea
-//                     name="address"
-//                     value={formData.address}
-//                     onChange={handleInputChange}
-//                     rows="3"
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   ></textarea>
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     City
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="city"
-//                     value={formData.city}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     State
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="state"
-//                     value={formData.state}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Pincode
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="pincode"
-//                     value={formData.pincode}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-//               </div>
-
-//               <div className="mt-6 flex justify-end">
-//                 <button
-//                   type="button"
-//                   onClick={handleNext}
-//                   className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-//                 >
-//                   Next
-//                 </button>
-//               </div>
-//             </div>
-//           ) : (
-//             /* Payment Details Form */
-//             <div className="bg-white p-6 rounded-lg shadow-md">
-//               <h2 className="text-2xl font-semibold mb-6">Payment Details</h2>
-              
-//               <div className="space-y-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Card Number
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="cardNumber"
-//                     value={formData.cardNumber}
-//                     onChange={handleInputChange}
-//                     placeholder="1234 5678 9012 3456"
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Cardholder Name
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="cardName"
-//                     value={formData.cardName}
-//                     onChange={handleInputChange}
-//                     className="w-full px-3 py-2 border rounded-md"
-//                   />
-//                 </div>
-
-//                 <div className="grid grid-cols-2 gap-4">
-//                   <div>
-//                     <label className="block text-sm font-medium text-gray-700 mb-2">
-//                       Expiry Date
-//                     </label>
-//                     <input
-//                       type="text"
-//                       name="expiryDate"
-//                       value={formData.expiryDate}
-//                       onChange={handleInputChange}
-//                       placeholder="MM/YY"
-//                       className="w-full px-3 py-2 border rounded-md"
-//                     />
-//                   </div>
-
-//                   <div>
-//                     <label className="block text-sm font-medium text-gray-700 mb-2">
-//                       CVV
-//                     </label>
-//                     <input
-//                       type="password"
-//                       name="cvv"
-//                       value={formData.cvv}
-//                       onChange={handleInputChange}
-//                       maxLength="4"
-//                       className="w-full px-3 py-2 border rounded-md"
-//                     />
-//                   </div>
-//                 </div>
-//               </div>
-
-//               {/* Order Summary */}
-//               <div className="mt-8 border-t pt-6">
-//                 <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
-//                 <div className="space-y-2">
-//                   {cart.map(item => (
-//                     <div key={item.productId} className="flex justify-between">
-//                       <span>{item.name} x {item.quantity}</span>
-//                       <span>₹{(item.price * item.quantity).toFixed(2)}</span>
-//                     </div>
-//                   ))}
-//                   <div className="border-t pt-2 font-semibold">
-//                     <div className="flex justify-between">
-//                       <span>Total</span>
-//                       <span>₹{getCartTotal().toFixed(2)}</span>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="mt-6 flex justify-between">
-//                 <button
-//                   type="button"
-//                   onClick={handleBack}
-//                   className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-//                 >
-//                   Back
-//                 </button>
-//                 <button
-//                   type="submit"
-//                   className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-//                 >
-//                   Place Order
-//                 </button>
-//               </div>
-//             </div>
-//           )}
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Checkout;
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
-// import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
-// import {cartRemove, cartAdd, cartItemRemove, cartEmpty} from '../store/cartSlice';
 import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
 import axios from 'axios';
+import { FaArrowLeft, FaShoppingBag, FaTruck } from 'react-icons/fa';
+import { getStates, getCities } from '../services/locationService';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector(selectCartItems);
-  const { userData } = useSelector((state) => state.user);
-  const cartItems = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [filteredCities, setFilteredCities] = useState([]);
+  const [citySearchTerm, setCitySearchTerm] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   
   const [formData, setFormData] = useState({
     shippingAddress: {
@@ -430,23 +35,132 @@ const Checkout = () => {
     paymentMethod: 'COD'
   });
 
-  // Redirect if cart is empty
-  // useEffect(() => {
-  //   if (cartItems.length === 0) {
-  //     navigate('/cart');
-  //     toast.error('Your cart is empty');
-  //   }
-  // }, [cartItems, navigate]);
+  useEffect(() => {
+    // Load states on component mount
+    setStates(getStates());
+  }, []);
+
+  useEffect(() => {
+    if (formData.shippingAddress.state) {
+      const stateCities = getCities(formData.shippingAddress.state);
+      setCities(stateCities);
+      setFilteredCities(stateCities);
+    } else {
+      setCities([]);
+      setFilteredCities([]);
+    }
+  }, [formData.shippingAddress.state]);
+
+  // Filter cities based on search term
+  useEffect(() => {
+    if (citySearchTerm) {
+      const filtered = cities.filter(city => 
+        city.toLowerCase().includes(citySearchTerm.toLowerCase())
+      );
+      setFilteredCities(filtered);
+    } else {
+      setFilteredCities(cities);
+    }
+  }, [citySearchTerm, cities]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'city') {
+      setCitySearchTerm(value);
+      setFormData(prev => ({
+        ...prev,
+        shippingAddress: {
+          ...prev.shippingAddress,
+          city: '' // Clear selected city when typing
+        }
+      }));
+      setSelectedIndex(-1); // Reset selected index when typing
+    } else if (name === 'state') {
+      // Reset city when state changes
+      setFormData(prev => ({
+        ...prev,
+        shippingAddress: {
+          ...prev.shippingAddress,
+          state: value,
+          city: '' // Reset city when state changes
+        }
+      }));
+      setCitySearchTerm(''); // Reset city search term
+      setSelectedIndex(-1); // Reset selected index
+    } else {
+      // Handle other form fields normally
+      setFormData(prev => ({
+        ...prev,
+        shippingAddress: {
+          ...prev.shippingAddress,
+          [name]: value
+        }
+      }));
+    }
+  };
+
+  // Update city filtering logic
+  useEffect(() => {
+    if (formData.shippingAddress.state && citySearchTerm) {
+      const stateCities = getCities(formData.shippingAddress.state);
+      const filtered = stateCities.filter(city => 
+        city.toLowerCase().includes(citySearchTerm.toLowerCase())
+      );
+      setFilteredCities(filtered);
+    } else if (formData.shippingAddress.state) {
+      // Show all cities for the selected state if no search term
+      setFilteredCities(getCities(formData.shippingAddress.state));
+    } else {
+      setFilteredCities([]);
+    }
+  }, [citySearchTerm, formData.shippingAddress.state]);
+
+  const handleKeyDown = (e) => {
+    if (!filteredCities.length) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < filteredCities.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0) {
+          const selectedCity = filteredCities[selectedIndex];
+          setFormData(prev => ({
+            ...prev,
+            shippingAddress: {
+              ...prev.shippingAddress,
+              city: selectedCity
+            }
+          }));
+          setCitySearchTerm(selectedCity);
+          setSelectedIndex(-1);
+        }
+        break;
+      case 'Escape':
+        setSelectedIndex(-1);
+        break;
+    }
+  };
+
+  const handleCitySelect = (city) => {
     setFormData(prev => ({
       ...prev,
       shippingAddress: {
         ...prev.shippingAddress,
-        [name]: value
+        city
       }
     }));
+    setCitySearchTerm(city);
+    setSelectedIndex(-1); // Reset selected index
   };
 
   const validateShippingDetails = () => {
@@ -460,381 +174,272 @@ const Checkout = () => {
       }
     }
 
-    // Basic email validation
     if (!/\S+@\S+\.\S+/.test(shippingAddress.email)) {
       toast.error('Please enter a valid email address');
       return false;
     }
 
-    // Basic phone validation
     if (!/^\d{10}$/.test(shippingAddress.phone)) {
       toast.error('Please enter a valid 10-digit phone number');
+      return false;
+    }
+
+    if (!/^\d{6}$/.test(shippingAddress.pincode)) {
+      toast.error('Please enter a valid 6-digit pincode');
       return false;
     }
 
     return true;
   };
 
-  const handleNext = () => {
-    if (step === 1 && validateShippingDetails()) {
-      setStep(2);
-    }
-  };
-
-  // const handleBack = () => {
-  //   setStep(1);
-  // };
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setLoading(true);
-
-  //   try {
-  //     const orderData = {
-  //       items: cart.map(item => ({
-  //         product: item.product._id,
-  //         quantity: item.quantity,
-  //         price: item.product.price
-  //       })),
-  //       shippingAddress: formData.shippingAddress,
-  //       paymentMethod: formData.paymentMethod,
-  //       totalAmount: cartTotal
-  //     };
-
-  //     const response = await orderService.createOrder(orderData);
-  //     dispatch(clearCart());
-  //     toast.success('Order placed successfully!');
-  //     navigate(`/order-success/${response.orderId}`);
-  //   } catch (error) {
-  //     toast.error(error.response?.data?.message || 'Failed to place order');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handlePlaceOrder = async (e) => {
-  //   e.preventDefault();
-    
-  //   try {
-  //     const response = await axios.post('/api/orders/create', {
-  //       shippingAddress: formData.shippingAddress,
-  //       paymentMethod: formData.paymentMethod,
-  //       items: cartItems.map(item => ({
-  //         product: item.product._id,
-  //         quantity: item.quantity,
-  //         price: item.price
-  //       })),
-  //       totalAmount: cartTotal
-  //     }, {
-  //       withCredentials: true,
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       }
-  //     });
-
-  //     if (response.data.success) {
-  //       toast.success('Order placed successfully!');
-  //       // Clear cart after successful order
-  //       dispatch(clearCart());
-  //       navigate(`/orders/${response.data.order._id}`);
-  //     }
-  //   } catch (error) {
-  //     console.error('Order creation error:', error);
-  //     toast.error(error.response?.data?.message || 'Failed to place order');
-  //   }
-  // };
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-    
-  //   if (step === 1) {
-  //     if (validateShippingDetails()) {
-  //       setStep(2);
-  //     }
-  //     return;
-  //   }
-
-  //   setLoading(true);
-
-  //   try {
-  //     const response = await axios.post('/api/orders/create', {
-  //       shippingAddress: {
-  //         ...formData.shippingAddress,
-  //         fullName: `${formData.shippingAddress.firstName} ${formData.shippingAddress.lastName}`
-  //       },
-  //       paymentMethod: formData.paymentMethod,
-  //       items: cartItems.map(item => ({
-  //         product: item.product._id,
-  //         quantity: item.quantity,
-  //         price: item.product.price,
-  //         seller: item.seller._id
-  //       })),
-  //       totalAmount: cartTotal
-  //     }, {
-  //       withCredentials: true,
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       }
-  //     });
-
-  //     if (response.data.success) {
-  //       // Clear cart after successful order
-  //       dispatch(clearCart());
-  //       toast.success('Order placed successfully!');
-  //       navigate(`/orders/${response.data.orders[0]._id}`); // Navigate to first order
-  //     }
-  //   } catch (error) {
-  //     console.error('Order creation error:', error);
-  //     toast.error(error.response?.data?.message || 'Failed to place order');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (step === 1) {
-        if (validateShippingDetails()) {
-            setStep(2);
-        }
-        return;
+    if (!validateShippingDetails()) {
+      return;
     }
 
     setLoading(true);
 
     try {
-        const response = await axios.post('/api/orders/create', {
-            shippingAddress: formData.shippingAddress,
-            paymentMethod: formData.paymentMethod,
-        }, {
-            withCredentials: true,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.data.success) {
-            dispatch(clearCart());
-            toast.success('Order placed successfully!');
-            // Navigate to the first order's detail page
-             // Get the order ID from the first order
-             const orderId = response.data.orders[0]._id;
-            
-             // Store order details in localStorage if needed
-             localStorage.setItem('lastOrderId', orderId);
-             
-             // Navigate to order success page or order details page
-             navigate(`/order-success/${orderId}`);
+      const response = await axios.post('/api/orders/create', {
+        shippingAddress: formData.shippingAddress,
+        paymentMethod: formData.paymentMethod,
+      }, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
         }
-    } catch (error) {
-        console.error('Order creation error:', error);
-        toast.error(error.response?.data?.message || 'Failed to place order');
-    } finally {
-        setLoading(false);
-    }
-};
+      });
 
-  const handleBack = () => {
-    setStep(1);
+      if (response.data.success) {
+        dispatch(clearCart());
+        toast.success('Order placed successfully!');
+        navigate(`/order-success/${response.data.orders[0]._id}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to place order');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Progress Steps */}
-      <div className="flex items-center justify-center mb-8">
-        <div className={`h-1 w-32 ${step === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-        <div className={`h-1 w-32 ${step === 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center mb-8 text-gray-500 text-sm">
+          <button onClick={() => navigate('/cart')} className="flex items-center hover:text-gray-700">
+            <FaArrowLeft className="mr-2" /> Back to Cart
+          </button>
+        </nav>
 
-      <div className="max-w-3xl mx-auto">
-        <form onSubmit={handleSubmit}>
-          {step === 1 ? (
-            /* Shipping Details Form */
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-semibold mb-6">Shipping Details</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Checkout Form */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                <FaTruck className="mr-3 text-blue-600" /> Shipping Details
+              </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.shippingAddress.firstName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.shippingAddress.firstName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter first name"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.shippingAddress.lastName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.shippingAddress.lastName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter last name"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.shippingAddress.email}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.shippingAddress.email}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter email address"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.shippingAddress.phone}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.shippingAddress.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter 10-digit phone number"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Street Address
-                  </label>
-                  <textarea
-                    name="street"
-                    value={formData.shippingAddress.street}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  ></textarea>
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Address *
+                    </label>
+                    <textarea
+                      name="street"
+                      value={formData.shippingAddress.street}
+                      onChange={handleInputChange}
+                      rows="3"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your street address"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.shippingAddress.city}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State *
+                    </label>
+                    <select
+                      name="state"
+                      value={formData.shippingAddress.state}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select State</option>
+                      {states.map(state => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.shippingAddress.state}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="city"
+                        value={citySearchTerm}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type to search city"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoComplete="off"
+                      />
+                      
+                      {citySearchTerm && filteredCities.length > 0 && !formData.shippingAddress.city && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCities.map((city, index) => (
+                            <div
+                              key={city}
+                              className={`px-4 py-2 cursor-pointer ${
+                                index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-100'
+                              }`}
+                              onClick={() => handleCitySelect(city)}
+                            >
+                              {city}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pincode
-                  </label>
-                  <input
-                    type="text"
-                    name="pincode"
-                    value={formData.shippingAddress.pincode}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Payment Method and Order Summary */
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-semibold mb-6">Payment Method</h2>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    id="cod"
-                    name="paymentMethod"
-                    value="COD"
-                    checked={formData.paymentMethod === 'COD'}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      paymentMethod: e.target.value
-                    }))}
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <label htmlFor="cod">Cash on Delivery</label>
-                </div>
-              </div>
-
-              {/* Order Summary */}
-              <div className="mt-8 border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
-                <div className="space-y-2">
-                  {cart.map(item => (
-                    <div key={item.product._id} className="flex justify-between">
-                      <span>{item.product.name} x {item.quantity}</span>
-                      <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="border-t pt-2 font-semibold">
-                    <div className="flex justify-between">
-                      <span>Total</span>
-                      <span>₹{cartTotal.toFixed(2)}</span>
+                      {formData.shippingAddress.city && (
+                        <div className="mt-1 text-sm text-gray-500">
+                          Selected: {formData.shippingAddress.city}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="mt-6 flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  Back
-                </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pincode *
+                    </label>
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={formData.shippingAddress.pincode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter 6-digit pincode"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">Payment Method</h3>
+                  <div className="space-y-4">
+                    <label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="COD"
+                        checked={formData.paymentMethod === 'COD'}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          paymentMethod: e.target.value
+                        }))}
+                        className="h-4 w-4 text-blue-600"
+                      />
+                      <span>Cash on Delivery</span>
+                    </label>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2 rounded-md text-white transition-colors ${
-                    loading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
                 >
                   {loading ? 'Processing...' : 'Place Order'}
                 </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                <FaShoppingBag className="mr-3 text-blue-600" /> Order Summary
+              </h2>
+              <div className="space-y-2">
+                {cart.map(item => (
+                  <div key={item.product._id} className="flex justify-between">
+                    <span>{item.product.name} x {item.quantity}</span>
+                    <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-2 font-semibold">
+                  <div className="flex justify-between">
+                    <span>Total</span>
+                    <span>₹{cartTotal.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </form>
+          </div>
+        </div>
       </div>
     </div>
   );

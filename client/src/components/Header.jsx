@@ -5,6 +5,8 @@ import { SignInSetUp, SignInFailure } from "../store/userSlice";
 import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+// import './styles/header.css';
+import '../styles/header.css';
 
 const Header = () => {
   const { userData } = useSelector((state) => state.user);
@@ -21,23 +23,26 @@ const Header = () => {
   const timeoutRef = useRef(null);
 
   const showMenu = () => {
-    clearTimeout(timeoutRef.current); // Clear any existing timeout
+    clearTimeout(timeoutRef.current);
     setIsProfileMenuOpen(true);
   };
 
   const hideMenu = () => {
     timeoutRef.current = setTimeout(() => {
       setIsProfileMenuOpen(false);
-    }, 500); // Hide after 3 seconds
+    }, 300); // Reduced to 300ms for better responsiveness
   };
 
-  const handleMouseEnterMenu = () => {
-    clearTimeout(timeoutRef.current); // Clear timeout when hovering over the menu
+  const handleMenuItemClick = () => {
+    setIsProfileMenuOpen(false);
+    clearTimeout(timeoutRef.current);
   };
 
   useEffect(() => {
     return () => {
-      clearTimeout(timeoutRef.current); // Clean up timeout on unmount
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
   }, []);
 
@@ -140,237 +145,98 @@ const Header = () => {
   ];
 
   return (
-    <header className="bg-white shadow-md sticky top-0 left-0 right-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-blue-600">
-            FreshMart
-          </Link>
-
-          {/* Search Bar with Dropdown */}
-          <div
-            className="hidden md:flex items-center flex-1 max-w-md mx-6 relative"
-            ref={searchRef}
-          >
-            <form onSubmit={handleSearch} className="w-full">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={currentPlaceholder}
-                  className="w-full px-4 py-2 pl-10 pr-4 rounded-full border border-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500"
-                >
-                  <FaSearch className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Search Results Dropdown */}
-              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
-                  {searchResults.map((product) => (
-                    <Link
-                      key={product._id}
-                      to={`/product/${product._id}`}
-                      className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                      onClick={() => {
-                        setSearchTerm("");
-                        setSearchResults([]);
-                      }}
-                    >
-                      {product.images[0] && (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-10 h-10 object-cover rounded-md mr-3"
-                        />
-                      )}
-                      <div>
-                        <div className="font-medium text-gray-800">
-                          {product.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ₹{product.price}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link
-                    to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
-                    className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSearchResults([]);
-                    }}
-                  >
-                    See all results
-                  </Link>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {isSearching && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden text-gray-600 hover:text-blue-600"
-          >
-            <FaBars className="w-6 h-6" />
-          </button>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            {userData ? (
-              <>
-                <Link
-                  to="/cart"
-                  className="text-gray-600 hover:text-blue-600 relative"
-                >
-                  <FaShoppingCart className="w-6 h-6" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
-                <div 
-                  className="relative"
-                  onMouseEnter={showMenu}
-                  onMouseLeave={hideMenu}
-                >
-                  <FaUserCircle className="w-8 h-8 text-gray-600 cursor-pointer" />
-                  {isProfileMenuOpen && (
-                    <div 
-                      ref={menuRef} 
-                      className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-10"
-                      onMouseEnter={handleMouseEnterMenu}
-                      onMouseLeave={hideMenu}
-                    >
-                      <Link to="/profile"  className="block px-4 py-2 text-gray-600 hover:bg-gray-100">Profile</Link>
-                      <Link to="/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">Orders</Link>
-                      <Link to="/wishlist" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">My Wishlist</Link>
-                      <button 
-                        onClick={handleSignout} 
-                        className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="text-gray-600 hover:text-blue-600">
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-          </nav>
+    <header className="bg-[#3861fb] shadow-md">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <div className="text-white text-xl font-bold">
+          Bazario
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t py-4">
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="px-4 mb-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search products..."
-                  className="w-full px-4 py-2 pl-10 pr-4 rounded-full border border-gray-300 focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        {/* Search Bar */}
+        <div className="flex-1 max-w-2xl mx-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Explore seasonal foods..."
+              className="w-full px-4 py-2 rounded-full bg-white"
+            />
+            <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <FaSearch className="h-5 w-5 text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Cart & Profile */}
+        <div className="flex items-center space-x-4">
+          <Link to="/cart" className="text-white hover:text-blue-200 relative group transition-all duration-300">
+            <FaShoppingCart className="w-6 h-6 transform group-hover:scale-110" />
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 
+                               rounded-full w-5 h-5 flex items-center justify-center
+                               font-medium shadow-sm">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+          <div className="relative" 
+               onMouseEnter={showMenu} 
+               onMouseLeave={hideMenu}>
+            <FaUserCircle className="w-8 h-8 text-white hover:text-blue-200 cursor-pointer 
+                                   transition-colors duration-300 transform hover:scale-110" />
+            {isProfileMenuOpen && (
+              <div ref={menuRef}
+                   className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-10
+                            transform transition-all duration-200 origin-top-right
+                            border border-gray-200 overflow-hidden">
+                <Link 
+                  to="/profile" 
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
+                             transition-colors duration-200 ease-in-out border-b border-gray-100"
+                  onClick={handleMenuItemClick}
                 >
-                  <FaSearch className="w-4 h-4" />
+                  <FaUser className="w-4 h-4 mr-3 text-blue-500" />
+                  <span>Profile</span>
+                </Link>
+                
+                <Link 
+                  to="/orders" 
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
+                             transition-colors duration-200 ease-in-out border-b border-gray-100"
+                  onClick={handleMenuItemClick}
+                >
+                  <svg className="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  <span>Orders</span>
+                </Link>
+                
+                <Link 
+                  to="/wishlist" 
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
+                             transition-colors duration-200 ease-in-out border-b border-gray-100"
+                  onClick={handleMenuItemClick}
+                >
+                  <FaHeart className="w-4 h-4 mr-3 text-blue-500" />
+                  <span>My Wishlist</span>
+                </Link>
+                
+                <button 
+                  onClick={() => {
+                    handleMenuItemClick();
+                    handleSignout();
+                  }}
+                  className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-red-50 
+                             transition-colors duration-200 ease-in-out"
+                >
+                  <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="text-red-500">Logout</span>
                 </button>
               </div>
-            </form>
-
-            {/* Mobile Navigation Links */}
-            <div className="space-y-2">
-              {userData ? (
-                <>
-                  <Link
-                    to="/cart"
-                    className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    <FaShoppingCart className="w-5 h-5 mr-2" />
-                    Cart
-                    {cartCount > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Link>
-
-                  <Link
-                    to="/profile"
-                    className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    <FaUser className="w-5 h-5 mr-2" />
-                    Profile
-                  </Link>
-                  <Link
-                    to="/orders"
-                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    Orders
-                  </Link>
-                  <Link
-                    to="/wishlist"
-                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    My Wishlist
-                  </Link>
-                  <button
-                    onClick={handleSignout}
-                    className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="block px-4 py-2 text-blue-500 hover:bg-gray-50"
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

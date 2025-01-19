@@ -11,6 +11,7 @@ import cors from "cors";
 import searchRoutes from './routes/search.route.js';
 import reviewRoutes from './routes/review.routes.js';
 import bodyParser from 'body-parser';
+import otpRoutes from './routes/otp.route.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -44,6 +45,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);
