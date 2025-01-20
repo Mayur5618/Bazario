@@ -26,6 +26,7 @@ import ScrollToTop from './components/ScrollToTop.jsx';
 import AllProducts from './pages/AllProducts.jsx';
 import SellerAccount from './pages/SellerAccount.jsx';
 import Wishlist from './pages/Wishlist';
+import CategoryProducts from './components/CategoryProducts';
 
 const App = () => {
   return (
@@ -65,6 +66,7 @@ const App = () => {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/all-products" element={<AllProducts />} />
               <Route path="/sellers/:sellerId" element={<SellerAccount />} />
+              <Route path="/products/:category" element={<CategoryProducts />} />
               
               {/* Protected Routes */}
               <Route path="/profile" element={

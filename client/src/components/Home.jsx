@@ -4,35 +4,41 @@ import ProductCatalog from './ProductCatalog';
 import RecentlyViewed from './RecentlyViewed';
 import { FaShieldAlt, FaTruck, FaUndo, FaHeadset, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  const navigate = useNavigate();
 
   const featuredCategories = [
     {
       title: "Fresh Vegetables",
       description: "Farm-fresh vegetables delivered daily",
-      image: "/images/vegetables.jpg",
-      color: "from-green-500 to-emerald-700"
+      image: "https://i.pinimg.com/736x/1f/8d/cd/1f8dcd9fad685de5025213d4b846848b.jpg",
+      color: "from-green-500 to-emerald-700",
+      slug: 'vegetable'
     },
     {
       title: "Home-Cooked Meals",
       description: "Authentic homemade delicacies",
-      image: "/images/home-cooked.jpg",
-      color: "from-orange-500 to-red-700"
+      image: "https://i.pinimg.com/736x/87/55/50/8755508c64ce14492a4f622ed29762a2.jpg",
+      color: "from-orange-500 to-red-700",
+      slug: 'home-cooked'
     },
     {
       title: "Traditional Pickles",
       description: "Handcrafted with love and tradition",
-      image: "/images/pickles.jpg",
-      color: "from-yellow-500 to-amber-700"
+      image: "https://i.pinimg.com/736x/4c/6c/ba/4c6cbae47f19fb1a628624afc83d4406.jpg",
+      color: "from-yellow-500 to-amber-700",
+      slug: 'pickles'
     },
     {
       title: "Seasonal Specials",
       description: "Limited time seasonal offerings",
-      image: "/images/seasonal.jpg",
-      color: "from-purple-500 to-indigo-700"
+      image: "https://i.pinimg.com/736x/8b/62/58/8b62584beeeb75fe5db7efc1d3dd2545.jpg",
+      color: "from-purple-500 to-indigo-700",
+      slug: 'seasonal'
     }
   ];
 
@@ -98,6 +104,11 @@ const Home = () => {
     }
   ];
 
+  const handleCategoryClick = (slug) => {
+    console.log('Navigating to:', `/products/${slug}`);
+    navigate(`/products/${slug}`);
+  };
+
   return (
     <div className="bg-white min-h-screen">
       {/* Modern Category Showcase - Reduced height */}
@@ -146,6 +157,7 @@ const Home = () => {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.6 }}
                     className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-opacity-90 transition-all"
+                    onClick={() => handleCategoryClick(featuredCategories[activeCategory].slug)}
                   >
                     Explore Collection
                   </motion.button>
@@ -164,12 +176,14 @@ const Home = () => {
           {featuredCategories.map((_, index) => (
             <button
               key={index}
+              
               onClick={() => setActiveCategory(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 index === activeCategory 
                   ? 'bg-white w-6' 
                   : 'bg-white/50 hover:bg-white/70'
               }`}
+              
             />
           ))}
         </div>
@@ -205,7 +219,15 @@ const Home = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="group relative overflow-hidden rounded-2xl shadow-lg"
+              className="group relative overflow-hidden rounded-2xl shadow-lg cursor-pointer"
+              onClick={() => handleCategoryClick(category.slug)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCategoryClick(category.slug);
+                }
+              }}
             >
               <div className="aspect-w-3 aspect-h-4">
                 <img
