@@ -4,6 +4,8 @@ import { storage } from "../config/firebase.config.js";
 // Upload file to Firebase Storage
 export const uploadToFirebase = async (base64String) => {
     try {
+        console.log('Starting Firebase upload process');
+        
         // Validate input
         if (!base64String || typeof base64String !== 'string') {
             throw new Error('Invalid image data');
@@ -19,29 +21,33 @@ export const uploadToFirebase = async (base64String) => {
             throw new Error('Invalid base64 string format');
         }
 
+        console.log('Base64 data processed');
+
         // Generate unique filename
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(7);
-        const fileName = `reviews/${timestamp}_${randomString}.jpg`;
+        const fileName = `profiles/${timestamp}_${randomString}.jpg`;
+        console.log('Generated filename:', fileName);
 
         // Create reference
         const storageRef = ref(storage, fileName);
+        console.log('Storage reference created');
 
         try {
-            // Upload image
+            console.log('Starting upload to Firebase Storage...');
             const snapshot = await uploadString(storageRef, base64Data, 'base64', {
                 contentType: 'image/jpeg'
             });
+            console.log('Upload successful, getting download URL...');
 
-            // Get download URL
             const downloadURL = await getDownloadURL(snapshot.ref);
+            console.log('Download URL obtained:', downloadURL);
+            
             return downloadURL;
-
         } catch (uploadError) {
-            console.error('Detailed upload error:', uploadError);
+            console.error('Firebase upload error:', uploadError);
             throw new Error(uploadError.message || 'Failed to upload to Firebase');
         }
-
     } catch (error) {
         console.error("Firebase upload error:", {
             error,

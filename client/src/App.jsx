@@ -7,7 +7,7 @@ import Home from './components/Home.jsx';
 import './styles/main.css';
 import './index.css';
 import CategorySection from './components/CategorySection.jsx';
-import Profile from './components/Profile.jsx';
+import Profile from './pages/Profile.jsx';
 import Footer from './components/layout/Footer.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import ProductDetail from './pages/ProductDetail.jsx';

@@ -1,0 +1,25 @@
+/* Add these styles to your global CSS */
+:root {
+  --primary-purple: #6B46C1;
+  --light-purple: #F5F3FF;
+  --dark-purple: #553C9A;
+}
+
+.bg-gradient-purple {
+  background: linear-gradient(to right, var(--primary-purple), var(--dark-purple));
+}
+
+/* Custom animations */
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Custom shadows */
+.custom-shadow {
+  box-shadow: 0 4px 6px -1px rgba(107, 70, 193, 0.1), 
+              0 2px 4px -1px rgba(107, 70, 193, 0.06);
+} 

@@ -20,6 +20,40 @@ const ProductCatalog = () => {
   const { userData } = useSelector((state) => state.user);
   const [cartItemsMap, setCartItemsMap] = useState({});
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const [imageLoading, setImageLoading] = useState({});
+
+  // Animation variants for products
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const productVariants = {
+    hidden: { 
+      opacity: 0,
+      y: 20
+    },
+    show: { 
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut"
+      }
+    },
+    exit: {
+      opacity: 0,
+      y: -20,
+      transition: {
+        duration: 0.3
+      }
+    }
+  };
 
   // Fetch cart items when component mounts
   useEffect(() => {
@@ -157,6 +191,13 @@ const ProductCatalog = () => {
     fetchProducts();
   }, [selectedCategory]);
 
+  const handleImageLoad = (productId) => {
+    setImageLoading(prev => ({
+      ...prev,
+      [productId]: false
+    }));
+  };
+
   const categories = [
     { id: "all", name: "All Products" },
     { id: "vegetable", name: "Vegetables" },
@@ -188,46 +229,92 @@ const ProductCatalog = () => {
   }
 
   return (
-    <>
-      <div className="container mx-auto px-4 pt-8">
-        {/* Category Filter */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-4">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-6 py-2 rounded-full text-sm ${
-                  selectedCategory === category.id
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto px-4">
+      {/* Category Tabs */}
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            className={`px-6 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
+              selectedCategory === category.id
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {category.name}
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-4">
-        {products.map((product) => (
-          <div key={product._id} className="bg-white rounded-lg overflow-hidden flex flex-col">
-            <div className="relative w-full pb-[100%]">
-              <Link to={`/product/${product._id}`} className="absolute inset-0">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+      {/* Products Grid */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selectedCategory}
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          exit="hidden"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6"
+        >
+          {products.map((product) => (
+            <motion.div
+              key={product._id}
+              variants={productVariants}
+              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
+            >
+              <Link to={`/product/${product._id}`}>
+                <div className="relative h-48 rounded-t-lg overflow-hidden">
+                  {/* Loading Skeleton */}
+                  {(!product.images[0] || imageLoading[product._id] !== false) && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                  )}
+                  
+                  {/* Product Image */}
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${
+                      imageLoading[product._id] === false ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onLoad={() => handleImageLoad(product._id)}
+                  />
+                </div>
+
+                <div className="p-4">
+                  <h3 className="text-lg font-medium text-gray-900 truncate">
+                    {product.name}
+                  </h3>
+                  
+                  <div className="mt-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-900 font-medium">₹{product.price}</p>
+                      <p className="text-sm text-gray-500">per {product.unitSize} {product.unitType}</p>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-center">
+                        <span className="text-sm text-yellow-500">★ {product.rating}</span>
+                        <span className="text-sm text-gray-500 ml-1">
+                          ({product.reviews?.length || 0})
+                        </span>
+                      </div>
+                      <p className={`text-sm font-medium ${
+                        product.stock > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </Link>
-              
+
+              {/* Wishlist Button */}
               <button
                 onClick={(e) => {
                   e.preventDefault();
                   handleWishlist(e, product._id);
                 }}
-                className="absolute top-3 right-3 z-10"
+                className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
               >
                 <div className="w-8 h-8 flex items-center justify-center">
                   {wishlistItems.includes(product._id) ? (
@@ -237,61 +324,11 @@ const ProductCatalog = () => {
                   )}
                 </div>
               </button>
-            </div>
-
-            <div className="p-3 flex flex-col flex-grow">
-              <Link to={`/product/${product._id}`}>
-                <h3 className="text-base font-medium text-gray-900 mb-2">
-                  {product.name}
-                </h3>
-              </Link>
-
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-lg font-bold">₹{product.price}</span>
-                <span className="text-sm text-gray-500">
-                  per {product.unitSize} {product.unitType}
-                </span>
-              </div>
-
-              {product.stock > 0 ? (
-                <AnimatePresence mode="wait">
-                  {cartItemsMap[product._id] ? (
-                    <div className="flex items-center justify-between bg-red-500 rounded-md overflow-hidden">
-                      <button
-                        onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity - 1)}
-                        className="w-12 h-10 flex items-center justify-center text-white text-xl font-bold"
-                      >
-                        -
-                      </button>
-                      <span className="text-white font-medium">
-                        {cartItemsMap[product._id].quantity}
-                      </span>
-                      <button
-                        onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity + 1, product.stock)}
-                        className="w-12 h-10 flex items-center justify-center text-white text-xl font-bold"
-                      >
-                        +
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleAddToCart(product._id)}
-                      className="w-full py-2.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                    >
-                      Add to Cart
-                    </button>
-                  )}
-                </AnimatePresence>
-              ) : (
-                <div className="text-center py-2.5 text-red-500 font-medium">
-                  Out of Stock
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
+            </motion.div>
+          ))}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
 

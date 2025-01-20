@@ -75,6 +75,7 @@ const ProductDetail = () => {
         setIsVideo(isYoutubeLink(data.product.images[0]));
       }
       fetchReviews();
+      addToRecentlyViewed(data.product);
       setLoading(false);
     } catch (err) {
       setError(err.message || "Failed to fetch product details");
@@ -405,6 +406,77 @@ const ProductDetail = () => {
     } else {
       dispatch(addToWishlist(id));
       toast.success("Added to wishlist");
+    }
+  };
+
+  const addToRecentlyViewed = (product) => {
+    if (!product) return;
+
+    try {
+      // 1. Validation criteria for products
+      const isValidProduct = (
+        product._id &&
+        product.name &&
+        product.price &&
+        product.images?.length > 0 &&
+        typeof product.stock !== 'undefined'
+      );
+
+      if (!isValidProduct) {
+        console.log('Product does not meet criteria for recently viewed');
+        return;
+      }
+
+      // 2. Get existing recently viewed products
+      const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+      const currentTime = Date.now();
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+      // 3. Clean up old entries
+      const validProducts = recentlyViewed.filter(item => {
+        return (currentTime - item.timestamp) < ONE_WEEK;
+      });
+
+      // 4. Check if product already exists
+      const existingIndex = validProducts.findIndex(item => item._id === product._id);
+
+      // 5. Remove if exists
+      if (existingIndex !== -1) {
+        validProducts.splice(existingIndex, 1);
+      }
+
+      // 6. Create product object with essential data
+      const productToAdd = {
+        _id: product._id,
+        name: product.name,
+        images: product.images,
+        price: product.price,
+        unit: product.unitType || 'piece',
+        rating: Number(product.rating || 0),
+        reviews: product.reviews || [],
+        stock: Number(product.stock),
+        timestamp: currentTime,
+        category: product.category,
+        viewCount: (existingIndex !== -1 ? 
+          validProducts[existingIndex].viewCount + 1 : 1)
+      };
+
+      // 7. Add to front of array
+      validProducts.unshift(productToAdd);
+
+      // 8. Keep only last 6 items
+      const filteredProducts = validProducts.slice(0, 6);
+
+      // 9. Save to localStorage
+      localStorage.setItem('recentlyViewed', JSON.stringify(filteredProducts));
+
+      // 10. Notify components of update
+      window.dispatchEvent(new Event('recentlyViewedUpdated'));
+
+      console.log('Added to recently viewed:', productToAdd); // Debug log
+
+    } catch (error) {
+      console.error('Error updating recently viewed products:', error);
     }
   };
 

@@ -1,159 +1,121 @@
-// import React, { useEffect, useState } from 'react';
-// import './RecentlyViewed.css'; // Import the CSS file for styling
-
-// const RecentlyViewed = ({ handleViewProduct }) => {
-//   const [recentlyViewed, setRecentlyViewed] = useState([]);
-
-//   useEffect(() => {
-//     const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-//     setRecentlyViewed(viewedProducts);
-//   }, []);
-
-//   const handleProductClick = (product) => {
-//     handleViewProduct(product);
-//   };
-
-//   return (
-//     <div className="recently-viewed">
-//       <h2 className="text-2xl font-bold mb-4">Recently Viewed Products</h2>
-//       <div className="flex overflow-x-auto space-x-4">
-//         {recentlyViewed.length > 0 ? (
-//           recentlyViewed.map(product => (
-//             <div key={product._id} onClick={() => handleProductClick(product)} className="product-card">
-//               <img src={product.images[0]} alt={product.name} className="product-image" />
-//               <div className="product-info">
-//                 <h3 className="product-name">{product.name}</h3>
-//                 <p className="product-price">Price: ₹{product.price}</p>
-//                 <p className="product-unit">Unit: {product.unitSize} {product.unitType}</p>
-//                 <p className="product-rating">Rating: 🌟{product.rating} ({product.reviews} Reviews)</p>
-//                 <p className="product-stock">Stock: {product.stock > 0 ? 'Available' : 'Out of Stock'}</p>
-//               </div>
-//             </div>
-//           ))
-//         ) : (
-//           <p>No recently viewed products.</p>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default RecentlyViewed;
-
-// import React, { useEffect, useState } from 'react';
-// import '../styles/recentlyViewed.css';
-
-// const RecentlyViewed = ({ handleViewProduct }) => {
-//   const [recentlyViewed, setRecentlyViewed] = useState([]);
-
-//   useEffect(() => {
-//     const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-//     setRecentlyViewed(viewedProducts);
-//   }, []);
-
-//   const handleProductClick = (product) => {
-//     handleViewProduct(product);
-//   };
-
-//   return (
-//     <div className="p-6 bg-gray-50">
-//       <h2 className="text-2xl font-bold mb-6 text-gray-700">Recently Viewed Products</h2>
-//       <div className="flex space-x-6 overflow-x-auto">
-//         {recentlyViewed.length > 0 ? (
-//           recentlyViewed.map((product) => (
-//             <div
-//               key={product._id}
-//               onClick={() => handleProductClick(product)}
-//               className="flex-none w-64 bg-white rounded-lg shadow-md overflow-hidden transform transition hover:scale-105 hover:shadow-lg cursor-pointer"
-//             >
-//               <img
-//                 src={product.images[0]}
-//                 alt={product.name}
-//                 className="h-40 w-full object-cover"
-//               />
-//               <div className="p-4">
-//                 <h3 className="text-lg font-semibold text-gray-800 truncate">
-//                   {product.name}
-//                 </h3>
-//                 <p className="text-gray-600 text-sm mt-1">Price: ₹{product.price}</p>
-//                 <p className="text-gray-600 text-sm">
-//                   Unit: {product.unitSize} {product.unitType}
-//                 </p>
-//                 <p className="text-sm text-yellow-500 mt-1">
-//                   🌟 {product.rating} ({product.reviews?.length || 0} Reviews)
-//                 </p>
-//                 <p
-//                   className={`mt-2 text-sm font-medium ${
-//                     product.stock > 0 ? 'text-green-600' : 'text-red-600'
-//                   }`}
-//                 >
-//                   {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-//                 </p>
-//               </div>
-//             </div>
-//           ))
-//         ) : (
-//           <p className="text-gray-500">No recently viewed products.</p>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default RecentlyViewed;
-
 import React, { useEffect, useState } from 'react';
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import '../styles/recentlyViewed.css';
 
-const RecentlyViewed = ({ handleViewProduct }) => {
+const RecentlyViewed = () => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
-  useEffect(() => {
-    const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-    setRecentlyViewed(viewedProducts);
-  }, []);
+  const loadRecentlyViewed = () => {
+    try {
+      const currentTime = Date.now();
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
-  const handleProductClick = (product) => {
-    handleViewProduct(product);
+      // Get and parse stored products
+      const storedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+
+      // Filter out products older than a week
+      const recentProducts = storedProducts.filter(product => {
+        return (currentTime - product.timestamp) < ONE_WEEK;
+      });
+
+      // Update localStorage with filtered list
+      if (recentProducts.length !== storedProducts.length) {
+        localStorage.setItem('recentlyViewed', JSON.stringify(recentProducts));
+      }
+
+      setRecentlyViewed(recentProducts);
+    } catch (error) {
+      console.error('Error loading recently viewed products:', error);
+      setRecentlyViewed([]);
+    }
   };
 
+  useEffect(() => {
+    loadRecentlyViewed();
+
+    // Listen for updates to recently viewed products
+    window.addEventListener('recentlyViewedUpdated', loadRecentlyViewed);
+
+    return () => {
+      window.removeEventListener('recentlyViewedUpdated', loadRecentlyViewed);
+    };
+  }, []);
+
+  const handleScroll = (direction) => {
+    const container = document.getElementById('recently-viewed-container');
+    const scrollAmount = direction === 'left' ? -300 : 300;
+    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  };
+
+  // Don't show section if no recently viewed products
+  if (recentlyViewed.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="recently-viewed p-6 bg-gray-50">
+    <div className="recently-viewed max-w-7xl mx-auto relative px-4">
       <h2 className="text-2xl font-bold mb-6 text-gray-700">Recently Viewed Products</h2>
-      <div className="flex space-x-6 overflow-x-auto">
-        {recentlyViewed.length > 0 ? (
-          recentlyViewed.map((product) => (
-            <div
+      
+      <div className="relative">
+        <div 
+          id="recently-viewed-container"
+          className="flex gap-6 overflow-x-hidden scroll-smooth"
+        >
+          {recentlyViewed.map((product) => (
+            <Link
               key={product._id}
-              onClick={() => handleProductClick(product)}
-              className="product-card flex-none w-64 bg-white rounded-lg shadow-lg overflow-hidden transform transition hover:scale-105 hover:shadow-xl cursor-pointer"
+              to={`/product/${product._id}`}
+              className="flex-none w-[220px] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
             >
-              <img
-                src={product.images[0]}
-                alt={product.name}
-                className="product-image h-40 w-full object-cover"
-              />
+              <div className="h-[180px] w-full overflow-hidden rounded-t-lg">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <div className="p-4">
-                <h3 className="product-name text-lg font-semibold text-gray-800 truncate">
+                <h3 className="text-base font-medium text-gray-900 truncate">
                   {product.name}
                 </h3>
-                <p className="product-price text-gray-600 text-sm mt-1">Price: ₹{product.price}</p>
-                <p className="product-unit text-gray-600 text-sm">Unit: {product.unitSize} {product.unitType}</p>
-                <p className="product-rating text-sm text-yellow-500 mt-1">
-                  🌟 {product.rating} ({product.reviews?.length || 0} Reviews)
-                </p>
-                <p
-                  className={`mt-2 text-sm font-medium ${
-                    product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-900 font-medium">₹{product.price}</p>
+                    <p className="text-sm text-gray-500">per {product.unit}</p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center">
+                      <span className="text-sm text-yellow-500">★ {product.rating}</span>
+                      <span className="text-sm text-gray-500 ml-1">({product.reviews?.length || 0})</span>
+                    </div>
+                    <p className={`text-sm font-medium ${
+                      product.stock > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500">No recently viewed products.</p>
+            </Link>
+          ))}
+        </div>
+
+        {recentlyViewed.length > 3 && (
+          <>
+            <button
+              onClick={() => handleScroll('left')}
+              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 p-3 rounded-full shadow-md text-gray-600 z-10 transition-all"
+            >
+              <FaArrowLeft size={20} />
+            </button>
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 p-3 rounded-full shadow-md text-gray-600 z-10 transition-all"
+            >
+              <FaArrowRight size={20} />
+            </button>
+          </>
         )}
       </div>
     </div>

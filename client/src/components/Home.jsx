@@ -1,45 +1,49 @@
-import React from 'react';
-import CategorySection from './CategorySection';
-import ProductCatalog from './ProductCatalog';
+import React, { useState, useEffect } from 'react';
 import Temp from './temp';
-import ProductSlider from './ProductSlider';
-import { useDispatch } from 'react-redux';
-import { toast } from 'react-hot-toast';
-import { useState, useEffect } from 'react';
-import { clearUserData } from '../store/userSlice';
+import ProductCatalog from './ProductCatalog';
 import RecentlyViewed from './RecentlyViewed';
-
+import { FaShieldAlt, FaTruck, FaUndo, FaHeadset, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Home = () => {
-  const [tokenExpired, setTokenExpired] = useState(false);
-  const dispatch = useDispatch();
+  const [activeCategory, setActiveCategory] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
 
-  // console.log(messageShown);
-  
-  // useEffect(() => {
-  //   const checkToken = async () => {
-  //     try {
-  //       const response = await fetch('/api/cart', {
-  //         method: 'GET',
-  //         headers: {
-  //           'Authorization': `Bearer ${localStorage.getItem('token')}`
-  //         }
-  //       });
-  //       if (!response.ok) {
-  //         const data = await response.json();
-  //         if (data.message === "Please log in to access this resource") {
-  //           setTokenExpired(true);
-  //           dispatch(clearUserData()); // Clear user data from Redux
-  //           localStorage.removeItem('token'); // Optionally remove token from local storage
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching cart:", error);
-  //     }
-  //   };
+  const featuredCategories = [
+    {
+      title: "Fresh Vegetables",
+      description: "Farm-fresh vegetables delivered daily",
+      image: "/images/vegetables.jpg",
+      color: "from-green-500 to-emerald-700"
+    },
+    {
+      title: "Home-Cooked Meals",
+      description: "Authentic homemade delicacies",
+      image: "/images/home-cooked.jpg",
+      color: "from-orange-500 to-red-700"
+    },
+    {
+      title: "Traditional Pickles",
+      description: "Handcrafted with love and tradition",
+      image: "/images/pickles.jpg",
+      color: "from-yellow-500 to-amber-700"
+    },
+    {
+      title: "Seasonal Specials",
+      description: "Limited time seasonal offerings",
+      image: "/images/seasonal.jpg",
+      color: "from-purple-500 to-indigo-700"
+    }
+  ];
 
-  //   checkToken();
-  // }, [dispatch]);
+  useEffect(() => {
+    if (!isHovering) {
+      const timer = setInterval(() => {
+        setActiveCategory((prev) => (prev + 1) % featuredCategories.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [isHovering]);
 
   const handleViewProduct = (product) => {
     const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
@@ -71,17 +75,192 @@ const Home = () => {
     localStorage.setItem('recentlyViewed', JSON.stringify(filteredProducts));
   };
 
+  const trustFeatures = [
+    {
+      icon: <FaShieldAlt className="text-4xl text-purple-600" />,
+      title: "Secure Shopping",
+      description: "100% secure payment processing"
+    },
+    {
+      icon: <FaTruck className="text-4xl text-purple-600" />,
+      title: "Fast Delivery",
+      description: "Quick delivery to your doorstep"
+    },
+    {
+      icon: <FaUndo className="text-4xl text-purple-600" />,
+      title: "Easy Returns",
+      description: "Hassle-free return policy"
+    },
+    {
+      icon: <FaHeadset className="text-4xl text-purple-600" />,
+      title: "24/7 Support",
+      description: "Round-the-clock customer service"
+    }
+  ];
+
   return (
-    <div className='bg-gray-00'>
-      
-      <div className="w-full relative">
-        <Temp />
-        <div className="relative z-0 p-4"> {/* Added padding for spacing */}
-          {/* <h className="text-xl font-bold mb-4">Explore Categories</h> */}
-          {/* <CategorySection /> */}
+    <div className="bg-white min-h-screen">
+      {/* Modern Category Showcase - Reduced height */}
+      <div className="relative h-[50vh] overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCategory}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0"
+          >
+            <div className={`relative h-full bg-gradient-to-r ${featuredCategories[activeCategory].color}`}>
+              {/* Background Image with Overlay */}
+              <div 
+                className="absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage: `url(${featuredCategories[activeCategory].image})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+              />
+
+              {/* Content - Adjusted spacing */}
+              <div className="relative h-full max-w-7xl mx-auto px-4 py-8 flex items-center">
+                <div className="w-1/2">
+                  <motion.h2
+                    initial={{ x: -100, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-4xl md:text-5xl font-bold text-white mb-4"
+                  >
+                    {featuredCategories[activeCategory].title}
+                  </motion.h2>
+                  <motion.p
+                    initial={{ x: -100, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-lg text-white/90 mb-6"
+                  >
+                    {featuredCategories[activeCategory].description}
+                  </motion.p>
+                  <motion.button
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-opacity-90 transition-all"
+                  >
+                    Explore Collection
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Category Navigation - Adjusted position */}
+        <div 
+          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          {featuredCategories.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveCategory(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === activeCategory 
+                  ? 'bg-white w-6' 
+                  : 'bg-white/50 hover:bg-white/70'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Navigation Arrows - Adjusted size */}
+        <button
+          onClick={() => setActiveCategory((prev) => (prev - 1 + featuredCategories.length) % featuredCategories.length)}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full text-white transition-all"
+        >
+          <FaArrowLeft size={20} />
+        </button>
+        <button
+          onClick={() => setActiveCategory((prev) => (prev + 1) % featuredCategories.length)}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full text-white transition-all"
+        >
+          <FaArrowRight size={20} />
+        </button>
+      </div>
+
+      {/* Recently Viewed Section - Moved here */}
+      <div className="bg-purple-50 py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <RecentlyViewed handleViewProduct={handleViewProduct} />
+        </div>
+      </div>
+
+      {/* Featured Products Grid - Adjusted spacing */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredCategories.map((category, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="group relative overflow-hidden rounded-2xl shadow-lg"
+            >
+              <div className="aspect-w-3 aspect-h-4">
+                <img
+                  src={category.image}
+                  alt={category.title}
+                  className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-2">{category.title}</h3>
+                  <p className="text-white/80 text-sm">{category.description}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Trust Features Section */}
+      <div className="bg-purple-50 py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {trustFeatures.map((feature, index) => (
+              <div key={index} className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                {feature.icon}
+                <h3 className="mt-4 text-lg font-semibold text-purple-800">{feature.title}</h3>
+                <p className="mt-2 text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Products Section */}
+      <div className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-purple-800 text-center mb-8">
+            Featured Products
+          </h2>
           <ProductCatalog />
-          {/* <ProductSlider /> */}
-          <RecentlyViewed handleViewProduct={handleViewProduct}/>
+        </div>
+      </div>
+
+      {/* Recently Viewed Section with updated styling */}
+     
+
+      {/* Quality Guarantee Banner */}
+      <div className="bg-purple-700 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-4">Our Quality Guarantee</h2>
+          <p className="text-lg max-w-2xl mx-auto">
+            We ensure that every product meets the highest standards of quality. 
+            Your satisfaction is our top priority.
+          </p>
         </div>
       </div>
     </div>
@@ -89,58 +268,3 @@ const Home = () => {
 };
 
 export default Home;
-
-//  import React, { useEffect, useState } from 'react';
-//  import CategorySection from './CategorySection';
-//  import ProductCatalog from './ProductCatalog';
-//  import ProductSlider from './ProductSlider';
-//  import { useDispatch } from 'react-redux';
-//  import { toast } from 'react-hot-toast';
- 
-//  const Home = () => {
-//    const [tokenExpired, setTokenExpired] = useState(false);
-//    const dispatch = useDispatch();
- 
-//    useEffect(() => {
-//      const checkToken = async () => {
-//        try {
-//          // Simulate a cart fetch or any API call that requires authentication
-//          const response = await fetch('/api/cart', {
-//            method: 'GET',
-//            headers: {
-//              'Authorization': `Bearer ${localStorage.getItem('token')}`
-//            }
-//          });
-//          if (!response.ok) {
-//            const data = await response.json();
-//            if (data.message === "Please log in to access this resource") {
-//              setTokenExpired(true);
-//              toast.error("Your session has expired. Please log in again.");
-//            }
-//          }
-//        } catch (error) {
-//          console.error("Error fetching cart:", error);
-//        }
-//      };
- 
-//      checkToken();
-//    }, [dispatch]);
- 
-//    return (
-//      <div className='bg-gray-00'>
-//        {tokenExpired && (
-//          <div className="alert alert-warning">
-//            Your session has expired. Please log in again.
-//          </div>
-//        )}
-//        <div className="w-full relative">
-//            <ProductCatalog />
-//            <ProductSlider />
-//          </div>
-//        </div>
-     
-
-//    );
-//  };
- 
-//  export default Home;

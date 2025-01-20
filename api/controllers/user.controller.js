@@ -5,13 +5,30 @@ import Agency from '../models/agency.model.js';
 import jwt from 'jsonwebtoken';
 import twilio from 'twilio';
 import crypto from 'crypto';
-
+import multer from 'multer'; // Import multer for file uploads
+import path from 'path'; // Import path for file path handling
+import fs from 'fs'; // Import fs for file system operations
+// import User from '../models/.model.js'; // Ensure you import your User model
+import User from '../models/buyer.model.js';
+import { uploadToFirebase } from '../utilities/firebase.js';
 // Twilio configuration
 const twilioClient = twilio("AC7e47441a2fde99bca427d17971d3036b", "7ae83cc4d9f5d8e445eff220b5340b0d");
 const TWILIO_PHONE_NUMBER = "+918140023599";
 
 // In-memory store for OTPs (for demonstration purposes)
 const otpStore = {};
+
+// Configure multer for file storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Specify the directory to save uploaded files
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${req.user._id}${path.extname(file.originalname)}`); // Use user ID as filename
+    }
+});
+
+const upload = multer({ storage });
 
 // Function to send OTP
 export const sendOtp = async (req, res) => {
@@ -176,72 +193,52 @@ export const signin = async (req, res) => {
     try {
         const { mobileno, password } = req.body;
 
-        if (!mobileno || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide mobile number and password'
-            });
-        }
-
-        const mobilenoString = mobileno.toString();
-
-        let user = null;
+        // Find user with profile image
+        const buyer = await Buyer.findOne({ mobileno }).select('+profileImage');
         
-        const seller = await Seller.findOne({ mobileno: mobilenoString });
-        const buyer = await Buyer.findOne({ mobileno: mobilenoString });
-        const agency = await Agency.findOne({ mobileno: mobilenoString });
-
-        user = seller || buyer || agency;
-
-        if (!user) {
-            return res.status(401).json({
+        if (!buyer) {
+            return res.status(404).json({
                 success: false,
-                message: 'Invalid mobile number or password'
+                message: 'User not found'
             });
         }
 
-        const isPasswordValid = await user.matchPassword(password);
+        const isPasswordValid = await buyer.comparePassword(password);
         if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid mobile number or password'
+                message: 'Invalid credentials'
             });
         }
 
         const token = jwt.sign(
-            { 
-                id: user._id, 
-                userType: user.userType 
-            },
-            'your-temporary-secret-key',
-            { expiresIn: '24h' }
+            { id: buyer._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
         );
 
-        res.status(200)
-           .cookie('access_token', token, {
+        res.cookie('access_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000,
-           })
-           .json({
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
+        // Send response with profile image
+        const { password: pass, ...buyerData } = buyer._doc;
+        
+        console.log('User data with profile image:', buyerData);
+
+        res.status(200).json({
             success: true,
-            data: {
-                _id: user._id,
-                firstname: user.firstname,
-                lastname: user.lastname,
-                mobileno: user.mobileno,
-                userType: user.userType,
-                platformType: user.platformType,
-                token            
-              }
+            message: 'Logged in successfully',
+            user: buyerData
         });
 
     } catch (error) {
         console.error('Signin error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error during signin',
+            message: 'Error signing in',
             error: error.message
         });
     }
@@ -364,62 +361,31 @@ export const verifyUser = async (req, res) => {
 
   export const checkAuth = async (req, res) => {
     try {
-      const token = req.cookies.access_token;
-      
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'No token found'
-        });
-      }
-  
-      const decoded = jwt.verify(token, 'your-temporary-secret-key');
-      
-      // Find user based on decoded token
-      let user = null;
-      switch (decoded.userType) {
-        case 'seller':
-          user = await Seller.findById(decoded.id);
-          break;
-        case 'buyer':
-          user = await Buyer.findById(decoded.id);
-          break;
-        case 'agency':
-          user = await Agency.findById(decoded.id);
-          break;
-      }
-  
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-  
-      // Return user data without sensitive information
-      res.json({
-        success: true,
-        data: {
-          _id: user._id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          mobileno: user.mobileno,
-          userType: user.userType,
-          platformType: user.platformType
+        const buyer = await Buyer.findById(req.user.id).select('-password');
+        
+        if (!buyer) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
         }
-      });
-  
-    } catch (error) {
-      console.error('Check auth error:', error);
-      res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-  };
 
-  // Add this new controller function
-  export const checkMobileExists = async (req, res) => {
+        res.status(200).json({
+            success: true,
+            user: buyer  // This includes the profileImage
+        });
+    } catch (error) {
+        console.error('Auth check error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking authentication',
+            error: error.message
+        });
+    }
+};
+
+// Add this new controller function
+export const checkMobileExists = async (req, res) => {
     try {
         const { mobileno } = req.body;
         const mobilenoString = mobileno.toString();
@@ -502,4 +468,72 @@ export const getSellerData = async (req, res) => {
     console.error('Error fetching seller data:', error);
     res.status(500).json({ success: false, message: 'Error fetching seller data' });
   }
+};
+
+// Update the uploadProfileImage controller
+export const uploadProfileImage = async (req, res) => {
+    try {
+        const { image, userId } = req.body;
+        
+        console.log('Received request with:', {
+            hasImage: !!image,
+            hasUserId: !!userId,
+            userId: userId
+        });
+
+        // Validate required fields
+        if (!image || !userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Missing required fields: ${!image ? 'image' : ''} ${!userId ? 'userId' : ''}`.trim()
+            });
+        }
+
+        // Find the user
+        const user = await Buyer.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        try {
+            // Upload to Firebase
+            const imageUrl = await uploadToFirebase(image);
+            console.log('Image uploaded to Firebase:', imageUrl);
+
+            // Update user's profile image
+            const updatedUser = await Buyer.findByIdAndUpdate(
+                userId,
+                { $set: { profileImage: imageUrl } },
+                { new: true }
+            ).select('-password');
+
+            if (!updatedUser) {
+                throw new Error('Failed to update user profile');
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'Profile image updated successfully',
+                user: updatedUser
+            });
+
+        } catch (error) {
+            console.error('Upload/Update error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error processing image upload',
+                error: error.message
+            });
+        }
+    } catch (error) {
+        console.error('Server error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
 };

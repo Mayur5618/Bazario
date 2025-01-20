@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { SignInSetUp, SignInFailure } from "../store/userSlice";
-import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart, FaSignOutAlt, FaUserEdit } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 // import './styles/header.css';
@@ -18,23 +18,24 @@ const Header = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const searchRef = useRef(null);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const buttonRef = useRef(null);
   const timeoutRef = useRef(null);
 
   const showMenu = () => {
     clearTimeout(timeoutRef.current);
-    setIsProfileMenuOpen(true);
+    setIsMenuOpen(true);
   };
 
   const hideMenu = () => {
     timeoutRef.current = setTimeout(() => {
-      setIsProfileMenuOpen(false);
+      setIsMenuOpen(false);
     }, 300); // Reduced to 300ms for better responsiveness
   };
 
   const handleMenuItemClick = () => {
-    setIsProfileMenuOpen(false);
+    setIsMenuOpen(false);
     clearTimeout(timeoutRef.current);
   };
 
@@ -111,26 +112,11 @@ const Header = () => {
     }
   };
 
-  const handleSignout = async () => {
-    try {
-      const res = await fetch("/api/users/sign-out", {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        localStorage.removeItem("token");
-        dispatch(SignInSetUp());
-        toast.success("Logged out successfully");
-        navigate("/login");
-      } else {
-        const errorMessage = "Logout failed";
-        dispatch(SignInFailure(errorMessage));
-        toast.error(errorMessage);
-      }
-    } catch (error) {
-      console.error("Signout error:", error);
-      toast.error("An error occurred during logout");
-    }
+  const handleLogout = () => {
+    dispatch(SignInSetUp());
+    toast.success('Logged out successfully');
+    navigate('/login');
+    setIsMenuOpen(false);
   };
 
   // Inside your Header component, update the profile menu items:
@@ -144,13 +130,41 @@ const Header = () => {
     // ... rest of the menu items ...
   ];
 
+  // Handle clicks outside of menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current && 
+        !menuRef.current.contains(event.target) && 
+        !buttonRef.current.contains(event.target)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleMenuClick = (action) => {
+    // Keep menu open for a short duration to allow for clicking
+    setTimeout(() => {
+      setIsMenuOpen(false);
+    }, 100);
+    action();
+  };
+
   return (
     <header className="bg-[#3861fb] shadow-md">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
-        <div className="text-white text-xl font-bold">
+        <Link to="/" className="text-white text-xl font-bold">
           Bazario
-        </div>
+        </Link>
 
         {/* Search Bar */}
         <div className="flex-1 max-w-2xl mx-4">
@@ -168,71 +182,102 @@ const Header = () => {
 
         {/* Cart & Profile */}
         <div className="flex items-center space-x-4">
-          <Link to="/cart" className="text-white hover:text-blue-200 relative group transition-all duration-300">
-            <FaShoppingCart className="w-6 h-6 transform group-hover:scale-110" />
+          <Link to="/cart" className="text-white hover:text-blue-200 relative">
+            <FaShoppingCart className="w-6 h-6" />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 
-                               rounded-full w-5 h-5 flex items-center justify-center
-                               font-medium shadow-sm">
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {cartCount}
               </span>
             )}
           </Link>
-          <div className="relative" 
-               onMouseEnter={showMenu} 
-               onMouseLeave={hideMenu}>
-            <FaUserCircle className="w-8 h-8 text-white hover:text-blue-200 cursor-pointer 
-                                   transition-colors duration-300 transform hover:scale-110" />
-            {isProfileMenuOpen && (
-              <div ref={menuRef}
-                   className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-10
-                            transform transition-all duration-200 origin-top-right
-                            border border-gray-200 overflow-hidden">
-                <Link 
-                  to="/profile" 
-                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
-                             transition-colors duration-200 ease-in-out border-b border-gray-100"
-                  onClick={handleMenuItemClick}
-                >
-                  <FaUser className="w-4 h-4 mr-3 text-blue-500" />
-                  <span>Profile</span>
-                </Link>
-                
-                <Link 
-                  to="/orders" 
-                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
-                             transition-colors duration-200 ease-in-out border-b border-gray-100"
-                  onClick={handleMenuItemClick}
-                >
-                  <svg className="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                  <span>Orders</span>
-                </Link>
-                
-                <Link 
-                  to="/wishlist" 
-                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 
-                             transition-colors duration-200 ease-in-out border-b border-gray-100"
-                  onClick={handleMenuItemClick}
-                >
-                  <FaHeart className="w-4 h-4 mr-3 text-blue-500" />
-                  <span>My Wishlist</span>
-                </Link>
-                
-                <button 
-                  onClick={() => {
-                    handleMenuItemClick();
-                    handleSignout();
-                  }}
-                  className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-red-50 
-                             transition-colors duration-200 ease-in-out"
-                >
-                  <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span className="text-red-500">Logout</span>
-                </button>
+
+          {/* Profile Dropdown */}
+          <div className="relative">
+            <button
+              ref={buttonRef}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="relative focus:outline-none"
+            >
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                {userData?.profileImage ? (
+                  <img
+                    src={userData.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '';
+                      const fallback = e.target.parentNode.querySelector('.fallback-icon');
+                      if (fallback) fallback.classList.remove('hidden');
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center fallback-icon">
+                    <FaUser className="text-gray-400 text-xl" />
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
+              <div 
+                ref={menuRef}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50"
+              >
+                {userData ? (
+                  <>
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm text-gray-600">Signed in as</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">
+                        {userData.firstname} {userData.lastname}
+                      </p>
+                    </div>
+
+                    <Link 
+                      to="/profile" 
+                      className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      onClick={() => handleMenuClick(() => navigate('/profile'))}
+                    >
+                      <FaUserEdit className="text-gray-500" />
+                      <span>Profile</span>
+                    </Link>
+
+                    <Link 
+                      to="/wishlist" 
+                      className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      onClick={() => handleMenuClick(() => navigate('/wishlist'))}
+                    >
+                      <FaHeart className="text-gray-500" />
+                      <span>Wishlist</span>
+                    </Link>
+
+                    <button 
+                      onClick={() => handleMenuClick(handleLogout)}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-gray-50"
+                    >
+                      <FaSignOutAlt className="text-red-500" />
+                      <span>Sign Out</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      to="/login" 
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      onClick={() => handleMenuClick(() => navigate('/login'))}
+                    >
+                      Sign In
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      onClick={() => handleMenuClick(() => navigate('/register'))}
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>
