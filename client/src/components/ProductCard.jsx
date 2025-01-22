@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { cartAdd, cartRemove, updateCartItemQuantity } from '../store/cartSlice';
 
 const ProductCard = ({ product }) => {
+  const dispatch = useDispatch();
+
   const handleProductView = () => {
     // Get existing recently viewed products
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
@@ -32,6 +36,21 @@ const ProductCard = ({ product }) => {
     }
   };
 
+  // Add to cart
+  const handleAddToCart = () => {
+    dispatch(cartAdd({ product, quantity: 1 }));
+  };
+
+  // Update quantity
+  const handleQuantityChange = (productId, newQuantity) => {
+    dispatch(updateCartItemQuantity({ productId, quantity: newQuantity }));
+  };
+
+  // Remove from cart
+  const handleRemoveFromCart = (productId) => {
+    dispatch(cartRemove(productId));
+  };
+
   return (
     <Link 
       to={`/product/${product._id}`} 
@@ -39,6 +58,33 @@ const ProductCard = ({ product }) => {
       className="product-card"
     >
       {/* ... existing product card content ... */}
+      <div>
+        {/* Product details */}
+        {isInCart ? (
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={() => handleQuantityChange(product._id, quantity - 1)}
+              className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded"
+            >
+              -
+            </button>
+            <span>{quantity}</span>
+            <button 
+              onClick={() => handleQuantityChange(product._id, quantity + 1)}
+              className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded"
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={handleAddToCart}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Add to Cart
+          </button>
+        )}
+      </div>
     </Link>
   );
 };

@@ -35,3 +35,19 @@
   padding: 0.5rem 1rem; /* Reduced padding */
   height: 70px; /* Reduced fixed height */
 }
+
+/* Add these styles for the profile button */
+.profile-button {
+  outline: none !important; /* Remove default outline */
+  border: none;
+  transition: transform 0.2s;
+}
+
+.profile-button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.profile-button:active {
+  transform: scale(0.95); /* Optional: adds a slight press effect */
+}

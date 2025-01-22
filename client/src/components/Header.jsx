@@ -167,17 +167,68 @@ const Header = () => {
         </Link>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-2xl mx-4">
+        <div className="flex-1 max-w-2xl mx-4 relative" ref={searchRef}>
           <div className="relative">
             <input
               type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Explore seasonal foods..."
               className="w-full px-4 py-2 rounded-full bg-white"
             />
-            <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <button 
+              className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              onClick={handleSearch}
+            >
               <FaSearch className="h-5 w-5 text-gray-400" />
             </button>
           </div>
+
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
+              {searchResults.map((product) => (
+                <Link
+                  key={product._id}
+                  to={`/product/${product._id}`}
+                  className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSearchResults([]);
+                  }}
+                >
+                  {product.images[0] && (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-10 h-10 object-cover rounded-md mr-3"
+                    />
+                  )}
+                  <div>
+                    <div className="font-medium text-gray-800">{product.name}</div>
+                    <div className="text-sm text-gray-500">₹{product.price}</div>
+                  </div>
+                </Link>
+              ))}
+              <Link
+                to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
+                className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSearchResults([]);
+                }}
+              >
+                See all results
+              </Link>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isSearching && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4 text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+            </div>
+          )}
         </div>
 
         {/* Cart & Profile */}
@@ -196,7 +247,7 @@ const Header = () => {
             <button
               ref={buttonRef}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative focus:outline-none"
+              className="relative focus:outline-none profile-button"
             >
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
                 {userData?.profileImage ? (

@@ -34,25 +34,18 @@ const App = () => {
     {/* <AuthProvider> */}
         {/* <CartProvider> */}
           <div className="flex flex-col min-h-screen">
-            <Toaster 
-              position="top-right"
+            <Toaster
+              containerStyle={{
+                top: 70,
+                right: 20,
+              }}
               toastOptions={{
-                duration: 3000,
+                duration: 2000,
                 style: {
-                  background: '#333',
-                  color: '#fff',
+                  background: '#fff',
+                  color: '#333',
                 },
-                success: {
-                  style: {
-                    background: '#22c55e',
-                  },
-                },
-                error: {
-                  style: {
-                    background: '#ef4444',
-                  },
-                },
-              }} 
+              }}
             />
             <ConditionalHeader />
             <ScrollToTop />

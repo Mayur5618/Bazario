@@ -187,250 +187,122 @@ const Cart = () => {
   };
 
   return (
-    // <div className="container mx-auto px-4 py-8">
-    //   <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-
-    //   <div className="grid grid-cols-1 gap-4">
-    //     {cart.map((item, index) => (
-    //       <div
-    //         key={`${item.product._id}-${index}`}
-    //         className={`bg-white flex items-center gap-4 p-4 border rounded-lg  shadow-sm
-    //         transition-all duration-300 ease-in-out
-    //         ${
-    //           removingItems[item.product._id]
-    //             ? "opacity-0 transform translate-x-full"
-    //             : "opacity-100 transform translate-x-0"
-    //         }`}
-    //       >
-    //         <div
-    //           key={`${item.product._id}-${index}`}
-    //           className="flex w-full items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
-    //         >
-    //           <img
-    //             src={item.product?.images?.[0]}
-    //             alt={item.product?.name}
-    //             className="w-24 h-24 object-cover rounded"
-    //             onError={(e) => {
-    //               e.target.onerror = null; // Prevent infinite loop
-    //               e.target.src = "/images/fallback.jpg"; // Add a fallback image
-    //             }}
-    //           />
-
-    //           <div className="flex-1">
-    //             <Link
-    //               to={`/product/${item.product._id}`}
-    //               className="text-lg font-semibold hover:text-blue-600"
-    //             >
-    //               {item.product.name}
-    //             </Link>
-    //             <p className="text-gray-600">
-    //               ₹{item.price.toFixed(2)} per {item.unitType}
-    //             </p>
-
-    //             <div className="flex items-center gap-2 mt-2">
-    //               <button
-    //                 onClick={() =>
-    //                   handleUpdateQuantity(
-    //                     item.product._id, // Make sure this is the correct product ID
-    //                     item.quantity,
-    //                     item.product.stock,
-    //                     item.quantity - 1
-    //                   )
-    //                 }
-    //                 className="px-3 py-1 border rounded hover:bg-gray-100"
-    //               >
-    //                 -
-    //               </button>
-    //               <span className="w-12 text-center">{item.quantity}</span>
-    //               <button
-    //                 onClick={() =>
-    //                   handleUpdateQuantity(
-    //                     item.product._id, // Make sure this is the correct product ID
-    //                     item.quantity,
-    //                     item.product.stock,
-    //                     item.quantity + 1
-    //                   )
-    //                 }
-    //                 className="px-3 py-1 border rounded hover:bg-gray-100"
-    //               >
-    //                 +
-    //               </button>
-    //               <button
-    //                 onClick={() => handleRemoveFromCart(item.product._id)}
-    //                 className="ml-4 text-red-600 hover:text-red-800 flex items-center gap-1"
-    //               >
-    //                 <span className="hidden sm:inline">Remove</span>
-    //                 <svg
-    //                   xmlns="http://www.w3.org/2000/svg"
-    //                   className="h-5 w-5"
-    //                   viewBox="0 0 20 20"
-    //                   fill="currentColor"
-    //                 >
-    //                   <path
-    //                     fillRule="evenodd"
-    //                     d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-    //                     clipRule="evenodd"
-    //                   />
-    //                 </svg>
-    //               </button>
-    //             </div>
-    //           </div>
-
-    //           <div className="text-right">
-    //             <p className="text-lg font-semibold">
-    //               ₹{(item.price * item.quantity).toFixed(2)}
-    //             </p>
-    //             {item.quantity >= item.stock && (
-    //               <p className="text-sm text-red-600">Max stock reached</p>
-    //             )}
-    //           </div>
-    //         </div>
-    //       </div>
-    //     ))}
-    //   </div>
-
-    //   <div className="mt-8 border-t pt-4">
-    //     <div className="flex justify-between items-center mb-4">
-    //       <span className="text-xl font-semibold">Total:</span>
-    //       <span className="text-xl font-bold">₹{cartTotal.toFixed(2)}</span>
-    //     </div>
-
-    //     <div className="flex justify-end gap-4">
-    //       <Link
-    //         to="/"
-    //         className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
-    //       >
-    //         Continue Shopping
-    //       </Link>
-    //       <Link
-    //         to="/checkout"
-    //         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-    //       >
-    //         Proceed to Checkout
-    //       </Link>
-    //     </div>
-    //   </div>
-    // </div>
-
     <div className="container mx-auto px-4 py-8">
-    <h2 className="text-2xl font-bold mb-4">Your Basket</h2>
+      <h2 className="text-2xl font-bold mb-4">Your Basket</h2>
 
-    {/* Checkout Summary Bar */}
-    <div className="bg-gray-900 text-white p-4 rounded-lg mb-6 flex justify-between items-center">
-      <div>
-        <span className="text-lg">Subtotal ({cart.length} items): ₹{cartTotal.toFixed(2)}</span>
-        {/* <div className="text-green-400 text-sm">
-          Savings: ₹{cart.reduce((acc, item) => 
-            acc + ((item.product.originalPrice - item.price) * item.quantity), 0).toFixed(2)}
-        </div> */}
-      </div>
-      <Link
-        to="/checkout"
-        className="px-8 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-      >
-        Checkout
-      </Link>
-    </div>
-
-    {/* Cart Items Table Header */}
-    <div className="grid grid-cols-12 gap-4 mb-4 px-4 py-2 bg-[#f3eff3] rounded-t-lg">
-      <div className="col-span-6">Items ({cart.length} items)</div>
-      <div className="col-span-3 text-center">Quantity</div>
-      <div className="col-span-3 text-right">Sub-total</div>
-    </div>
-
-    {/* Cart Items */}
-    <div className="border rounded-b-lg">
-      {cart.map((item, index) => (
-        <div
-          key={`${item.product._id}-${index}`}
-          className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0
-            transition-all duration-300 ease-in-out
-            ${removingItems[item.product._id] ? 'opacity-0 transform translate-x-full' : 'opacity-100 transform translate-x-0'}`}
-        >
-          {/* Item Details - Left Section */}
-          <div className="col-span-6 flex gap-4">
-            <img
-              src={item.product?.images?.[0]}
-              alt={item.product?.name}
-              className="w-20 h-20 object-cover rounded"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/images/fallback.jpg";
-              }}
-            />
-            <div className="flex flex-col justify-between">
-              <Link
-                to={`/product/${item.product._id}`}
-                className="text-lg font-semibold hover:text-blue-600"
-              >
-                {item.product.name}
-              </Link>
-              <div className="text-gray-600">₹{item.price.toFixed(2)} per {item.unitType}</div>
-              <button
-                onClick={() => handleRemoveFromCart(item.product._id)}
-                className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 w-fit"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-
-          {/* Quantity Controls - Middle Section */}
-          <div className="col-span-3 flex items-center justify-center ">
-            <div className="flex items-center gap-2 border-[1px] border-gray-300 py-[1px] rounded-sm">
-              <button
-                onClick={() => handleUpdateQuantity(
-                  item.product._id,
-                  item.quantity,
-                  item.product.stock,
-                  item.quantity - 1
-                )}
-                className="px-3 py-1 transform transition-transform duration-200"
-              >
-                -
-              </button>
-              <span className="w-12 text-center">{item.quantity}</span>
-              <button
-                onClick={() => handleUpdateQuantity(
-                  item.product._id,
-                  item.quantity,
-                  item.product.stock,
-                  item.quantity + 1
-                )}
-                className="px-3 py-1 transform transition-transform duration-200"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Subtotal - Right Section */}
-          <div className="col-span-3 flex flex-col items-end justify-center">
-            <div className="text-lg font-semibold">
-              ₹{(item.price * item.quantity).toFixed(2)}
-            </div>
-            {item.product.originalPrice > item.price && (
-              <div className="text-green-600 text-sm">
-                Saved: ₹{((item.product.originalPrice - item.price) * item.quantity).toFixed(2)}
-              </div>
-            )}
-          </div>
+      {/* Checkout Summary Bar */}
+      <div className="bg-gray-900 text-white p-4 rounded-lg mb-6 flex justify-between items-center">
+        <div>
+          <span className="text-lg">Subtotal ({cart.length} items): ₹{cartTotal.toFixed(2)}</span>
+          {/* <div className="text-green-400 text-sm">
+            Savings: ₹{cart.reduce((acc, item) => 
+              acc + ((item.product.originalPrice - item.price) * item.quantity), 0).toFixed(2)}
+          </div> */}
         </div>
-      ))}
-    </div>
+        <Link
+          to="/checkout"
+          className="px-8 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          Checkout
+        </Link>
+      </div>
 
-    {/* Continue Shopping Link */}
-    <div className="mt-6 flex justify-start">
-      <Link
-        to="/"
-        className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
-      >
-        Continue Shopping
-      </Link>
-    </div>
-  </div>
+      {/* Cart Items Table Header */}
+      <div className="grid grid-cols-12 gap-4 mb-4 px-4 py-2 bg-[#f3eff3] rounded-t-lg">
+        <div className="col-span-6">Items ({cart.length} items)</div>
+        <div className="col-span-3 text-center">Quantity</div>
+        <div className="col-span-3 text-right">Sub-total</div>
+      </div>
 
+      {/* Cart Items */}
+      <div className="border rounded-b-lg">
+        {cart.map((item, index) => (
+          <div
+            key={`${item?.product?._id}-${index}`}
+            className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0
+              transition-all duration-300 ease-in-out
+              ${removingItems[item?.product?._id] ? 'opacity-0 transform translate-x-full' : 'opacity-100 transform translate-x-0'}`}
+          >
+            {/* Item Details - Left Section */}
+            <div className="col-span-6 flex gap-4">
+              <img
+                src={item?.product?.images?.[0]}
+                alt={item?.product?.name}
+                className="w-20 h-20 object-cover rounded"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/images/fallback.jpg";
+                }}
+              />
+              <div className="flex flex-col justify-between">
+                <Link
+                  to={`/product/${item?.product?._id}`}
+                  className="text-lg font-semibold hover:text-blue-600"
+                >
+                  {item?.product?.name}
+                </Link>
+                <div className="text-gray-600">₹{(item?.price || 0).toFixed(2)} per {item?.unitType}</div>
+                <button
+                  onClick={() => handleRemoveFromCart(item?.product?._id)}
+                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 w-fit"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            {/* Quantity Controls - Middle Section */}
+            <div className="col-span-3 flex items-center justify-center ">
+              <div className="flex items-center gap-2 border-[1px] border-gray-300 py-[1px] rounded-sm">
+                <button
+                  onClick={() => handleUpdateQuantity(
+                    item?.product?._id,
+                    item?.quantity,
+                    item?.product?.stock,
+                    item?.quantity - 1
+                  )}
+                  className="px-3 py-1 transform transition-transform duration-200"
+                >
+                  -
+                </button>
+                <span className="w-12 text-center">{item?.quantity}</span>
+                <button
+                  onClick={() => handleUpdateQuantity(
+                    item?.product?._id,
+                    item?.quantity,
+                    item?.product?.stock,
+                    item?.quantity + 1
+                  )}
+                  className="px-3 py-1 transform transition-transform duration-200"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Subtotal - Right Section */}
+            <div className="col-span-3 flex flex-col items-end justify-center">
+              <div className="text-lg font-semibold">
+                ₹{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
+              </div>
+              {item?.quantity >= (item?.product?.stock || 0) && (
+                <p className="text-sm text-red-600">Max stock reached</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Continue Shopping Link */}
+      <div className="mt-6 flex justify-start">
+        <Link
+          to="/"
+          className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
+        >
+          Continue Shopping
+        </Link>
+      </div>
+    </div>
   );
 };
 
