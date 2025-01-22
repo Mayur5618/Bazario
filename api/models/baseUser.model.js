@@ -11,6 +11,7 @@ const baseUserSchema = new mongoose.Schema({
     city: { type: String, required: true },
     pincode: { type: String, required: true },
     password: { type: String, required: true },
+    profileImage: { type: String, default: '' }, // Added this line
 }, {
     timestamps: true,
     discriminatorKey: 'userType',
@@ -29,5 +30,14 @@ baseUserSchema.pre('save', async function(next) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
+
+// Add comparePassword method
+baseUserSchema.methods.comparePassword = async function(candidatePassword) {
+    try {
+        return await bcrypt.compare(candidatePassword, this.password);
+    } catch (error) {
+        throw error;
+    }
+};
 
 export default baseUserSchema;

@@ -189,56 +189,270 @@ export const signup = async (req, res) => {
     }
 };
 
+// export const signin = async (req, res) => {
+//     try {
+//         const { mobileno, password } = req.body;
+
+//         // Find user with profile image
+//         const buyer = await Buyer.findOne({ mobileno }).select('+profileImage');
+        
+//         if (!buyer) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'User not found'
+//             });
+//         }
+
+//         const isPasswordValid = await buyer.comparePassword(password);
+//         if (!isPasswordValid) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Invalid credentials'
+//             });
+//         }
+
+//         const token = jwt.sign(
+//             { id: buyer._id },
+//             process.env.JWT_SECRET,
+//             { expiresIn: '1d' }
+//         );
+
+//         res.cookie('access_token', token, {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === 'production',
+//             maxAge: 24 * 60 * 60 * 1000
+//         });
+
+//         // Send response with profile image
+//         const { password: pass, ...buyerData } = buyer._doc;
+        
+//         console.log('User data with profile image:', buyerData);
+
+//         res.status(200).json({
+//             success: true,
+//             message: 'Logged in successfully',
+//             user: buyerData
+//         });
+
+//     } catch (error) {
+//         console.error('Signin error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error signing in',
+//             error: error.message
+//         });
+//     }
+// };
+
+// export const signin = async (req, res) => {
+//     try {
+//         const { mobileno, password } = req.body;
+
+//         // Find buyer by mobile number
+//         const buyer = await Buyer.findOne({ mobileno });
+        
+//         if (!buyer) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'User not found'
+//             });
+//         }
+
+//         // Check password
+//         const isPasswordMatch = await buyer.comparePassword(password);
+        
+//         if (!isPasswordMatch) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Invalid credentials'
+//             });
+//         }
+
+//         // Generate token
+//         const token = jwt.sign(
+//             { userId: buyer._id, userType: 'buyer' },
+//             "your-temporary-secret-key",
+//             { expiresIn: '30d' }
+//         );
+
+//         // Set cookie
+//         res.cookie('token', token, {
+//             httpOnly: true,
+
+//             // secure: process.env.NODE_ENV === 'production',
+//             sameSite: 'strict',
+//             maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+//         });
+
+//         // Send response
+//         res.status(200).json({
+//             success: true,
+//             message: 'Login successful',
+//             user: {
+//                 _id: buyer._id,
+//                 firstname: buyer.firstname,
+//                 lastname: buyer.lastname,
+//                 mobileno: buyer.mobileno,
+//                 userType: buyer.userType,
+//                 profilePhoto: buyer.profileImage
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error('Signin error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Internal server error',
+//             error: error.message
+//         });
+//     }
+// };
+
+// export const signin = async (req, res) => {
+//     try {
+//         const { mobileno, password } = req.body;
+
+//         if (!mobileno || !password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Please provide mobile number and password'
+//             });
+//         }
+
+//         const mobilenoString = mobileno.toString();
+
+//         let user = null;
+        
+//         const seller = await Seller.findOne({ mobileno: mobilenoString });
+//         const buyer = await Buyer.findOne({ mobileno: mobilenoString });
+//         const agency = await Agency.findOne({ mobileno: mobilenoString });
+
+//         user = seller || buyer || agency;
+
+//         if (!user) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Invalid mobile number or password'
+//             });
+//         }
+
+//         const isPasswordValid = await user.matchPassword(password);
+//         if (!isPasswordValid) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: 'Invalid mobile number or password'
+//             });
+//         }
+
+//         const token = jwt.sign(
+//             { 
+//                 id: user._id, 
+//                 userType: user.userType 
+//             },
+//             'your-temporary-secret-key',
+//             { expiresIn: '24h' }
+//         );
+
+//         res.status(200)
+//            .cookie('access_token', token, {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === 'production',
+//             sameSite: 'lax',
+//             maxAge: 24 * 60 * 60 * 1000,
+//            })
+//            .json({
+//             success: true,
+//             data: {
+//                 _id: user._id,
+//                 firstname: user.firstname,
+//                 lastname: user.lastname,
+//                 mobileno: user.mobileno,
+//                 userType: user.userType,
+//                 platformType: user.platformType,
+                          
+//               }
+//         });
+
+//     } catch (error) {
+//         console.error('Signin error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error during signin',
+//             error: error.message
+//         });
+//     }
+// };
+
 export const signin = async (req, res) => {
     try {
         const { mobileno, password } = req.body;
 
-        // Find user with profile image
-        const buyer = await Buyer.findOne({ mobileno }).select('+profileImage');
-        
-        if (!buyer) {
-            return res.status(404).json({
+        if (!mobileno || !password) {
+            return res.status(400).json({
                 success: false,
-                message: 'User not found'
+                message: 'Please provide mobile number and password'
             });
         }
 
-        const isPasswordValid = await buyer.comparePassword(password);
+        const mobilenoString = mobileno.toString();
+
+        let user = null;
+        
+        const seller = await Seller.findOne({ mobileno: mobilenoString });
+        const buyer = await Buyer.findOne({ mobileno: mobilenoString });
+        const agency = await Agency.findOne({ mobileno: mobilenoString });
+
+        user = seller || buyer || agency;
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid mobile number or password'
+            });
+        }
+
+        const isPasswordValid = await user.matchPassword(password);
         if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials'
+                message: 'Invalid mobile number or password'
             });
         }
 
         const token = jwt.sign(
-            { id: buyer._id },
-            process.env.JWT_SECRET,
-            { expiresIn: '1d' }
+            { 
+                id: user._id, 
+                userType: user.userType 
+            },
+            'your-temporary-secret-key',
+            { expiresIn: '24h' }
         );
 
-        res.cookie('access_token', token, {
+        res.status(200)
+           .cookie('access_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000
-        });
-
-        // Send response with profile image
-        const { password: pass, ...buyerData } = buyer._doc;
-        
-        console.log('User data with profile image:', buyerData);
-
-        res.status(200).json({
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+           })
+           .json({
             success: true,
-            message: 'Logged in successfully',
-            user: buyerData
+            data: {
+                _id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                mobileno: user.mobileno,
+                userType: user.userType,
+                platformType: user.platformType,
+                profileImage: user.profileImage          
+              }
         });
 
     } catch (error) {
         console.error('Signin error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error signing in',
+            message: 'Error during signin',
             error: error.message
         });
     }
