@@ -275,28 +275,50 @@ export const deleteProduct =  async (req, res) => {
 //GET /api/products
 export const getProducts = async (req, res) => {
     try {
-        const { platformType, category, minPrice, maxPrice, query } = req.query;
+        const { query, category, minPrice, maxPrice, sortBy } = req.query;
         
         const filter = {};
         
-        if (platformType) filter.platformType = platformType;
-        if (category) filter.category = category;
+        // Text search
+        if (query) {
+            filter.$or = [
+                { name: { $regex: query, $options: 'i' } },
+                { description: { $regex: query, $options: 'i' } },
+                { category: { $regex: query, $options: 'i' } }
+            ];
+        }
+
+        // Category filter
+        if (category && category !== 'all') {
+            filter.category = category;
+        }
+
+        // Price range filter
         if (minPrice || maxPrice) {
             filter.price = {};
             if (minPrice) filter.price.$gte = Number(minPrice);
             if (maxPrice) filter.price.$lte = Number(maxPrice);
         }
-        
-        if (query) {
-            filter.$or = [
-                { name: { $regex: query, $options: 'i' } },
-                { description: { $regex: query, $options: 'i' } }
-            ];
+
+        // Sort options
+        let sort = {};
+        switch (sortBy) {
+            case 'price_asc':
+                sort = { price: 1 };
+                break;
+            case 'price_desc':
+                sort = { price: -1 };
+                break;
+            case 'newest':
+                sort = { createdAt: -1 };
+                break;
+            default:
+                sort = { createdAt: -1 };
         }
 
         const products = await Product.find(filter)
-            .populate('seller', 'firstname lastname')
-            .sort({ createdAt: -1 });
+            .sort(sort)
+            .populate('seller', 'firstname lastname');
 
         res.json({
             success: true,
@@ -304,6 +326,7 @@ export const getProducts = async (req, res) => {
             products
         });
     } catch (error) {
+        console.error('Get products error:', error);
         res.status(500).json({
             success: false,
             message: error.message
