@@ -198,12 +198,20 @@ const ProductDetail = () => {
     try {
       const response = await axios.post("/api/cart/add", {
         productId: id,
-        quantity: 1,
+        quantity: quantity
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
-        dispatch(cartAdd());
-        const updatedCart = await axios.get("/api/cart/getCartItems");
+        dispatch(cartAdd({
+          product: product,
+          quantity: quantity
+        }));
+        
+        const updatedCart = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true
+        });
         const updatedItem = updatedCart.data.cart.items.find(
           item => item.product._id === id
         );
@@ -211,6 +219,7 @@ const ProductDetail = () => {
         toast.success("Added to cart!");
       }
     } catch (error) {
+      console.error("Cart error:", error);
       toast.error(error.response?.data?.message || "Failed to add to cart");
     } finally {
       setIsAddingToCart(false);

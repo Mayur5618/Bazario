@@ -12,6 +12,8 @@ import {
   getProducts,
   updateProduct,
   getBulkProducts,
+  getFilteredProducts,
+  getCategories,
 } from "../controllers/product.controller.js";
 import { createReview } from "../controllers/review.controller.js";
 import Product from "../models/product.model.js";
@@ -20,6 +22,8 @@ const router = express.Router();
 
 // Public routes
 router.get("/", getProducts);
+router.get("/categories", getCategories);
+router.get("/filtered", getFilteredProducts);
 router.get("/:id", getProduct);
 
 // Protected routes with platform access check
@@ -52,7 +56,13 @@ router.post('/bulk', getBulkProducts);
 
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await Product.distinct('category');
+    const { platformType } = req.query;
+    
+    // Add platformType to the query if provided
+    const query = platformType ? { platformType: { $in: [platformType] } } : {};
+    
+    const categories = await Product.distinct('category', query);
+    
     res.status(200).json({
       success: true,
       categories

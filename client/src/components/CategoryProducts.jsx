@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaShoppingCart, FaMinus, FaPlus, FaCheck } from 'react-icons/fa';
 import { cartAdd, cartRemove, updateCartItemQuantity } from '../store/cartSlice';
+import ProductFilter from './ProductFilter';
+import ProductCard from './ProductCard';
 
 // Cool animation variants
 const containerVariants = {
@@ -115,8 +117,15 @@ const loadingDotVariants = {
 
 const CategoryProducts = () => {
   const { category } = useParams();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentFilters, setCurrentFilters] = useState({
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    rating: searchParams.get('rating') || '',
+    sortBy: searchParams.get('sortBy') || 'newest'
+  });
   const [cartItems, setCartItems] = useState({});
   const [isAddingToCart, setIsAddingToCart] = useState({});
   const userData = useSelector((state) => state.user.userData);
@@ -127,21 +136,49 @@ const CategoryProducts = () => {
   const toastId = React.useRef(null);
   const toastDuration = 2000; // Duration for success messages
 
-  // Fetch products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get(`/api/products/category/${category}`);
-        setProducts(response.data.products);
-      } catch (error) {
-        toast.error('Failed to fetch products');
-      } finally {
-        setLoading(false);
+  const fetchProducts = async (filters = null) => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      
+      // Add search query if it exists
+      const search = searchParams.get('query');
+      if (search) {
+        queryParams.append('search', search);
       }
-    };
 
-    fetchProducts();
-  }, [category]);
+      // Add category if it exists
+      if (category) {
+        queryParams.append('category', category);
+      }
+
+      // Add filters if they exist
+      if (filters) {
+        if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
+        if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
+        if (filters.rating) queryParams.append('rating', filters.rating);
+        if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+      }
+
+      // Always add platformType
+      queryParams.append('platformType', 'b2c');
+
+      const response = await axios.get(`/api/products/filtered?${queryParams.toString()}`);
+      console.log('Filter response:', response.data); // Debug log
+      setProducts(response.data.products);
+      setCurrentFilters(filters || {});
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast.error('Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchProducts(currentFilters);
+  }, [category, searchParams.get('query')]);
 
   // Fetch cart items
   useEffect(() => {
@@ -326,161 +363,28 @@ const CategoryProducts = () => {
     }
   };
 
+  const handleApplyFilter = (filters) => {
+    fetchProducts(filters);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <motion.h1 
-          className="text-3xl font-bold text-gray-800 mb-8 capitalize"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {category.replace(/-/g, ' ')}
-        </motion.h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-3xl font-bold mb-8">{category}</h1>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard key={product._id} product={product} />
+        ))}
+      </div>
 
-        {loading ? (
-          <motion.div 
-            className="flex justify-center space-x-2 py-20"
-            variants={loadingContainerVariants}
-            animate="animate"
-          >
-            {[1, 2, 3].map((dot) => (
-              <motion.div
-                key={dot}
-                className="w-3 h-3 bg-blue-600 rounded-full"
-                variants={loadingDotVariants}
-                initial="initial"
-                animate="animate"
-              />
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {products.map((product) => (
-              <motion.div
-                key={product._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
-                variants={productCardVariants}
-                whileHover="hover"
-                layout
-              >
-                <motion.img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  whileHover={{ scale: 1.05 }}
-                />
-
-                <div className="p-4">
-                  <motion.h3 
-                    className="text-lg font-semibold text-gray-800 mb-2"
-                    layout
-                  >
-                    {product.name}
-                  </motion.h3>
-                  <motion.p 
-                    className="text-gray-600 text-sm mb-4 line-clamp-2"
-                    layout
-                  >
-                    {product.description}
-                  </motion.p>
-                  
-                  <motion.div 
-                    className="flex justify-between items-center mb-4"
-                    layout
-                  >
-                    <span className="text-xl font-bold text-gray-900">
-                      ₹{product.price}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      Stock: {product.stock}
-                    </span>
-                  </motion.div>
-
-                  <AnimatePresence mode="wait">
-                    {cartItems[product._id] ? (
-                      <motion.div
-                        key="quantity-controls"
-                        className="flex items-center justify-between rounded-lg overflow-hidden"
-                        variants={quantityControlsVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                      >
-                        <motion.button
-                          variants={buttonVariants}
-                          whileTap="tap"
-                          whileHover="hover"
-                          onClick={() => handleUpdateQuantity(
-                            product._id,
-                            cartItems[product._id].quantity - 1,
-                            product.stock
-                          )}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-l-lg"
-                        >
-                          <FaMinus />
-                        </motion.button>
-                        <motion.span 
-                          className="font-medium px-4"
-                          layout
-                        >
-                          {cartItems[product._id].quantity}
-                        </motion.span>
-                        <motion.button
-                          variants={buttonVariants}
-                          whileTap="tap"
-                          whileHover="hover"
-                          onClick={() => handleUpdateQuantity(
-                            product._id,
-                            cartItems[product._id].quantity + 1,
-                            product.stock
-                          )}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg"
-                          disabled={cartItems[product._id].quantity >= product.stock}
-                        >
-                          <FaPlus />
-                        </motion.button>
-                      </motion.div>
-                    ) : (
-                      <motion.button
-                        key="add-button"
-                        variants={buttonVariants}
-                        initial="initial"
-                        animate="animate"
-                        whileTap="tap"
-                        whileHover="hover"
-                        onClick={() => handleAddToCart(product._id)}
-                        disabled={isAddingToCart[product._id] || product.stock === 0}
-                        className="w-full h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400"
-                      >
-                        {isAddingToCart[product._id] ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          />
-                        ) : (
-                          <>
-                            <FaShoppingCart />
-                            <span>Add to Cart</span>
-                          </>
-                        )}
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Filter Sidebar */}
+        <div className="md:col-span-1">
+          <ProductFilter 
+            onApplyFilter={handleApplyFilter}
+            initialFilters={currentFilters}
+          />
+        </div>
       </div>
     </div>
   );

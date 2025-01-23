@@ -19,6 +19,7 @@
     "flowbite-react": "^0.10.2",
     "framer-motion": "^11.15.0",
     "node-vibrant": "^4.0.0",
+    "rc-slider": "^11.1.8",
     "react": "^18.3.1",
     "react-alice-carousel": "^2.9.1",
     "react-card-slider-component": "^1.0.9",

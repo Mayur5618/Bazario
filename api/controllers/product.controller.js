@@ -339,11 +339,11 @@ export const getProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id)
             .populate('seller', 'firstname lastname')
-             .populate({
-                path: 'reviews', // Populate reviews
+            .populate({
+                path: 'reviews',
                 populate: {
-                    path: 'user', // Populate user details for each review
-                    select: 'firstname lastname' // Select fields to return
+                    path: 'user',
+                    select: 'firstname lastname'
                 }
             });
 
@@ -543,6 +543,221 @@ export const getBulkProducts = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Add this new controller function for filtered products
+export const getFilteredProducts = async (req, res) => {
+    try {
+        const {
+            minPrice,
+            maxPrice,
+            maxRating,
+            sortBy,
+            search,
+            page = 1,
+            limit = 12,
+            platformType = 'b2c'
+        } = req.query;
+
+        console.log('Received Query Params:', req.query);
+
+        // Build base filter
+        let filter = {
+            platformType: { $in: [platformType] },
+            stock: { $gt: 0 }
+        };
+
+        // Search filter
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Price range filter
+        if (minPrice || maxPrice) {
+            filter.price = {};
+            if (minPrice) filter.price.$gte = Number(minPrice);
+            if (maxPrice) filter.price.$lte = Number(maxPrice);
+        }
+
+        // Rating filter
+        if (maxRating && !isNaN(Number(maxRating))) {
+            filter.rating = { 
+                $lte: Number(maxRating),
+                $gt: 0
+            };
+        }
+
+        // Determine sort options with focus on price sorting
+        let sortOption = {};
+        
+        if (maxRating && !isNaN(Number(maxRating))) {
+            sortOption = { rating: -1 };
+        } else {
+            switch(sortBy) {
+                case 'price_low':
+                    // Explicit price ascending sort
+                    sortOption = { 
+                        price: 1,  // 1 for ascending order
+                        _id: 1     // Secondary sort by _id for consistent ordering
+                    };
+                    break;
+                case 'price_high':
+                    sortOption = { price: -1, _id: 1 };
+                    break;
+                case 'rating_high':
+                    sortOption = { rating: -1, numReviews: -1 };
+                    break;
+                case 'most_sold':
+                    sortOption = { numSold: -1, rating: -1 };
+                    break;
+                default:
+                    sortOption = { createdAt: -1 };
+            }
+        }
+
+        console.log('Applied Sort Option:', sortOption);
+
+        // Execute query with aggregation pipeline for better sorting
+        const products = await Product.aggregate([
+            { $match: filter },
+            { 
+                $addFields: {
+                    numericPrice: { $toDouble: "$price" }  // Convert price to number
+                }
+            },
+            { 
+                $sort: sortBy === 'price_low' 
+                    ? { numericPrice: 1 }  // Sort by converted numeric price
+                    : sortOption 
+            },
+            { $skip: (parseInt(page) - 1) * parseInt(limit) },
+            { $limit: parseInt(limit) },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'seller',
+                    foreignField: '_id',
+                    as: 'seller'
+                }
+            },
+            { 
+                $unwind: {
+                    path: '$seller',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    description: 1,
+                    price: 1,
+                    category: 1,
+                    stock: 1,
+                    platformType: 1,
+                    images: 1,
+                    unitSize: 1,
+                    unitType: 1,
+                    reviews: 1,
+                    rating: 1,
+                    numReviews: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    'seller._id': 1,
+                    'seller.firstname': 1,
+                    'seller.lastname': 1
+                }
+            }
+        ]);
+
+        // Get total count for pagination
+        const total = await Product.countDocuments(filter);
+
+        // Log sorted products for verification
+        console.log('Sorted Products:', products.map(p => ({
+            name: p.name,
+            price: p.price,
+            numericPrice: p.numericPrice
+        })));
+
+        res.status(200).json({
+            success: true,
+            products,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parseInt(limit)),
+            total,
+            filters: {
+                minPrice,
+                maxPrice,
+                maxRating,
+                sortBy,
+                search,
+                platformType
+            }
+        });
+
+    } catch (error) {
+        console.error('Filter products error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error filtering products',
+            error: error.message
+        });
+    }
+};
+
+// Add a new function to get products by category
+export const getProductsByCategory = async (req, res) => {
+    try {
+        const { category } = req.params;
+        const { platformType = 'b2c', limit = 8 } = req.query;
+
+        const products = await Product.find({
+            category: { $regex: new RegExp(category, 'i') },
+            platformType: { $in: [platformType] }
+        })
+        .limit(parseInt(limit))
+        .populate('seller', 'firstname lastname')
+        .populate('reviews');
+
+        res.status(200).json({
+            success: true,
+            products
+        });
+    } catch (error) {
+        console.error('Error fetching products by category:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching products by category'
+        });
+    }
+};
+
+// Add this new controller function
+export const getCategories = async (req, res) => {
+    try {
+        const { platformType } = req.query;
+        
+        // Build query for platform type
+        const query = platformType ? { platformType: { $in: [platformType] } } : {};
+        
+        // Get distinct categories
+        const categories = await Product.distinct('category', query);
+        
+        res.status(200).json({
+            success: true,
+            categories
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching categories'
+        });
+    }
 };
 
 export default router;

@@ -52,3 +52,10 @@
   transform: scale(0.95); /* Optional: adds a slight press effect */
 }
 
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
