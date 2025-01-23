@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
-import { FaShoppingCart, FaMinus, FaPlus, FaCheck } from 'react-icons/fa';
+import { FaShoppingCart, FaMinus, FaPlus, FaCheck, FaStar } from 'react-icons/fa';
 import { cartAdd, cartRemove, updateCartItemQuantity } from '../store/cartSlice';
 import ProductFilter from './ProductFilter';
 import ProductCard from './ProductCard';
@@ -136,26 +136,29 @@ const CategoryProducts = () => {
   const toastId = React.useRef(null);
   const toastDuration = 2000; // Duration for success messages
 
-  const fetchProducts = async (filters = null) => {
+  // Add new state for temporary filters
+  const [tempFilters, setTempFilters] = useState({
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    rating: searchParams.get('rating') || '',
+    sortBy: searchParams.get('sortBy') || 'newest'
+  });
+
+  const fetchProducts = async (filters) => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
       
-      // Add search query if it exists
-      const search = searchParams.get('query');
-      if (search) {
-        queryParams.append('search', search);
-      }
-
-      // Add category if it exists
+      // Add category
       if (category) {
         queryParams.append('category', category);
       }
 
-      // Add filters if they exist
+      // Add filters
       if (filters) {
         if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
         if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
+        // Change rating filter to match backend expectation
         if (filters.rating) queryParams.append('rating', filters.rating);
         if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
       }
@@ -164,9 +167,18 @@ const CategoryProducts = () => {
       queryParams.append('platformType', 'b2c');
 
       const response = await axios.get(`/api/products/filtered?${queryParams.toString()}`);
-      console.log('Filter response:', response.data); // Debug log
-      setProducts(response.data.products);
-      setCurrentFilters(filters || {});
+      console.log('Filter params:', queryParams.toString()); // Debug log
+      
+      if (response.data.success) {
+        // Client-side rating filter if server doesn't handle it
+        let filteredProducts = response.data.products;
+        if (filters?.rating) {
+          filteredProducts = filteredProducts.filter(
+            product => product.rating >= parseInt(filters.rating)
+          );
+        }
+        setProducts(filteredProducts);
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to fetch products');
@@ -175,7 +187,6 @@ const CategoryProducts = () => {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchProducts(currentFilters);
   }, [category, searchParams.get('query')]);
@@ -363,27 +374,259 @@ const CategoryProducts = () => {
     }
   };
 
-  const handleApplyFilter = (filters) => {
-    fetchProducts(filters);
+  // Update the filter handlers to use tempFilters instead of directly fetching
+  const handleRatingClick = (rating) => {
+    const newRating = tempFilters.rating === rating.toString() ? '' : rating.toString();
+    setTempFilters(prev => ({ ...prev, rating: newRating }));
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold mb-8">{category}</h1>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product._id} product={product} />
-        ))}
-      </div>
+  const handleSortChange = (value) => {
+    setTempFilters(prev => ({ ...prev, sortBy: value }));
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Filter Sidebar */}
-        <div className="md:col-span-1">
-          <ProductFilter 
-            onApplyFilter={handleApplyFilter}
-            initialFilters={currentFilters}
-          />
+  const handleApplyFilter = () => {
+    setCurrentFilters(tempFilters);
+    fetchProducts(tempFilters);
+  };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Category Title */}
+        <h1 className="text-2xl font-bold mb-8 capitalize">{category}</h1>
+
+        {/* Main Layout */}
+        <div className="flex gap-8">
+          {/* Filter Sidebar - Sticky position */}
+          <aside className="w-72 shrink-0">
+            <div className="bg-white rounded-lg shadow-sm sticky top-[84px]">
+              <div className="p-6">
+                {/* Filter Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
+                  <button
+                    onClick={() => {
+                      const resetFilters = {
+                        minPrice: '',
+                        maxPrice: '',
+                        rating: '',
+                        sortBy: 'newest'
+                      };
+                      setTempFilters(resetFilters);
+                      setCurrentFilters(resetFilters);
+                      fetchProducts(resetFilters);
+                    }}
+                    className="text-blue-600 text-sm hover:underline font-medium"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {/* Filter Content */}
+                <div className="space-y-6">
+                  {/* Price Range */}
+                  <div className="mb-6">
+                    <h3 className="text-base font-medium mb-3">Price Range</h3>
+                    <div className="flex gap-4">
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={tempFilters.minPrice}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={tempFilters.maxPrice}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rating */}
+                  <div className="mb-6">
+                    <h3 className="text-base font-medium mb-3">Rating</h3>
+                    <div className="space-y-2">
+                      {[4, 3, 2, 1].map((rating) => (
+                        <button
+                          key={rating}
+                          onClick={() => handleRatingClick(rating)}
+                          className={`w-full flex items-center p-2 rounded ${
+                            tempFilters.rating === rating.toString() ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <div className="flex">
+                            {[...Array(5)].map((_, index) => (
+                              <FaStar
+                                key={index}
+                                className={`w-4 h-4 ${
+                                  index < rating ? 'text-yellow-400' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-sm text-gray-600">& Up</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="mb-6">
+                    <h3 className="text-base font-medium mb-3">Sort By</h3>
+                    <select
+                      value={tempFilters.sortBy}
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      className="w-full px-3 py-2 border rounded"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="price_low">Price: Low to High</option>
+                      <option value="price_high">Price: High to Low</option>
+                      <option value="rating_high">Highest Rated</option>
+                      <option value="most_sold">Most Sold</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Apply Filters Button */}
+                <div className="mt-6">
+                  <button
+                    onClick={handleApplyFilter}
+                    className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1">
+            {/* Products Grid */}
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[400px]"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence mode="wait">
+                {products.length === 0 ? (
+                  // No products message
+                  <div className="col-span-full flex items-center justify-center min-h-[400px]">
+                    <div className="text-center">
+                      <p className="text-gray-500 text-lg">No products found</p>
+                      <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Product cards
+                  products.map((product) => (
+                    <motion.div
+                      key={product._id}
+                      variants={productCardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      className="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full"
+                    >
+                      {/* Product Image with fixed aspect ratio */}
+                      <div className="relative w-full pt-[100%] mb-4 overflow-hidden rounded-lg">
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="absolute top-0 left-0 w-full h-full object-cover"
+                        />
+                      </div>
+
+                      {/* Product Details */}
+                      <div className="flex flex-col flex-grow">
+                        {/* Title */}
+                        <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">
+                          {product.name}
+                        </h3>
+
+                        {/* Price and Unit */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl font-bold">₹{product.price}</span>
+                          <span className="text-sm text-gray-500">per {product.unit}</span>
+                        </div>
+
+                        {/* Rating */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex">
+                            {[...Array(5)].map((_, index) => (
+                              <FaStar
+                                key={index}
+                                className={`w-4 h-4 ${
+                                  index < product.rating ? 'text-yellow-400' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {product.rating} ({product.reviews?.length || 0})
+                          </span>
+                        </div>
+
+                        {/* Stock Status */}
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm text-green-600">In Stock</span>
+                          <span className="text-sm text-gray-500">Stock: {product.stock}</span>
+                        </div>
+
+                        {/* Add to Cart Button */}
+                        <div className="mt-auto">
+                          {cartItems[product._id] ? (
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                              <button
+                                onClick={() => handleUpdateQuantity(
+                                  product._id,
+                                  cartItems[product._id].quantity - 1,
+                                  product.stock
+                                )}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <FaMinus className="w-4 h-4" />
+                              </button>
+                              <span className="text-lg font-medium">
+                                {cartItems[product._id].quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(
+                                  product._id,
+                                  cartItems[product._id].quantity + 1,
+                                  product.stock
+                                )}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <FaPlus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleAddToCart(product._id)}
+                              disabled={isAddingToCart[product._id]}
+                              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <FaShoppingCart className="w-4 h-4" />
+                              Add to Cart
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </main>
         </div>
       </div>
     </div>
