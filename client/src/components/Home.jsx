@@ -275,16 +275,7 @@ const Home = () => {
       {/* Recently Viewed Section with updated styling */}
      
 
-      {/* Quality Guarantee Banner */}
-      <div className="bg-purple-700 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Our Quality Guarantee</h2>
-          <p className="text-lg max-w-2xl mx-auto">
-            We ensure that every product meets the highest standards of quality. 
-            Your satisfaction is our top priority.
-          </p>
-        </div>
-      </div>
+     
     </div>
   );
 };

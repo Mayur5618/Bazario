@@ -136,12 +136,13 @@ const AllProducts = () => {
   const [categories, setCategories] = useState([]);
   const [productsByCategory, setProductsByCategory] = useState({});
   const [activeCategory, setActiveCategory] = useState(null);
+  const [cartItem, setCartItem] = useState(null);
 
   /////////////////////////////////////////////////////////////////
   const { category } = useParams();
   // const [products, setProducts] = useState([]);
   // const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState({});
+  // const [cartItems, setCartItems] = useState({});
   // const [isAddingToCart, setIsAddingToCart] = useState({});
   // const userData = useSelector((state) => state.user.userData);
   // const dispatch = useDispatch();
@@ -256,7 +257,7 @@ const AllProducts = () => {
           response.data.cart.items.forEach(item => {
             cartItemsMap[item.product._id] = item;
           });
-          setCartItems(cartItemsMap);
+          setCartItemsMap(cartItemsMap);
         }
       } catch (error) {
         console.error("Error fetching cart:", error);
@@ -351,6 +352,24 @@ const AllProducts = () => {
     }
   };
 
+  // Add fetchCartItem function
+  const fetchCartItem = async (productId) => {
+    try {
+      const response = await axios.get("/api/cart/getCartItems", {
+        withCredentials: true,
+      });
+      if (response.data.success) {
+        const foundItem = response.data.cart.items.find(
+          item => item.product._id === productId
+        );
+        setCartItem(foundItem);
+      }
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
+  // Update handleAddToCart function
   const handleAddToCart = async (productId) => {
     if (!userData) {
       toast.error("Please login to add items to cart");
@@ -359,71 +378,82 @@ const AllProducts = () => {
     }
 
     setIsAddingToCart(prev => ({ ...prev, [productId]: true }));
-    const product = products.find(p => p._id === productId);
-
     try {
       const response = await axios.post("/api/cart/add", {
         productId,
-        quantity: 1,
+        quantity: 1
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
-        dispatch(cartAdd({ product, quantity: 1 }));
-        setCartItems(prev => ({
-          ...prev,
-          [productId]: { product, quantity: 1 }
+        const product = (filteredProducts || products).find(p => p._id === productId);
+        dispatch(cartAdd({
+          product,
+          quantity: 1
         }));
-        showToastMessage(product, 1, 'add');
+        
+        // Fetch updated cart item
+        const updatedCart = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true
+        });
+        const updatedItem = updatedCart.data.cart.items.find(
+          item => item.product._id === productId
+        );
+        setCartItem(updatedItem);
+        toast.success("Added to cart!");
       }
     } catch (error) {
-      toast.error("Failed to add item to cart");
+      console.error("Cart error:", error);
+      toast.error(error.response?.data?.message || "Failed to add to cart");
     } finally {
       setIsAddingToCart(prev => ({ ...prev, [productId]: false }));
     }
   };
 
-  const handleUpdateQuantity = async (productId, newQuantity, maxStock) => {
-    if (newQuantity < 0 || newQuantity > maxStock) return;
-    
-    const product = products.find(p => p._id === productId);
+  // Add handleUpdateQuantity function
+  const handleUpdateQuantity = async (productId, newQuantity) => {
+    if (!userData) {
+      toast.error("Please login to update cart");
+      return;
+    }
 
     try {
-      // Show loading toast
-      showToastMessage(product, newQuantity, 'update', true);
-
-      if (newQuantity === 0) {
+      if (newQuantity < 1) {
+        dispatch(cartRemove(productId));
         const response = await axios.delete(`/api/cart/remove/${productId}`);
         if (response.data.success) {
-          dispatch(cartRemove(productId));
-          setCartItems(prev => {
-            const newItems = { ...prev };
-            delete newItems[productId];
-            return newItems;
-          });
-          // Show success message for removal
-          showToastMessage(product, 0, 'remove', false);
+          setCartItem(null);
+          toast.success("Item removed from cart");
         }
-      } else {
-        const response = await axios.put(`/api/cart/update/${productId}`, {
-          quantity: newQuantity
+        return;
+      }
+
+      const product = (filteredProducts || products).find(p => p._id === productId);
+      if (newQuantity > product.stock) {
+        toast.error("Cannot exceed available stock");
+        return;
+      }
+
+      const response = await axios.put(`/api/cart/update/${productId}`, {
+        quantity: newQuantity,
+      });
+
+      if (response.data.success) {
+        const updatedCart = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true
         });
-        if (response.data.success) {
-          dispatch(updateCartItemQuantity({ productId, quantity: newQuantity }));
-          setCartItems(prev => ({
-            ...prev,
-            [productId]: { ...prev[productId], quantity: newQuantity }
-          }));
-          // Show success message for update
-          showToastMessage(product, newQuantity, 'update', false);
-        }
+        const updatedItem = updatedCart.data.cart.items.find(
+          item => item.product._id === productId
+        );
+        setCartItem(updatedItem);
+        toast.success(`Quantity updated to ${newQuantity}`);
       }
     } catch (error) {
-      if (toastId.current) {
-        toast.dismiss(toastId.current);
-      }
-      toast.error("Failed to update cart");
+      toast.error("Failed to update quantity");
     }
   };
+
   /////////////////////////////////////////////////////////////////
 
   // Get category and search query from URL
@@ -861,7 +891,7 @@ const AllProducts = () => {
                                 </div>
                             </Link>
                             <div className="p-4 pt-0">
-                                {cartItems[product._id] ? (
+                                {cartItemsMap[product._id] ? (
                                     <div className="flex items-center justify-between">
                                         {/* Cart quantity controls */}
                                     </div>
@@ -901,95 +931,98 @@ const AllProducts = () => {
                             View All →
                         </Link>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {products.filter(p => p.category === category).map((product) => (
-                            <motion.div
-                                key={product._id}
-                                layout
-                                className="bg-white rounded-lg shadow-sm overflow-hidden"
-                            >
-                                <Link to={`/product/${product._id}`}>
-                                    <img
-                                        src={product.images[0]}
-                                        alt={product.name}
-                                        className="w-full h-48 object-cover"
-                                    />
-                                    <div className="p-4">
-                                        <h3 className="font-semibold">{product.name}</h3>
-                                        <p className="text-gray-600">₹{product.price}</p>
-                                        <div className="flex items-center mt-2">
-                                            <span className="flex items-center">
-                                                {product.rating} <FaStar className="text-yellow-400 ml-1" />
-                                            </span>
-                                            <span className="text-gray-500 text-sm ml-2">
-                                                ({product.numReviews} reviews)
-                                            </span>
-                                        </div>
+                            <div key={product._id} className="bg-white rounded-lg shadow p-4">
+                                <img
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    className="w-full h-48 object-cover rounded-lg mb-4"
+                                />
+                                <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-xl font-bold">₹{product.price} <span className="text-sm text-gray-500">per</span></div>
+                                    <div className="flex items-center">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <FaStar
+                                                key={star}
+                                                className={`w-4 h-4 ${
+                                                    star <= (product.rating || 0)
+                                                        ? "text-yellow-400"
+                                                        : "text-gray-300"
+                                                }`}
+                                            />
+                                        ))}
+                                        <span className="ml-1 text-gray-600">
+                                            {product.rating || 0} ({product.reviews?.length || 0})
+                                        </span>
                                     </div>
-                                </Link>
-                                <div className="p-4 pt-0">
-                                    {cartItems[product._id] ? (
-                                        <AnimatePresence mode="wait">
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                                    <span className={`${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                                    </span>
+                                    <span>Stock: {product.stock}</span>
+                                </div>
+                                {product.stock > 0 ? (
+                                    <AnimatePresence mode="wait">
+                                        {cartItemsMap[product._id] ? (
                                             <motion.div
                                                 key="quantity-controls"
-                                                className="flex items-center justify-between rounded-lg overflow-hidden w-[95%] mx-auto"
-                                                variants={quantityControlsVariants}
-                                                initial="initial"
-                                                animate="animate"
-                                                exit="exit"
+                                                className="flex items-center border-2 border-blue-600 justify-between rounded-lg overflow-hidden"
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
                                             >
                                                 <motion.button
-                                                    variants={buttonVariants}
-                                                    whileTap="tap"
-                                                    whileHover="hover"
-                                                    onClick={() => handleUpdateQuantity(
-                                                        product._id,
-                                                        cartItems[product._id].quantity - 1,
-                                                        product.stock
-                                                    )}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-l-lg"
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity - 1)}
+                                                    className="px-4 py-2 bg-blue-600 text-white font-medium text-xl"
                                                 >
-                                                    <FaMinus />
+                                                    -
                                                 </motion.button>
-                                                <motion.span 
-                                                    className="font-medium px-4"
-                                                    layout
-                                                >
-                                                    {cartItems[product._id].quantity}
-                                                </motion.span>
+                                                <span className="font-medium text-lg">
+                                                    {cartItemsMap[product._id].quantity}
+                                                </span>
                                                 <motion.button
-                                                    variants={buttonVariants}
-                                                    whileTap="tap"
-                                                    whileHover="hover"
-                                                    onClick={() => handleUpdateQuantity(
-                                                        product._id,
-                                                        cartItems[product._id].quantity + 1,
-                                                        product.stock
-                                                    )}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg"
-                                                    disabled={cartItems[product._id].quantity >= product.stock}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity + 1)}
+                                                    className="px-4 py-2 bg-blue-600 text-white font-medium text-xl"
+                                                    disabled={cartItemsMap[product._id].quantity >= product.stock}
                                                 >
-                                                    <FaPlus />
+                                                    +
                                                 </motion.button>
                                             </motion.div>
-                                        </AnimatePresence>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleAddToCart(product._id)}
-                                            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-                                            disabled={isAddingToCart[product._id]}
-                                        >
-                                            {isAddingToCart[product._id] ? (
-                                                <div className="flex items-center justify-center">
-                                                    <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
-                                                </div>
-                                            ) : (
-                                                'Add to Cart'
-                                            )}
-                                        </button>
-                                    )}
-                                </div>
-                            </motion.div>
+                                        ) : (
+                                            <motion.button
+                                                key="add-button"
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => handleAddToCart(product._id)}
+                                                className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                                disabled={isAddingToCart[product._id]}
+                                            >
+                                                {isAddingToCart[product._id] ? (
+                                                    <motion.div
+                                                        animate={{ rotate: 360 }}
+                                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <FaShoppingCart />
+                                                        <span>Add to Cart</span>
+                                                    </>
+                                                )}
+                                            </motion.button>
+                                        )}
+                                    </AnimatePresence>
+                                ) : (
+                                    <div className="text-red-500 text-center py-3 bg-red-50 rounded-lg">
+                                        Out of Stock
+                                    </div>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>

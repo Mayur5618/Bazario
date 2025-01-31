@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaArrowLeft, FaArrowRight, FaChevronLeft, FaChevronRight, FaStar } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/recentlyViewed.css';
 
 const RecentlyViewed = () => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const sliderRef = useRef(null);
+  const navigate = useNavigate();
 
   const loadRecentlyViewed = () => {
     try {
@@ -42,10 +44,21 @@ const RecentlyViewed = () => {
     };
   }, []);
 
-  const handleScroll = (direction) => {
-    const container = document.getElementById('recently-viewed-container');
-    const scrollAmount = direction === 'left' ? -300 : 300;
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  const scroll = (direction) => {
+    if (sliderRef.current) {
+      const scrollAmount = direction === 'left' ? -1200 : 1200;
+      sliderRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleProductClick = (product) => {
+    // Updated navigation path to match your route structure
+    navigate(`/product/${product._id}`);
+    // If you need to refresh the page after navigation
+    // window.location.href = `/product/${product._id}`;
   };
 
   // Don't show section if no recently viewed products
@@ -54,69 +67,95 @@ const RecentlyViewed = () => {
   }
 
   return (
-    <div className="recently-viewed max-w-7xl mx-auto relative px-4">
-      <h2 className="text-2xl font-bold mb-6 text-gray-700">Recently Viewed Products</h2>
-      
-      <div className="relative">
-        <div 
-          id="recently-viewed-container"
-          className="flex gap-6 overflow-x-hidden scroll-smooth"
-        >
-          {recentlyViewed.map((product) => (
-            <Link
-              key={product._id}
-              to={`/product/${product._id}`}
-              className="flex-none w-[220px] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="h-[180px] w-full overflow-hidden rounded-t-lg">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-base font-medium text-gray-900 truncate">
-                  {product.name}
-                </h3>
-                <div className="mt-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-900 font-medium">₹{product.price}</p>
-                    <p className="text-sm text-gray-500">per {product.unit}</p>
+    <div className="py-4 bg-gradient-to-b from-purple-100/50 to-white">
+      <div className="max-w-[1600px] mx-auto">
+        <div className="px-6">
+          <h2 className="text-xl font-bold mb-3">Recently Viewed Products</h2>
+        </div>
+        
+        <div className="relative px-2">
+          {/* Navigation Buttons */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              scroll('left');
+            }}
+            className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 p-2 rounded-full shadow-lg transition-all"
+          >
+            <FaChevronLeft className="w-4 h-4 text-gray-600" />
+          </button>
+
+          {/* Products Slider */}
+          <div 
+            ref={sliderRef}
+            className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-6"
+          >
+            {recentlyViewed.map((product) => (
+              <div 
+                key={product._id}
+                onClick={() => handleProductClick(product)}
+                className="flex-none w-[220px] cursor-pointer hover:shadow-lg transition-all"
+              >
+                <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
+                  {/* Product Image */}
+                  <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center">
-                      <span className="text-sm text-yellow-500">★ {product.rating}</span>
-                      <span className="text-sm text-gray-500 ml-1">({product.reviews?.length || 0})</span>
+
+                  {/* Product Info */}
+                  <div className="p-3 flex flex-col flex-grow">
+                    <h3 className="text-base font-medium text-gray-900 mb-1 line-clamp-2 hover:text-blue-600">
+                      {product.name}
+                    </h3>
+
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-lg font-bold">₹{product.price}</span>
+                        <span className="text-xs text-gray-500">per {product.unit}</span>
+                      </div>
                     </div>
-                    <p className={`text-sm font-medium ${
-                      product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                    </p>
+
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="flex">
+                        {[...Array(5)].map((_, index) => (
+                          <FaStar
+                            key={index}
+                            className={`w-3 h-3 ${
+                              index < product.rating ? 'text-yellow-400' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-600">
+                        ({product.reviews?.length || 0})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs mt-auto">
+                      <span className="text-green-600 font-medium">In Stock</span>
+                      <span className="text-gray-500">Stock: {product.stock}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {recentlyViewed.length > 3 && (
-          <>
-            <button
-              onClick={() => handleScroll('left')}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 p-3 rounded-full shadow-md text-gray-600 z-10 transition-all"
-            >
-              <FaArrowLeft size={20} />
-            </button>
-            <button
-              onClick={() => handleScroll('right')}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 p-3 rounded-full shadow-md text-gray-600 z-10 transition-all"
-            >
-              <FaArrowRight size={20} />
-            </button>
-          </>
-        )}
+          {/* Next Button */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              scroll('right');
+            }}
+            className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 p-2 rounded-full shadow-lg transition-all"
+          >
+            <FaChevronRight className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
       </div>
     </div>
   );

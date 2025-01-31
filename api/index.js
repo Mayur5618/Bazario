@@ -27,8 +27,12 @@ const app = express();
 // Configure middleware BEFORE routes
 app.use(cookieParser());
 app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true
+  origin: function(origin, callback) {
+    // Allow any origin during development
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 // Set body size limits BEFORE any routes
