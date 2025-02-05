@@ -120,7 +120,7 @@ const RegisterScreen = () => {
 
           <TouchableOpacity 
             style={styles.loginButton} 
-            onPress={() => router.replace('/auth/login')}
+            onPress={() => router.push('/(auth)/login')}
           >
             <Text style={styles.loginText}>
               Already have an account? <Text style={styles.loginLink}>Sign In</Text>

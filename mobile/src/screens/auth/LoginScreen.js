@@ -1,9 +1,10 @@
 // Use the LoginScreen code we created earlier
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Alert, ActivityIndicator } from 'react-native';
-import axios from '@/config/axios';
+import axios from '../../config/axios';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +18,7 @@ const LoginScreen = () => {
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   // Validation function
   const validateField = (name, value) => {
@@ -57,45 +59,29 @@ const LoginScreen = () => {
     setServerError('');
 
     try {
-      console.log('Attempting login with:', formData); // Debug log
-
       const response = await axios.post('/api/users/signin', {
         mobileno: formData.mobileno,
         password: formData.password
       });
 
-      console.log('Login response:', response.data); // Debug log
-
       if (response.data.success) {
         const userData = response.data.data;
-        if (userData) {
-          // Store user data if needed
-          // await AsyncStorage.setItem('userData', JSON.stringify(userData));
-          
-          // Navigate based on user type
-          switch(userData.userType) {
-            case 'buyer':
-              router.replace('/');
-              break;
-            case 'seller':
-              router.replace('/seller/dashboard');
-              break;
-            case 'agency':
-              router.replace('/agency/dashboard');
-              break;
-            default:
-              router.replace('/');
-          }
+        const token = userData._id;
+        
+        if (userData && token) {
+          await login(userData, token);
+          router.replace('/(app)/home');
+        } else {
+          setServerError('Invalid response from server');
         }
       } else {
         setServerError(response.data.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error.response || error); // Debug log
+      console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || 
                           'Network error. Please check your connection.';
       setServerError(errorMessage);
-      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +182,7 @@ const LoginScreen = () => {
 
           <TouchableOpacity 
             style={styles.registerButton} 
-            onPress={() => router.replace('/auth/register')}
+            onPress={() => router.push('/(auth)/register')}
           >
             <Text style={styles.registerText}>
               Don't have an account? <Text style={styles.registerLink}>Sign Up</Text>

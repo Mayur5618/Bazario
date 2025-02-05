@@ -1,37 +1,23 @@
 import { Stack } from 'expo-router';
-import { useCallback } from 'react';
-import { useFonts } from 'expo-font';
+import { AuthProvider } from '../src/context/AuthContext';
+import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function Layout() {
-  const [fontsLoaded] = useFonts({});
-
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
+export default function RootLayout() {
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
-    <Stack 
-      onLayout={onLayoutRootView}
-      screenOptions={{
-        headerShown: false
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth/login" />
-      <Stack.Screen name="auth/register" />
-      <Stack.Screen 
-        name="welcome" 
-        options={{
-          gestureEnabled: false
-        }}
+    <AuthProvider>
+      <Stack 
+        screenOptions={{ 
+          headerShown: false,
+          animation: 'fade'
+        }} 
       />
-    </Stack>
+    </AuthProvider>
   );
 } 

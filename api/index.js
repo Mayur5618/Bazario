@@ -26,6 +26,7 @@ const app = express();
 
 // Configure middleware BEFORE routes
 app.use(cookieParser());
+
 app.use(cors({
   origin: function(origin, callback) {
     // Allow any origin during development
