@@ -21,6 +21,7 @@ import ProductCard from '../components/ProductCard';
 import { useToast } from '../hooks/useToast';
 
 const { width } = Dimensions.get('window');
+const cardWidth = (width - 48) / 2; // For 2 cards per row with proper spacing
 
 const HomeScreen = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -43,12 +44,26 @@ const HomeScreen = () => {
       
       // Sample categories - you can fetch from API if available
       setCategories([
-        { id: 'fruits', name: 'Fruits & Vegetables', icon: '🥬' },
-        { id: 'dairy', name: 'Dairy & Eggs', icon: '🥛' },
-        { id: 'bakery', name: 'Bakery', icon: '🥖' },
-        { id: 'meat', name: 'Meat & Fish', icon: '🥩' },
-        { id: 'snacks', name: 'Snacks', icon: '🍿' },
-        { id: 'beverages', name: 'Beverages', icon: '🥤' }
+        {
+          id: 1,
+          name: 'Fresh Vegetables',
+          image: 'https://i.pinimg.com/736x/1f/8d/cd/1f8dcd9fad685de5025213d4b846848b.jpg',
+        },
+        {
+          id: 2,
+          name: 'Home-Cooked Meals',
+          image: 'https://i.pinimg.com/736x/87/55/50/8755508c64ce14492a4f622ed29762a2.jpg',
+        },
+        {
+          id: 3,
+          name: 'Traditional Pickles',
+          image: 'https://i.pinimg.com/736x/4c/6c/ba/4c6cbae47f19fb1a628624afc83d4406.jpg',
+        },  
+        {
+          id: 4,
+          name: "Seasonal Specials",
+          image: "https://i.pinimg.com/736x/8b/62/58/8b62584beeeb75fe5db7efc1d3dd2545.jpg",
+        },
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -100,22 +115,38 @@ const HomeScreen = () => {
   );
 
   const renderCategories = () => (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false}
-      style={styles.categoriesScroll}
-    >
-      {categories.map((category) => (
-        <TouchableOpacity 
-          key={category.id}
-          style={styles.categoryCard}
-          onPress={() => router.push(`/(app)/category/${category.id}`)}
-        >
-          <Text style={styles.categoryIcon}>{category.icon}</Text>
-          <Text style={styles.categoryName}>{category.name}</Text>
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Categories</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAll}>See All</Text>
         </TouchableOpacity>
-      ))}
-    </ScrollView>
+      </View>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesContainer}
+      >
+        {categories.map((category) => (
+          <TouchableOpacity 
+            key={category.id} 
+            style={styles.categoryCard}
+            activeOpacity={0.7}
+          >
+            <Image 
+              source={{ uri: category.image }}
+              style={styles.categoryImage}
+              resizeMode="cover"
+            />
+            <View style={styles.categoryNameContainer}>
+              <Text style={styles.categoryName} numberOfLines={2}>
+                {category.name}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 
   const handleNavigation = (route) => {
@@ -137,43 +168,21 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>Welcome, {user ? user.firstname : ''}</Text>
-          <Text style={styles.appName}>Bazario</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.welcomeText}>Welcome to</Text>
+          <Text style={styles.brandText}>Bazario</Text>
         </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
-            <Ionicons name="notifications-outline" size={24} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <ScrollView style={styles.content}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            placeholderTextColor="#666"
-          />
+          <Ionicons name="search" size={20} color="#666" />
+          <Text style={styles.searchPlaceholder}>Search products...</Text>
         </View>
 
-        {/* Categories Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/categories')}>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          {renderCategories()}
-        </View>
+        {/* Categories */}
+        {renderCategories()}
 
         {/* Featured Products */}
         <View style={styles.section}>
@@ -193,54 +202,38 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
+    paddingTop: 20,
   },
   welcomeText: {
     fontSize: 14,
     color: '#666',
   },
-  appName: {
-    fontSize: 24,
+  brandText: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    padding: 8,
-  },
-  content: {
-    flex: 1,
+    color: '#4169E1',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 20,
     padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
+  searchPlaceholder: {
+    marginLeft: 8,
+    color: '#666',
     fontSize: 16,
-    color: '#333',
   },
-  sectionContainer: {
+  section: {
     marginBottom: 24,
+    backgroundColor: '#fff',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -251,26 +244,26 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: 'bold',
+    color: '#333',
   },
   seeAll: {
+    color: '#4169E1',
     fontSize: 14,
-    color: '#2563eb',
     fontWeight: '500',
   },
-  categoriesScroll: {
-    paddingLeft: 16,
+  categoriesContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 0,
+    marginLeft: 16,
+    gap: 8,
   },
   categoryCard: {
-    width: 100,
-    height: 100,
+    width: 92,
+    height: 140,
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginRight: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'visible',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -279,16 +272,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    alignItems: 'center',
   },
-  categoryIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+  categoryImage: {
+    width: '100%',
+    height: 92,
+    borderRadius: 12,
+  },
+  categoryNameContainer: {
+    width: '100%',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 6,
+    marginTop: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 35,
   },
   categoryName: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#333',
     textAlign: 'center',
+    lineHeight: 14,
   },
   productsGrid: {
     flexDirection: 'row',

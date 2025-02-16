@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   items: [],
-  cart: 0, // Total number of items in cart
+  cart: 0, // This tracks the total quantity
 };
 
 const cartSlice = createSlice({
@@ -17,31 +17,15 @@ const cartSlice = createSlice({
     },
 
     // Add item to cart
-    cartAdd: (state, action) => {
-      const { product, quantity = 1 } = action.payload;
-      const existingItem = state.items.find(item => item.product._id === product._id);
-      
-      if (existingItem) {
-        existingItem.quantity += quantity;
-      } else {
-        state.items.push({ product, quantity });
-      }
-      
-      // Update total cart count
-      state.cart += quantity;
+    cartAdd: (state) => {
+      // Increment only when adding new product
+      state.cart += 1;
     },
 
     // Remove item from cart completely
-    cartRemove: (state, action) => {
-      const productId = action.payload;
-      const itemIndex = state.items.findIndex(item => item.product._id === productId);
-      
-      if (itemIndex !== -1) {
-        // Subtract the quantity from total cart count
-        state.cart -= state.items[itemIndex].quantity;
-        // Remove item from array
-        state.items.splice(itemIndex, 1);
-      }
+    cartRemove: (state) => {
+      // Decrement only when removing a product completely
+      state.cart = Math.max(0, state.cart - 1);
     },
 
     // Update item quantity
@@ -68,10 +52,15 @@ const cartSlice = createSlice({
       state.cart = 0;
     },
     cartItemRemove: (state, action) => {
-      state.cart -= action.payload;
+      const productId = action.payload;
+      // Remove item and decrease cart count by 1 (not by quantity)
+      state.items = state.items.filter(item => item.product._id !== productId);
+      state.cart = Math.max(0, state.cart - 1);
     },
     setCartItems: (state, action) => {
       state.items = action.payload || [];
+      // Set cart count to number of unique items
+      state.cart = (action.payload || []).length;
     },
   },
 });

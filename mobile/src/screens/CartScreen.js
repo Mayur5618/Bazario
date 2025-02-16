@@ -288,6 +288,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 6,
   },
+  quantityButtonText: {
+    color: '#2563eb',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   quantity: {
     marginHorizontal: 16,
     fontSize: 16,

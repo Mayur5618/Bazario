@@ -28,12 +28,10 @@ const app = express();
 app.use(cookieParser());
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow any origin during development
-    callback(null, true);
-  },
+  origin: true, // Allow all origins in development
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Set body size limits BEFORE any routes

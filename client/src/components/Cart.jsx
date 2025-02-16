@@ -87,11 +87,9 @@ const Cart = () => {
     newQuantity
   ) => {
     try {
-      // Validate quantity
+      // If quantity becomes 0, remove item
       if (newQuantity < 1) {
-        handleRemoveFromCart(productId);
-        
-        return;
+        return handleRemoveFromCart(productId);
       }
 
       if (newQuantity > stock) {
@@ -99,17 +97,15 @@ const Cart = () => {
         return;
       }
 
-      console.log("Updating product:", productId, "to quantity:", newQuantity); // Debug log
-      // Make API call to update quantity
       const response = await axios.put(
         `/api/cart/update/${productId}`,
-
         { quantity: newQuantity },
         { withCredentials: true }
       );
 
       if (response.data.success) {
-        // Update Redux store with new cart items
+        // Only update cart items, don't change cart count since we're just
+        // updating quantity of an existing item
         dispatch(setCartItems(response.data.cart.items));
         toast.success("Cart updated successfully");
       }
@@ -118,54 +114,19 @@ const Cart = () => {
       toast.error(error.response?.data?.message || "Failed to update cart");
     }
   };
-  //     if (response.data.success) {
-  //       dispatch(setCartItems(response.data.cart.items));
-  //       toast.success('Item removed from cart');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error removing item:', error);
-  //     toast.error('Failed to remove item from cart');
-  //   }
-  // };
-
-  // const handleRemoveFromCart = async (productId) => {
-  //   try {
-  //     const response = await axios.delete(`/api/cart/remove/${productId}`, {
-  //       withCredentials: true
-  //     });
-
-  //     if (response.data.success) {
-  //       // Get the updated cart items with complete product information
-  //       const updatedCartResponse = await axios.get('/api/cart/getCartItems', {
-  //         withCredentials: true
-  //       });
-
-  //       if (updatedCartResponse.data.success) {
-  //         dispatch(setCartItems(updatedCartResponse.data.cart.items));
-  //         toast.success('Item removed from cart');
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error removing item:', error);
-  //     toast.error('Failed to remove item from cart');
-  //   }
-  // };
 
   const handleRemoveFromCart = async (productId) => {
     try {
-      // Start the removal animation
-
-      dispatch(cartRemove());
       setRemovingItems((prev) => ({ ...prev, [productId]: true }));
-
-      // Wait for animation to complete
-      await new Promise((resolve) => setTimeout(resolve, 300));
 
       const response = await axios.delete(`/api/cart/remove/${productId}`, {
         withCredentials: true,
       });
 
       if (response.data.success) {
+        // This will decrease cart count by 1 since we're removing a product
+        dispatch(cartItemRemove(productId));
+        
         const updatedCartResponse = await axios.get("/api/cart/getCartItems", {
           withCredentials: true,
         });
@@ -175,13 +136,10 @@ const Cart = () => {
           toast.success("Item removed from cart");
         }
       }
-
-      // Reset the removing state
-      setRemovingItems((prev) => ({ ...prev, [productId]: false }));
     } catch (error) {
       console.error("Error removing item:", error);
       toast.error("Failed to remove item from cart");
-      // Reset the removing state on error
+    } finally {
       setRemovingItems((prev) => ({ ...prev, [productId]: false }));
     }
   };
