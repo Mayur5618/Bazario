@@ -3,6 +3,7 @@ import { AuthProvider } from '../src/context/AuthContext';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { useRouter, useSegments } from 'expo-router';
+import { CartProvider } from '@/context/CartContext';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -20,12 +21,16 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack 
-        screenOptions={{ 
-          headerShown: false,
-          animation: 'fade'
-        }} 
-      />
+      <CartProvider>  {/* Add CartProvider */}
+        <Stack 
+          screenOptions={{ 
+            headerShown: false,
+            animation: 'fade'
+          }} 
+        />
+      </CartProvider>
     </AuthProvider>
+
+    
   );
 } 

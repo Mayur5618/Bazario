@@ -7,11 +7,13 @@ const getDevelopmentUrl = () => {
   if (__DEV__) {
     // For Android Emulator
     if (Platform.OS === 'android') {
-      return 'http://192.168.186.193:5000'; // Your local IP address
+      return 'http://192.168.195.193:5000'; // Updated local IP address
     }
     
     // For iOS Simulator or Physical Device
-    return 'http://192.168.186.193:5000'; // Your local IP address
+    return 'http://192.168.186.193:5000';
+ // Updated local IP address
+    // above make change
   }
   return 'https://your-production-api.com'; // For production
 };
