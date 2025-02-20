@@ -7,11 +7,11 @@ const getDevelopmentUrl = () => {
   if (__DEV__) {
     // For Android Emulator
     if (Platform.OS === 'android') {
-      return 'http://192.168.195.193:5000'; // Updated local IP address
+      return 'http://192.168.186.193:5000'; // Update yaha karo
     }
     
     // For iOS Simulator or Physical Device
-    return 'http://192.168.186.193:5000';
+    return 'http://192.168.186.193:5000'; // Update yaha karo
  // Updated local IP address
     // above make change
   }
