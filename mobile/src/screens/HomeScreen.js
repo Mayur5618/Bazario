@@ -35,7 +35,7 @@ const HomeScreen = () => {
   const router = useRouter();
   const { cart, addToCart, updateQuantity, fetchCart, removeFromCart } = useCart();
   const dispatch = useDispatch();
-  const cartItems = useSelector((state) => state.cart.items);
+  const cartItems = useSelector((state) => state.cart.items) || {};
   console.log('Current cart items:', cartItems); // Debug log
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -122,29 +122,18 @@ const HomeScreen = () => {
     setRefreshing(false);
   };
 
-  const handleAddToCart = async (product) => {
+  const handleAddToCart = (product) => {
     try {
-      console.log('Adding product to cart:', product);
-      
-      // Make API call
-      const response = await axios.post('/api/cart/add', {
+      // Dispatch the action with correct payload structure
+      dispatch(addToCart({
         productId: product._id,
-        quantity: 1
-      });
-
-      console.log('API Response:', response.data);
-
-      if (response.data.success) {
-        // Create the action payload
-        const cartItem = {
-          product: product,
-          quantity: 1
-        };
-        
-        // Dispatch the action with the correct payload
-        dispatch(addToCart(cartItem));
-        Alert.alert('Success', 'Product added to cart!');
-      }
+        price: product.price,
+        name: product.name,
+        image: product.images[0]
+      }));
+      
+      // Optional: Show success message
+      Alert.alert('Success', 'Product added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
       Alert.alert('Error', 'Failed to add item to cart');
@@ -215,9 +204,7 @@ const HomeScreen = () => {
 
       <View style={styles.productsGrid}>
         {featuredProducts.map((product) => {
-          const cartItem = cartItems.find(item => 
-            item.product._id === product._id
-          );
+          const cartItem = cartItems[product._id];
           console.log('Cart item for product:', cartItem); // Debug log
           
           return (
@@ -272,10 +259,7 @@ const HomeScreen = () => {
                   ) : (
                     <TouchableOpacity 
                       style={styles.addButton}
-                      onPress={() => {
-                        console.log('Add button pressed for product:', product._id); // Debug log
-                        handleAddToCart(product);
-                      }}
+                      onPress={() => handleAddToCart(product)}
                     >
                       <Ionicons name="add-circle" size={18} color="#FFF" />
                       <Text style={styles.addButtonText}>Add</Text>

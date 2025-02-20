@@ -1,97 +1,102 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from '../config/axios';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState({ items: [] });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [cartItems, setCartItems] = useState({});
+  const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
 
-  const cartTotal = cart?.items?.reduce((total, item) => {
-    const itemPrice = parseFloat(item?.price || 0);
-    const quantity = parseInt(item?.quantity || 0);
-    return total + (itemPrice * quantity);
-  }, 0) || 0;
+  // Fetch cart items when component mounts or auth state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCartItems();
+    }
+  }, [isAuthenticated]);
 
-  const fetchCart = async () => {
+  const fetchCartItems = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const response = await axios.get('/api/cart/getCartItems');
-      if (response.data.success) {
-        setCart(response.data.cart || { items: [] });
-      }
+      const items = {};
+      
+      // Convert array to object for O(1) lookup
+      response.data.cart.items.forEach(item => {
+        items[item.product._id] = {
+          quantity: item.quantity,
+          price: item.product.price,
+          name: item.product.name,
+          image: item.product.images[0]
+        };
+      });
+      
+      setCartItems(items);
     } catch (error) {
       console.error('Error fetching cart:', error);
-      setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const addToCart = (product, quantity = 1) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.items.find(item => item.product._id === product._id);
-      if (existingItem) {
-        return {
-          ...prevCart,
-          items: prevCart.items.map(item =>
-            item.product._id === product._id
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          )
-        };
-      }
-      return {
-        ...prevCart,
-        items: [...prevCart.items, { product, quantity }]
-      };
-    });
-  };
-
-  const removeFromCart = (productId) => {
-    setCart(prevCart => ({
-      ...prevCart,
-      items: prevCart.items.filter(item => item.product._id !== productId)
-    }));
-  };
-
-  const updateQuantity = (productId, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
+  const addToCart = async (productId, product) => {
+    try {
+      await axios.post('/api/cart/add', { productId, quantity: 1 });
+      setCartItems(prev => ({
+        ...prev,
+        [productId]: {
+          quantity: 1,
+          price: product.price,
+          name: product.name,
+          image: product.images[0]
+        }
+      }));
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
     }
-    
-    setCart(prevCart => ({
-      ...prevCart,
-      items: prevCart.items.map(item =>
-        item.product._id === productId
-          ? { ...item, quantity }
-          : item
-      )
-    }));
   };
 
-  const clearCart = () => {
-    setCart({ items: [] });
+  const updateQuantity = async (productId, newQuantity) => {
+    try {
+      await axios.put(`/api/cart/update/${productId}`, { quantity: newQuantity });
+      
+      setCartItems(prev => {
+        const updated = { ...prev };
+        if (newQuantity <= 0) {
+          delete updated[productId];
+        } else {
+          updated[productId] = {
+            ...updated[productId],
+            quantity: newQuantity
+          };
+        }
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      throw error;
+    }
+  };
+
+  const isInCart = (productId) => {
+    return Boolean(cartItems[productId]);
+  };
+
+  const getQuantity = (productId) => {
+    return cartItems[productId]?.quantity || 0;
   };
 
   return (
-    <CartContext.Provider 
-      value={{ 
-        cart, 
-        cartTotal, 
-        loading,
-        error,
-        addToCart, 
-        removeFromCart, 
-        updateQuantity, 
-        clearCart,
-        fetchCart,
-        setCart
-      }}
-    >
+    <CartContext.Provider value={{
+      cartItems,
+      loading,
+      addToCart,
+      updateQuantity,
+      isInCart,
+      getQuantity,
+      refreshCart: fetchCartItems
+    }}>
       {children}
     </CartContext.Provider>
   );

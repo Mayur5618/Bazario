@@ -9,55 +9,34 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  FlatList
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from '../config/axios';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateQuantity, removeFromCart } from '../store/slices/cartSlice';
 
 const CartScreen = () => {
   const router = useRouter();
   const { cart, cartTotal, fetchCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
+  const dispatch = useDispatch();
 
   useEffect(() => {
     fetchCart();
   }, []);
 
-  const handleUpdateQuantity = async (productId, newQuantity) => {
-    try {
-      if (newQuantity < 1) {
-        await handleRemoveItem(productId);
-        return;
-      }
-
-      const response = await axios.put(`/api/cart/update/${productId}`, {
-        quantity: newQuantity
-      });
-
-      if (response.data.success) {
-        fetchCart();
-      }
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      Alert.alert('Error', 'Failed to update quantity');
-    }
+  const handleUpdateQuantity = (productId, quantity, price) => {
+    dispatch(updateQuantity({ productId, quantity, price }));
   };
 
-  const handleRemoveItem = async (productId) => {
-    try {
-      const response = await axios.delete(`/api/cart/remove/${productId}`);
-
-      if (response.data.success) {
-        fetchCart();
-      }
-    } catch (error) {
-      console.error('Error removing item:', error);
-      Alert.alert('Error', 'Failed to remove item');
-    }
+  const handleRemove = (productId, price) => {
+    dispatch(removeFromCart({ productId, price }));
   };
 
   const handleApplyCoupon = async () => {
@@ -94,14 +73,14 @@ const CartScreen = () => {
         <View style={styles.quantityControl}>
           <TouchableOpacity 
             style={styles.quantityButton}
-            onPress={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+            onPress={() => handleUpdateQuantity(item.product._id, item.quantity - 1, item.price)}
           >
             <Text>-</Text>
           </TouchableOpacity>
           <Text style={styles.quantityText}>{item.quantity}</Text>
           <TouchableOpacity 
             style={styles.quantityButton}
-            onPress={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+            onPress={() => handleUpdateQuantity(item.product._id, item.quantity + 1, item.price)}
           >
             <Text>+</Text>
           </TouchableOpacity>
@@ -109,7 +88,7 @@ const CartScreen = () => {
       </View>
       <TouchableOpacity 
         style={styles.deleteButton}
-        onPress={() => handleRemoveItem(item.product._id)}
+        onPress={() => handleRemove(item.product._id, item.price)}
       >
         <Ionicons name="trash-outline" size={24} color="red" />
       </TouchableOpacity>
@@ -126,9 +105,48 @@ const CartScreen = () => {
         <ActivityIndicator size="large" color="#0000ff" />
       ) : cart?.items?.length > 0 ? (
         <>
-          <ScrollView style={styles.cartList}>
-            {cart.items.map(renderCartItem)}
-          </ScrollView>
+          <FlatList
+            data={Object.entries(cart.items).map(([id, item]) => ({
+              id,
+              ...item,
+            }))}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.cartItem}>
+                <Image 
+                  source={{ 
+                    uri: item.product.images[0] || 'https://via.placeholder.com/100' 
+                  }}
+                  style={styles.productImage}
+                />
+                <View style={styles.itemDetails}>
+                  <Text style={styles.productName}>{item.product.name}</Text>
+                  <Text style={styles.productPrice}>₹{item.price}</Text>
+                  <View style={styles.quantityControl}>
+                    <TouchableOpacity 
+                      style={styles.quantityButton}
+                      onPress={() => handleUpdateQuantity(item.id, item.quantity - 1, item.price)}
+                    >
+                      <Text>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.quantityText}>{item.quantity}</Text>
+                    <TouchableOpacity 
+                      style={styles.quantityButton}
+                      onPress={() => handleUpdateQuantity(item.id, item.quantity + 1, item.price)}
+                    >
+                      <Text>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={styles.deleteButton}
+                  onPress={() => handleRemove(item.id, item.price)}
+                >
+                  <Ionicons name="trash-outline" size={24} color="red" />
+                </TouchableOpacity>
+              </View>
+            )}
+          />
           <View style={styles.footer}>
             <View style={styles.totalContainer}>
               <Text style={styles.totalLabel}>Total:</Text>
