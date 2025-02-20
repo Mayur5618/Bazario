@@ -272,6 +272,16 @@ const Home = () => {
         </div>
       </div>
 
+      {/* Quality Guarantee Section */}
+      <div className="bg-[#3B82F6] text-white py-16">
+        <div className="max-w-4xl mx-auto text-center px-4">
+          <h2 className="text-3xl font-bold mb-4">Our Quality Guarantee</h2>
+          <p className="text-lg">
+            We ensure that every product meets the highest standards of quality. Your satisfaction is our top priority.
+          </p>
+        </div>
+      </div>
+
       {/* Recently Viewed Section with updated styling */}
      
 

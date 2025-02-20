@@ -18,6 +18,7 @@ const LoginScreen = () => {
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { login } = useAuth();
 
   // Validation function
@@ -51,6 +52,8 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async () => {
+    setIsSubmitted(true);
+    
     if (!validateForm()) {
       return;
     }
@@ -64,26 +67,39 @@ const LoginScreen = () => {
         password: formData.password
       });
 
-      if (response.data.success) {
+      // Handle successful response
+      if (response?.data?.success) {
         const userData = response.data.data;
         const token = userData._id;
-        
-        if (userData && token) {
-          await login(userData, token);
-          router.replace('/(app)/home');
-        } else {
-          setServerError('Invalid response from server');
-        }
+        await login(userData, token);
+        router.replace('/(app)/home');
       } else {
-        setServerError(response.data.message || 'Login failed');
+        // Handle unsuccessful login but valid response
+        setServerError(response.data.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      const errorMessage = error.response?.data?.message || 
-                          'Network error. Please check your connection.';
-      setServerError(errorMessage);
+      // Don't console.log the error in production
+      if (error.response?.status === 401) {
+        setServerError('User does not exist. Please sign up first.');
+      } else if (error.response?.status === 400) {
+        setServerError('Invalid mobile number or password');
+      } else if (error.response) {
+        setServerError(error.response.data?.message || 'Login failed. Please try again.');
+      } else if (error.request) {
+        setServerError('Network error. Please check your connection.');
+      } else {
+        setServerError('Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePhoneChange = (text) => {
+    // Only allow numbers and limit to 10 digits
+    const numericValue = text.replace(/[^0-9]/g, '');
+    if (numericValue.length <= 10) {
+      setFormData(prev => ({ ...prev, mobileno: numericValue }));
     }
   };
 
@@ -109,15 +125,13 @@ const LoginScreen = () => {
                 placeholderTextColor="#666"
                 autoCapitalize="none"
                 value={formData.mobileno}
-                onChangeText={(text) => {
-                  setFormData(prev => ({ ...prev, mobileno: text }));
-                  setErrors(prev => ({ ...prev, mobileno: validateField('mobileno', text) }));
-                }}
+                onChangeText={handlePhoneChange}
+                maxLength={10}
               />
             </View>
-            {errors.mobileno ? (
+            {isSubmitted && errors.mobileno && (
               <Text style={styles.errorText}>{errors.mobileno}</Text>
-            ) : null}
+            )}
 
             <View style={styles.inputBox}>
               <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
@@ -144,9 +158,9 @@ const LoginScreen = () => {
                 />
               </TouchableOpacity>
             </View>
-            {errors.password ? (
+            {isSubmitted && errors.password && (
               <Text style={styles.errorText}>{errors.password}</Text>
-            ) : null}
+            )}
           </View>
 
           {serverError ? (

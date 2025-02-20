@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 // import './styles/header.css';
 import '../styles/header.css';
+import { addToRecentSearches } from '../store/searchSlice';
 
 const Header = () => {
   const { userData } = useSelector((state) => state.user);
@@ -22,6 +23,8 @@ const Header = () => {
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const timeoutRef = useRef(null);
+  const recentSearches = useSelector((state) => state.search.recentSearches);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
 
   const showMenu = () => {
     clearTimeout(timeoutRef.current);
@@ -70,16 +73,21 @@ const Header = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Click outside handler for search results
+  // Add click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setSearchResults([]);
+        setShowRecentSearches(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // Debounced search function
@@ -106,9 +114,11 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      dispatch(addToRecentSearches(searchTerm));
       navigate(`/all-products?query=${encodeURIComponent(searchTerm)}`);
       setSearchTerm("");
       setSearchResults([]);
+      setShowRecentSearches(false);
     }
   };
 
@@ -158,6 +168,14 @@ const Header = () => {
     action();
   };
 
+  // When clicking on a search suggestion
+  const handleSuggestionClick = (product) => {
+    dispatch(addToRecentSearches(product.name)); // Add to recent searches
+    setSearchTerm("");
+    setSearchResults([]);
+    navigate(`/product/${product._id}`);
+  };
+
   return (
     <header className="bg-[#3861fb] shadow-md">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -172,8 +190,20 @@ const Header = () => {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Explore seasonal foods..."
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (e.target.value) {
+                  setShowRecentSearches(false);
+                } else {
+                  setShowRecentSearches(true);
+                }
+              }}
+              onFocus={() => {
+                if (!searchTerm) {
+                  setShowRecentSearches(true);
+                }
+              }}
+              placeholder={currentPlaceholder}
               className="w-full px-4 py-2 rounded-full bg-white"
             />
             <button 
@@ -184,18 +214,41 @@ const Header = () => {
             </button>
           </div>
 
+          {/* Recent Searches Dropdown */}
+          {showRecentSearches && recentSearches.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+              <div className="p-2">
+                <div className="text-sm text-gray-500 mb-2">Recent Searches</div>
+                {recentSearches.map((term, index) => (
+                  <div
+                    key={index}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                    onClick={() => {
+                      setSearchTerm(term);
+                      navigate(`/all-products?query=${encodeURIComponent(term)}`);
+                      setShowRecentSearches(false);
+                    }}
+                  >
+                    <span className="text-gray-400 mr-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </span>
+                    {term}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
               {searchResults.map((product) => (
-                <Link
+                <div
                   key={product._id}
-                  to={`/product/${product._id}`}
-                  className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSearchResults([]);
-                  }}
+                  className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleSuggestionClick(product)}
                 >
                   {product.images[0] && (
                     <img
@@ -208,12 +261,13 @@ const Header = () => {
                     <div className="font-medium text-gray-800">{product.name}</div>
                     <div className="text-sm text-gray-500">₹{product.price}</div>
                   </div>
-                </Link>
+                </div>
               ))}
               <Link
                 to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
                 className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
                 onClick={() => {
+                  dispatch(addToRecentSearches(searchTerm)); // Add to recent searches
                   setSearchTerm("");
                   setSearchResults([]);
                 }}

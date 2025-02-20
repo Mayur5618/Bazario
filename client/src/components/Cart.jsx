@@ -11,6 +11,7 @@ import {
   setCartItems,
 } from "../store/cartSlice";
 import axios from "axios";
+import { FaShoppingCart, FaShoppingBasket, FaArrowLeft } from 'react-icons/fa';
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -48,15 +49,18 @@ const Cart = () => {
 
   if (!userData) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-          <p className="text-gray-600 mb-4">Please login to view your cart</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center p-8 max-w-md">
+          <div className="mb-8 flex justify-center">
+            <FaShoppingBasket className="w-32 h-32 text-blue-600/80" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Please Login First</h2>
+          <p className="text-gray-600 mb-8">Login to view your cart and start shopping</p>
           <Link
             to="/login"
-            className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
-            Login
+            Login to Continue
           </Link>
         </div>
       </div>
@@ -65,16 +69,58 @@ const Cart = () => {
 
   if (cart.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Your Cart is Empty</h2>
-          <p className="text-gray-600 mb-4">Add some items to your cart</p>
-          <Link
-            to="/"
-            className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4">
+          {/* Back button */}
+          <Link 
+            to="/" 
+            className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-8"
           >
-            Continue Shopping
+            <FaArrowLeft className="mr-2" />
+            Back to Shopping
           </Link>
+
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            {/* Empty Cart Icon */}
+            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaShoppingBasket className="w-12 h-12 text-blue-600" />
+            </div>
+
+            {/* Empty Cart Message */}
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Your Cart is Empty
+            </h2>
+            <p className="text-gray-600 mb-8">
+              Looks like you haven't added anything to your cart yet.
+              Browse our products and find something you'll love!
+            </p>
+
+            {/* Continue Shopping Button */}
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            >
+              Continue Shopping
+            </Link>
+
+            {/* Product Suggestions */}
+            <div className="mt-12 border-t pt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Popular Products You Might Like
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Add 3-4 popular product cards here */}
+                {/* This is just a placeholder structure */}
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="bg-gray-50 rounded-lg p-4">
+                    <div className="aspect-square bg-gray-200 rounded-lg mb-2 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -145,7 +191,7 @@ const Cart = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen container mx-auto px-4 py-8">
       <h2 className="text-2xl font-bold mb-4">Your Basket</h2>
 
       {/* Checkout Summary Bar */}

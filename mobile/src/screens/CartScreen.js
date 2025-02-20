@@ -15,42 +15,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from '../config/axios';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const CartScreen = () => {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cart, cartTotal, fetchCart } = useCart();
+  const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
-  const [total, setTotal] = useState(0);
-  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/(auth)/login');
-      return;
-    }
-    fetchCartItems();
-  }, [isAuthenticated]);
-
-  const fetchCartItems = async () => {
-    try {
-      const response = await axios.get('/api/cart/getCartItems');
-      if (response.data.success) {
-        setCartItems(response.data.cart?.items || []);
-        setTotal(response.data.cart?.total || 0);
-      } else {
-        setCartItems([]);
-        setTotal(0);
-      }
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-      setCartItems([]);
-      setTotal(0);
-      Alert.alert('Error', 'Unable to fetch cart items. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchCart();
+  }, []);
 
   const handleUpdateQuantity = async (productId, newQuantity) => {
     try {
@@ -64,7 +39,7 @@ const CartScreen = () => {
       });
 
       if (response.data.success) {
-        fetchCartItems();
+        fetchCart();
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -77,7 +52,7 @@ const CartScreen = () => {
       const response = await axios.delete(`/api/cart/remove/${productId}`);
 
       if (response.data.success) {
-        fetchCartItems();
+        fetchCart();
       }
     } catch (error) {
       console.error('Error removing item:', error);
@@ -98,119 +73,66 @@ const CartScreen = () => {
       
       if (response.data.success) {
         Alert.alert('Success', 'Coupon applied successfully!');
-        setTotal(response.data.newTotal);
+        fetchCart();
       }
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to apply coupon');
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading cart...</Text>
+  const renderCartItem = (item) => (
+    <View key={item.product._id} style={styles.cartItem}>
+      <Image 
+        source={{ 
+          uri: item.product.images[0] || 'https://via.placeholder.com/100' 
+        }}
+        style={styles.productImage}
+      />
+      <View style={styles.itemDetails}>
+        <Text style={styles.productName}>{item.product.name}</Text>
+        <Text style={styles.productPrice}>₹{item.price}</Text>
+        <View style={styles.quantityControl}>
+          <TouchableOpacity 
+            style={styles.quantityButton}
+            onPress={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+          >
+            <Text>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.quantityText}>{item.quantity}</Text>
+          <TouchableOpacity 
+            style={styles.quantityButton}
+            onPress={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+          >
+            <Text>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    );
-  }
-
-  if (cartItems.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="cart-outline" size={80} color="#ccc" />
-        <Text style={styles.emptyText}>Your cart is empty</Text>
-        <TouchableOpacity
-          style={styles.shopButton}
-          onPress={() => router.push('/(app)/home')}
-        >
-          <Text style={styles.shopButtonText}>Start Shopping</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+      <TouchableOpacity 
+        style={styles.deleteButton}
+        onPress={() => handleRemoveItem(item.product._id)}
+      >
+        <Ionicons name="trash-outline" size={24} color="red" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Shopping Cart</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#333" />
-        </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
-        </View>
-      ) : cartItems.length === 0 ? (
-        <View style={styles.emptyCart}>
-          <Ionicons name="cart-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyCartText}>Your cart is empty</Text>
-          <TouchableOpacity
-            style={styles.continueShopping}
-            onPress={() => router.push('/(app)/home')}
-          >
-            <Text style={styles.continueShoppingText}>Continue Shopping</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : cart?.items?.length > 0 ? (
         <>
           <ScrollView style={styles.cartList}>
-            {cartItems.map((item) => (
-              <View key={item._id} style={styles.cartItem}>
-                <Image 
-                  source={{ uri: item.product.images[0] }} 
-                  style={styles.productImage}
-                />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName}>{item.product.name}</Text>
-                  <Text style={styles.productPrice}>₹{item.product.price}</Text>
-                  <View style={styles.quantityControls}>
-                    <TouchableOpacity 
-                      style={styles.quantityButton}
-                      onPress={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
-                    >
-                      <Text style={styles.quantityButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantity}>{item.quantity}</Text>
-                    <TouchableOpacity 
-                      style={styles.quantityButton}
-                      onPress={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
-                    >
-                      <Text style={styles.quantityButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveItem(item.product._id)}
-                >
-                  <Ionicons name="trash-outline" size={24} color="#FF4444" />
-                </TouchableOpacity>
-              </View>
-            ))}
-
-            {/* Coupon Section */}
-            <View style={styles.couponContainer}>
-              <TextInput
-                style={styles.couponInput}
-                placeholder="Enter coupon code"
-                value={couponCode}
-                onChangeText={setCouponCode}
-              />
-              <TouchableOpacity 
-                style={styles.applyButton}
-                onPress={handleApplyCoupon}
-              >
-                <Text style={styles.applyButtonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
+            {cart.items.map(renderCartItem)}
           </ScrollView>
-
-          <View style={styles.summary}>
-            <View style={styles.row}>
-              <Text style={styles.summaryText}>Subtotal</Text>
-              <Text style={styles.summaryValue}>₹{total}</Text>
+          <View style={styles.footer}>
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total:</Text>
+              <Text style={styles.totalAmount}>₹{cartTotal.toFixed(2)}</Text>
             </View>
             <TouchableOpacity 
               style={styles.checkoutButton}
@@ -220,6 +142,16 @@ const CartScreen = () => {
             </TouchableOpacity>
           </View>
         </>
+      ) : (
+        <View style={styles.emptyCart}>
+          <Text style={styles.emptyCartText}>Your cart is empty</Text>
+          <TouchableOpacity 
+            style={styles.shopButton}
+            onPress={() => router.push('/(app)/home')}
+          >
+            <Text style={styles.shopButtonText}>Start Shopping</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -256,8 +188,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
+    backgroundColor: '#f3f4f6',
   },
-  productInfo: {
+  itemDetails: {
     flex: 1,
     marginLeft: 16,
   },
@@ -272,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  quantityControls: {
+  quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
@@ -288,17 +221,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 6,
   },
-  quantityButtonText: {
-    color: '#2563eb',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  quantity: {
+  quantityText: {
     marginHorizontal: 16,
     fontSize: 16,
     fontWeight: '600',
   },
-  removeButton: {
+  deleteButton: {
     padding: 8,
   },
   couponContainer: {
@@ -365,42 +293,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 24,
   },
-  continueShopping: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  continueShoppingText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 24,
-    fontWeight: '500',
-  },
   shopButton: {
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -420,6 +312,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  footer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e5e5'
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '600'
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2563eb'
+  }
 });
 
 export default CartScreen; 

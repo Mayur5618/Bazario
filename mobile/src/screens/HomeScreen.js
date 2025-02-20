@@ -10,7 +10,9 @@ import {
   Dimensions,
   SafeAreaView,
   Alert,
-  TextInput
+  TextInput,
+  ActivityIndicator,
+  FlatList
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import axios from '../config/axios';
@@ -20,6 +22,8 @@ import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { useToast } from '../hooks/useToast';
 import { useCart } from '../context/CartContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart, updateQuantity, removeFromCart } from '../store/cartSlice';
 // import axios from '../../config/axios';
 
 const { width } = Dimensions.get('window');
@@ -30,10 +34,16 @@ const HomeScreen = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
   const { cart, addToCart, updateQuantity, fetchCart, removeFromCart } = useCart();
+  const dispatch = useDispatch();
+  const cartItems = useSelector((state) => state.cart.items);
+  console.log('Current cart items:', cartItems); // Debug log
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -113,68 +123,52 @@ const HomeScreen = () => {
   };
 
   const handleAddToCart = async (product) => {
-    const cartItem = cart.items.find(item => item.product._id === product._id);
-    
-    if (cartItem) {
-      // Product exists in cart, show quantity controls
-      return (
-        <View style={styles.quantityControl}>
-          <TouchableOpacity 
-            style={styles.quantityButton}
-            onPress={async () => {
-              try {
-                if (cartItem.quantity === 1) {
-                  // Remove item from cart using removeFromCart API
-                  await removeFromCart(product._id);
-                  // Refresh cart after removal
-                  await fetchCart();
-                } else {
-                  await updateQuantity(product._id, cartItem.quantity - 1);
-                }
-              } catch (error) {
-                console.error('Error updating cart:', error);
-                Alert.alert(
-                  'Error',
-                  'Failed to update cart. Please try again.'
-                );
-              }
-            }}
-          >
-            <Text style={styles.quantityButtonText}>-</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.quantityText}>{cartItem.quantity}</Text>
-          
-          <TouchableOpacity 
-            style={styles.quantityButton}
-            onPress={async () => {
-              try {
-                if (cartItem.quantity < product.stock) {
-                  await updateQuantity(product._id, cartItem.quantity + 1);
-                } else {
-                  Alert.alert('Error', 'Cannot add more than available stock');
-                }
-              } catch (error) {
-                console.error('Error updating cart:', error);
-                Alert.alert(
-                  'Error',
-                  'Failed to update cart. Please try again.'
-                );
-              }
-            }}
-          >
-            <Text style={styles.quantityButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    } else {
-      // Product not in cart, show Add to Cart button
-      const success = await addToCart(product._id, 1);
-      if (success) {
-        Alert.alert('Success', 'Item added to cart!');
-      } else {
-        Alert.alert('Error', 'Failed to add item to cart');
+    try {
+      console.log('Adding product to cart:', product);
+      
+      // Make API call
+      const response = await axios.post('/api/cart/add', {
+        productId: product._id,
+        quantity: 1
+      });
+
+      console.log('API Response:', response.data);
+
+      if (response.data.success) {
+        // Create the action payload
+        const cartItem = {
+          product: product,
+          quantity: 1
+        };
+        
+        // Dispatch the action with the correct payload
+        dispatch(addToCart(cartItem));
+        Alert.alert('Success', 'Product added to cart!');
       }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'Failed to add item to cart');
+    }
+  };
+
+  const handleUpdateQuantity = async (productId, newQuantity) => {
+    try {
+      if (newQuantity < 1) {
+        const response = await axios.delete(`/api/cart/remove/${productId}`);
+        if (response.data.success) {
+          dispatch(removeFromCart(productId));
+        }
+      } else {
+        const response = await axios.put(`/api/cart/update/${productId}`, {
+          quantity: newQuantity
+        });
+        if (response.data.success) {
+          dispatch(updateQuantity({ productId, quantity: newQuantity }));
+        }
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      Alert.alert('Error', 'Failed to update quantity');
     }
   };
 
@@ -214,44 +208,54 @@ const HomeScreen = () => {
     <View style={styles.featuredSection}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Featured Products</Text>
-        <TouchableOpacity style={styles.seeAllButton}>
+        <TouchableOpacity onPress={() => router.push('/(app)/products')}>
           <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.productsList}>
+      <View style={styles.productsGrid}>
         {featuredProducts.map((product) => {
-          const cartItem = cart?.items?.find(item => item.product._id === product._id);
+          const cartItem = cartItems.find(item => 
+            item.product._id === product._id
+          );
+          console.log('Cart item for product:', cartItem); // Debug log
           
           return (
             <TouchableOpacity 
               key={product._id} 
-              style={styles.productCard}
+              style={styles.gridCard}
+              onPress={() => router.push(`/(app)/product/${product._id}`)}
               activeOpacity={0.9}
             >
               <View style={styles.imageContainer}>
                 <Image 
                   source={{ uri: product.images[0] }}
-                  style={styles.productImage}
+                  style={styles.gridImage}
                   resizeMode="cover"
                 />
+                <TouchableOpacity style={styles.wishlistButton}>
+                  <Ionicons name="heart-outline" size={18} color="#666" />
+                </TouchableOpacity>
               </View>
-
-              <View style={styles.productInfo}>
-                <View style={styles.productHeader}>
-                  <Text style={styles.productName}>{product.name}</Text>
-                  <Text style={styles.productPrice}>
-                    <Text style={styles.currencySymbol}>₹</Text>
-                    {product.price}
-                  </Text>
+              
+              <View style={styles.gridInfo}>
+                <Text style={styles.gridName} numberOfLines={2}>{product.name}</Text>
+                
+                <View style={styles.priceRow}>
+                  <Text style={styles.gridPrice}>₹{product.price}</Text>
+                  <Text style={styles.unitText}>per {product.unitSize} {product.unitType}</Text>
                 </View>
 
-                <View style={styles.productFooter}>
+                <View style={styles.bottomRow}>
+                  <Text style={styles.ratingText}>
+                    ⭐ {product.rating.toFixed(1)} ({product.numReviews})
+                  </Text>
+                  
                   {cartItem ? (
                     <View style={styles.quantityControl}>
                       <TouchableOpacity 
-                        style={[styles.quantityButton, styles.decrementButton]}
-                        onPress={() => updateQuantity(product._id, cartItem.quantity - 1)}
+                        style={styles.quantityButton}
+                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity - 1)}
                       >
                         <Text style={styles.quantityButtonText}>-</Text>
                       </TouchableOpacity>
@@ -259,8 +263,8 @@ const HomeScreen = () => {
                       <Text style={styles.quantityText}>{cartItem.quantity}</Text>
                       
                       <TouchableOpacity 
-                        style={[styles.quantityButton, styles.incrementButton]}
-                        onPress={() => updateQuantity(product._id, cartItem.quantity + 1)}
+                        style={styles.quantityButton}
+                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity + 1)}
                       >
                         <Text style={styles.quantityButtonText}>+</Text>
                       </TouchableOpacity>
@@ -268,9 +272,13 @@ const HomeScreen = () => {
                   ) : (
                     <TouchableOpacity 
                       style={styles.addButton}
-                      onPress={() => addToCart(product._id)}
+                      onPress={() => {
+                        console.log('Add button pressed for product:', product._id); // Debug log
+                        handleAddToCart(product);
+                      }}
                     >
-                      <Text style={styles.addButtonText}>Add to Cart</Text>
+                      <Ionicons name="add-circle" size={18} color="#FFF" />
+                      <Text style={styles.addButtonText}>Add</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -325,6 +333,43 @@ const HomeScreen = () => {
     }
   };
 
+  // Add search functionality
+  useEffect(() => {
+    const debounceTimer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        try {
+          setIsSearching(true);
+          const response = await axios.get(`/api/products?query=${searchQuery}`);
+          setSearchResults(response.data.products.slice(0, 5));
+        } catch (error) {
+          console.error("Search error:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push(`/(app)/products?query=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -335,10 +380,58 @@ const HomeScreen = () => {
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" />
-          <Text style={styles.searchPlaceholder}>Search products...</Text>
-        </View>
+        <TouchableOpacity 
+          style={styles.searchContainer}
+          onPress={() => router.push('/(app)/search')}
+        >
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#666" />
+            <Text style={styles.searchPlaceholder}>Search products...</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Search Results Dropdown */}
+        {searchResults.length > 0 && (
+          <View style={styles.searchResults}>
+            {searchResults.map((product) => (
+              <TouchableOpacity
+                key={product._id}
+                style={styles.searchResultItem}
+                onPress={() => {
+                  router.push(`/(app)/product/${product._id}`);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+              >
+                <View style={styles.searchResultContent}>
+                  {product.images[0] && (
+                    <Image
+                      source={{ uri: product.images[0] }}
+                      style={styles.searchResultImage}
+                    />
+                  )}
+                  <View style={styles.searchResultInfo}>
+                    <Text style={styles.searchResultName}>{product.name}</Text>
+                    <Text style={styles.searchResultPrice}>₹{product.price}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.seeAllResults}
+              onPress={handleSearch}
+            >
+              <Text style={styles.seeAllResultsText}>See all results</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Loading State */}
+        {isSearching && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#666" />
+          </View>
+        )}
 
         {/* Categories */}
         <View style={styles.section}>
@@ -379,18 +472,97 @@ const styles = StyleSheet.create({
     color: '#4169E1',
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginHorizontal: 16,
     marginBottom: 20,
-    padding: 12,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   searchPlaceholder: {
+    flex: 1,
     marginLeft: 8,
-    color: '#666',
     fontSize: 16,
+    color: '#666',
+  },
+  searchResults: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    maxHeight: 300,
+  },
+  searchResultItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  searchResultContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchResultImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  searchResultPrice: {
+    fontSize: 14,
+    color: '#666',
+  },
+  seeAllResults: {
+    padding: 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  seeAllResultsText: {
+    color: '#2563eb',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
+    alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   section: {
     marginBottom: 24,
@@ -529,6 +701,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: 4,
+    backgroundColor:'blue'
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -550,34 +723,29 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     backgroundColor: '#4169E1',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 4,
     alignItems: 'center',
-    gap: 2,
-    height: 28,
+    gap: 4,
   },
   addButtonText: {
     color: '#FFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F5F7FF',
+    backgroundColor: '#F3F4F6',
     borderRadius: 4,
-    height: 28,
-    width: 80,
+    paddingHorizontal: 4,
   },
   quantityButton: {
     width: 28,
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FF',
-    borderRadius: 4,
   },
   quantityButtonText: {
     fontSize: 16,
@@ -585,11 +753,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   quantityText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#1A1A1A',
-    width: 24,
-    textAlign: 'center',
+    marginHorizontal: 8,
   },
   featuredSection: {
     paddingTop: 16,
@@ -600,66 +767,15 @@ const styles = StyleSheet.create({
     color: '#4169E1',
     fontWeight: '600',
   },
-  seeAllButton: {
-    padding: 4,
-    borderRadius: 4,
-    backgroundColor: '#4169E1',
-  },
-  productsList: {
-    padding: 16,
-  },
-  productCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    borderWidth: 0.5,
-    borderColor: '#f0f0f0',
-    marginBottom: 12,
-  },
-  productImage: {
-    width: 100,
-    height: 100,
-    resizeMode: 'cover',
-  },
-  productInfo: {
-    flex: 1,
-    padding: 8,
-  },
-  productHeader: {
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginTop: 4,
   },
-  productName: {
+  ratingText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  productPrice: {
-    fontSize: 10,
     color: '#666',
-  },
-  currencySymbol: {
-    fontSize: 10,
-    color: '#666',
-  },
-  productFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  decrementButton: {
-    backgroundColor: '#F5F7FF',
-  },
-  incrementButton: {
-    backgroundColor: '#F5F7FF',
   },
 });
 

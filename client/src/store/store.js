@@ -16,6 +16,7 @@ import { persistReducer, persistStore } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import cartSlice from './cartSlice';
 import wishlistReducer from './wishlistSlice';
+import searchReducer from './searchSlice';
 
 // import themeSlice from './theme/themeSlice';
 // import cartSlice from './cart/cartSlice';
@@ -25,6 +26,7 @@ const rootReducer = combineReducers({
     user: userSlice,
     cart: cartSlice,
     wishlist: wishlistReducer,
+    search: searchReducer,
     // theme: themeSlice,
     // cart: cartSlice,
 });

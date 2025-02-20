@@ -8,6 +8,11 @@ const BottomTabs = () => {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Hide bottom tabs on cart screen
+  if (pathname.includes('/cart')) {
+    return null;
+  }
+
   const isActive = (path) => pathname.includes(path);
 
   const handleNavigation = (route) => {

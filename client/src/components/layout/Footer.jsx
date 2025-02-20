@@ -5,40 +5,27 @@ import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
 
 const Footer = () => {
   return (
-    <footer className="bg-gradient-to-b from-blue-50 to-white">
-      {/* Quality Guarantee Section */}
-      <div className="bg-blue-600 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Our Quality Guarantee</h2>
-          <p className="text-lg max-w-2xl mx-auto">
-            We ensure that every product meets the highest standards of quality. Your satisfaction is our top priority.
-          </p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <footer className="bg-white mt-auto">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Company Info */}
-          <div className="space-y-4">
-            <img
-              className="h-12"
-              src="/logo.png"
-              alt="Bazario Logo"
-            />
-            <p className="text-gray-600 text-sm">
+          {/* Logo and Description */}
+          <div>
+            <img src="/images/bazario-logo.png" alt="Bazario Logo" className="h-8 mb-4" />
+            <p className="text-gray-600 mb-4">
               Your trusted destination for quality food products. We bring the best of local flavors to your doorstep.
             </p>
+            {/* Social Links */}
             <div className="flex space-x-4">
-              <a href="#" className="text-blue-600 hover:text-blue-700 transition-colors">
+              <a href="#" className="text-blue-600 hover:text-blue-700">
                 <FaFacebook className="h-6 w-6" />
               </a>
-              <a href="#" className="text-blue-600 hover:text-blue-700 transition-colors">
+              <a href="#" className="text-blue-600 hover:text-blue-700">
                 <FaTwitter className="h-6 w-6" />
               </a>
-              <a href="#" className="text-blue-600 hover:text-blue-700 transition-colors">
+              <a href="#" className="text-blue-600 hover:text-blue-700">
                 <FaInstagram className="h-6 w-6" />
               </a>
-              <a href="#" className="text-blue-600 hover:text-blue-700 transition-colors">
+              <a href="#" className="text-blue-600 hover:text-blue-700">
                 <FaLinkedin className="h-6 w-6" />
               </a>
             </div>
@@ -46,9 +33,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-sm font-semibold text-blue-600 tracking-wider uppercase mb-4">
-              Quick Links
-            </h3>
+            <h3 className="text-blue-600 font-semibold mb-4">QUICK LINKS</h3>
             <ul className="space-y-3">
               <li>
                 <Link to="/about" className="text-gray-600 hover:text-blue-600 transition-colors">
@@ -75,9 +60,7 @@ const Footer = () => {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-blue-600 tracking-wider uppercase mb-4">
-              Legal
-            </h3>
+            <h3 className="text-blue-600 font-semibold mb-4">LEGAL</h3>
             <ul className="space-y-3">
               <li>
                 <Link to="/privacy" className="text-gray-600 hover:text-blue-600 transition-colors">
@@ -104,9 +87,7 @@ const Footer = () => {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-semibold text-blue-600 tracking-wider uppercase mb-4">
-              Subscribe to our newsletter
-            </h3>
+            <h3 className="text-blue-600 font-semibold mb-4">SUBSCRIBE TO OUR NEWSLETTER</h3>
             <p className="text-gray-600 text-sm mb-4">
               Get the latest updates and news delivered to your inbox.
             </p>
@@ -124,13 +105,6 @@ const Footer = () => {
               </button>
             </form>
           </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <p className="text-center text-gray-500 text-sm">
-            © {new Date().getFullYear()} Bazario. All rights reserved.
-          </p>
         </div>
       </div>
     </footer>

@@ -1,36 +1,26 @@
 import { Stack } from 'expo-router';
+import { Provider } from 'react-redux';
+import { store } from '../src/store';
 import { AuthProvider } from '../src/context/AuthContext';
-import { useEffect } from 'react';
-import * as SplashScreen from 'expo-splash-screen';
-import { useRouter, useSegments } from 'expo-router';
-import { CartProvider } from '@/context/CartContext';
-
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+import { CartProvider } from '../src/context/CartContext';
 
 export default function RootLayout() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Hide splash screen after initial navigation
-    SplashScreen.hideAsync();
-    
-    // Ensure we start at the root route
-    router.replace('/(auth)/login');
-  }, []);
-
   return (
-    <AuthProvider>
-      <CartProvider>  {/* Add CartProvider */}
-        <Stack 
-          screenOptions={{ 
-            headerShown: false,
-            animation: 'fade'
-          }} 
-        />
-      </CartProvider>
-    </AuthProvider>
-
-    
+    <Provider store={store}>
+      <AuthProvider>
+        <CartProvider>
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              animation: 'slide_from_right'
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" />
+          </Stack>
+        </CartProvider>
+      </AuthProvider>
+    </Provider>
   );
 } 
