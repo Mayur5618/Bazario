@@ -172,7 +172,7 @@ const AccountScreen = () => {
     {
       icon: 'location-outline',
       title: 'Shipping Address',
-      onPress: () => router.push('/addresses')
+      onPress: () => router.push('/(app)/account/shipping-address')
     },
     {
       icon: 'card-outline',

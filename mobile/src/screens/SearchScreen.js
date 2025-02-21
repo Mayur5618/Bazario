@@ -9,38 +9,81 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  Keyboard
+  Keyboard,
+  Pressable,
+  ScrollView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { router, useRouter } from 'expo-router';
 import axios from '../config/axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { searchApi } from '../api/searchApi';
+import { productApi } from '../api/productApi';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToRecentSearches, clearRecentSearches } from '../store/searchSlice';
 
 const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [recentSearches, setRecentSearches] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [trendingSearches, setTrendingSearches] = useState([
+    'Vegetables',
+    'Marathi Food',
+    'Traditional Pickles',
+    'Organic Products',
+    'Home Made Food'
+  ]);
+  const [popularProducts, setPopularProducts] = useState([]);
+  const router = useRouter();
+  const dispatch = useDispatch();
+  
+  // Get recent searches from Redux store
+  const recentSearches = useSelector(state => state.search.recentSearches);
 
+  // Fetch popular products on mount
   useEffect(() => {
-    const debounceTimer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        try {
-          setIsSearching(true);
-          const response = await axios.get(`/api/products?query=${searchQuery}`);
-          setSearchResults(response.data.products);
-        } catch (error) {
-          console.error("Search error:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
+    fetchPopularProducts();
+  }, []);
 
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
+  const fetchPopularProducts = async () => {
+    try {
+      const { products } = await productApi.getPopularProducts();
+      setPopularProducts(products);
+    } catch (error) {
+      console.error('Error fetching popular products:', error);
+    }
+  };
+
+  // Handle search submission
+  const handleSearch = async (query) => {
+    try {
+      const { products } = await productApi.searchProducts(query);
+      setSearchResults(products);
+      dispatch(addToRecentSearches(query));
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  };
+
+  // Get search suggestions as user types
+  const getSuggestions = async (query) => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const { suggestions } = await searchApi.getSearchSuggestions(query);
+      setSuggestions(suggestions);
+    } catch (error) {
+      console.error('Error getting suggestions:', error);
+    }
+  };
+
+  // Handle clearing recent searches
+  const handleClearSearches = () => {
+    dispatch(clearRecentSearches());
+  };
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
@@ -69,6 +112,32 @@ const SearchScreen = () => {
     </TouchableOpacity>
   );
 
+  const renderRecentSearchItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.searchChip}
+      onPress={() => handleSearch(item)}
+    >
+      <MaterialIcons name="history" size={16} color="#666" />
+      <Text style={styles.chipText}>{item}</Text>
+      <TouchableOpacity
+        onPress={() => dispatch(clearRecentSearches())}
+        style={styles.closeButton}
+      >
+        <MaterialIcons name="close" size={16} color="#666" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const renderTrendingSearchItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.searchChip}
+      onPress={() => handleSearch(item)}
+    >
+      <MaterialIcons name="trending-up" size={16} color="#666" />
+      <Text style={styles.chipText}>{item}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -83,14 +152,22 @@ const SearchScreen = () => {
           <TextInput
             style={styles.searchInput}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              getSuggestions(text);
+            }}
             placeholder="Search products..."
             placeholderTextColor="#666"
             autoFocus={true}
+            onSubmitEditing={() => handleSearch(searchQuery)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity 
-              onPress={() => setSearchQuery('')}
+              onPress={() => {
+                setSearchQuery('');
+                setSuggestions([]);
+                setSearchResults([]);
+              }}
               style={styles.clearButton}
             >
               <Ionicons name="close-circle" size={20} color="#666" />
@@ -99,38 +176,122 @@ const SearchScreen = () => {
         </View>
       </View>
 
-      {isSearching ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
+      <ScrollView style={styles.content}>
+        {/* Recent Searches */}
+        {!searchQuery && recentSearches.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Searches</Text>
+              <TouchableOpacity onPress={handleClearSearches}>
+                <Text style={styles.clearText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.chipContainer}>
+                {recentSearches.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.searchChip}
+                    onPress={() => handleSearch(item)}
+                  >
+                    <MaterialIcons name="history" size={16} color="#666" />
+                    <Text style={styles.chipText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Trending Searches */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trending Searches</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.chipContainer}>
+              {trendingSearches.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.searchChip}
+                  onPress={() => handleSearch(item)}
+                >
+                  <MaterialIcons name="trending-up" size={16} color="#666" />
+                  <Text style={styles.chipText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
-      ) : searchResults.length > 0 ? (
-        <FlatList
-          data={searchResults}
-          renderItem={renderProductItem}
-          keyExtractor={(item) => item._id}
-          numColumns={2}
-          columnWrapperStyle={styles.productRow}
-          contentContainerStyle={styles.listContent}
-        />
-      ) : searchQuery ? (
-        <View style={styles.noResults}>
-          <Text style={styles.noResultsText}>No products found</Text>
+
+        {/* Popular in Your City */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Popular in Your City</Text>
+          <View style={styles.popularGrid}>
+            {popularProducts.map((product, index) => (
+              <Pressable
+                key={index}
+                style={styles.popularItem}
+                onPress={() => router.push(`/product/${product._id}`)}
+              >
+                <Image
+                  source={{ uri: product.image }}
+                  style={styles.popularImage}
+                />
+                <Text style={styles.popularName} numberOfLines={2}>
+                  {product.name}
+                </Text>
+                <Text style={styles.popularPrice}>₹{product.price}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      ) : (
-        <View style={styles.recentSearches}>
-          <Text style={styles.recentTitle}>Recent Searches</Text>
-          {recentSearches.map((search, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.recentItem}
-              onPress={() => setSearchQuery(search)}
-            >
-              <Ionicons name="time-outline" size={20} color="#666" />
-              <Text style={styles.recentText}>{search}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+
+        {/* Search Suggestions */}
+        {searchQuery && suggestions.length > 0 && (
+          <FlatList
+            data={suggestions}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.suggestionItem}
+                onPress={() => handleSearch(item)}
+              >
+                <MaterialIcons name="search" size={20} color="#666" />
+                <Text style={styles.suggestionText}>{item}</Text>
+              </TouchableOpacity>
+            )}
+            keyExtractor={(item, index) => index.toString()}
+          />
+        )}
+
+        {/* Search Results */}
+        {searchResults.length > 0 ? (
+          <FlatList
+            data={searchResults}
+            renderItem={renderProductItem}
+            keyExtractor={(item) => item._id}
+            numColumns={2}
+            columnWrapperStyle={styles.productRow}
+            contentContainerStyle={styles.listContent}
+          />
+        ) : searchQuery ? (
+          <View style={styles.noResults}>
+            <Text style={styles.noResultsText}>No products found</Text>
+          </View>
+        ) : (
+          <View style={styles.recentSearches}>
+            <Text style={styles.recentTitle}>Recent Searches</Text>
+            {recentSearches.map((search, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.recentItem}
+                onPress={() => setSearchQuery(search)}
+              >
+                <Ionicons name="time-outline" size={20} color="#666" />
+                <Text style={styles.recentText}>{search}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -233,6 +394,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  recentSearchesContainer: {
+    padding: 16,
+  },
+  recentSearchesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  recentSearchesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  clearText: {
+    color: '#3B82F6',
+    fontSize: 14,
+  },
+  recentSearchItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  recentSearchContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recentSearchText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: '#333',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  suggestionText: {
+    marginLeft: 12,
+    fontSize: 14,
+  },
   recentSearches: {
     padding: 16,
   },
@@ -253,6 +456,83 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginLeft: 12,
+  },
+  content: {
+    flex: 1,
+  },
+  section: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  searchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  chipText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  popularGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  popularItem: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  popularImage: {
+    width: '100%',
+    height: 150,
+    resizeMode: 'cover',
+  },
+  popularName: {
+    fontSize: 14,
+    fontWeight: '500',
+    padding: 8,
+  },
+  popularPrice: {
+    fontSize: 14,
+    color: '#3861fb',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
 });
 

@@ -47,8 +47,12 @@ const HomeScreen = () => {
 
   // Fetch cart data when component mounts
   useEffect(() => {
-    fetchCart();
-  }, []);
+    if (isAuthenticated) {
+      fetchCart().catch(error => {
+        console.error('Error fetching cart:', error);
+      });
+    }
+  }, [isAuthenticated, fetchCart]);
 
   // Fetch featured products
   useEffect(() => {

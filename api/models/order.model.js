@@ -114,21 +114,38 @@ const orderSchema = new mongoose.Schema({
     processedAt: Date,
     shippedAt: Date,
     deliveredAt: Date,
-    cancelledAt: Date
+    cancelledAt: Date,
+    deliveryDate: {
+        type: Date
+    }
 }, {
     timestamps: true
 });
 
-// Generate unique order ID before saving
+// Generate formatted Order ID
 orderSchema.pre('save', async function(next) {
     if (!this.orderId) {
-        // Generate order ID: ORD-YYYYMMDD-XXXX
         const date = new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-        this.orderId = `ORD-${year}${month}${day}-${random}`;
+        
+        // Get count of orders for today to generate sequence
+        const todayStart = new Date(date.setHours(0, 0, 0, 0));
+        const todayEnd = new Date(date.setHours(23, 59, 59, 999));
+        
+        const count = await this.constructor.countDocuments({
+            createdAt: {
+                $gte: todayStart,
+                $lte: todayEnd
+            }
+        });
+
+        // Generate sequence number
+        const sequence = String(count + 1).padStart(4, '0');
+        
+        // Format: ORD-YYYYMMDD-SEQUENCE
+        this.orderId = `ORD-${year}${month}${day}-${sequence}`;
     }
 
     // Calculate totals

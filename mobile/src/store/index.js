@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import userReducer from './userSlice';
 import cartReducer from './slices/cartSlice';
+import searchReducer from './searchSlice';
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
-    cart: cartReducer
+    cart: cartReducer,
+    search: searchReducer
   },
   middleware: (getDefaultMiddleware) => 
     getDefaultMiddleware({

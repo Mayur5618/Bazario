@@ -1,4 +1,5 @@
 import Product from '../models/product.model.js';
+import SearchHistory from '../models/Mobile_searchHistory.model.js';
 
 // GET /api/search
 export const searchProducts = async (req, res) => {
@@ -120,6 +121,105 @@ export const getTrendingSearches = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error getting trending searches'
+        });
+    }
+};
+
+// Save search query to history
+export const saveSearchHistory = async (req, res) => {
+    try {
+        const { query } = req.body;
+        const userId = req.user._id;
+        
+        console.log('Saving search history:', { userId, query });
+
+        const savedSearch = await SearchHistory.findOneAndUpdate(
+            { user: userId, query },
+            { timestamp: new Date() },
+            { upsert: true, new: true }
+        );
+
+        console.log('Saved search:', savedSearch);
+
+        res.json({
+            success: true,
+            message: 'Search history saved'
+        });
+    } catch (error) {
+        console.error('Save search history error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error saving search history'
+        });
+    }
+};
+
+// Get user's recent searches
+export const getRecentSearches = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log('Fetching recent searches for user:', userId);
+
+        const recentSearches = await SearchHistory.find({ user: userId })
+            .sort({ timestamp: -1 })
+            .limit(10)
+            .select('query timestamp');
+
+        console.log('Found recent searches:', recentSearches);
+
+        res.json({
+            success: true,
+            searches: recentSearches
+        });
+    } catch (error) {
+        console.error('Recent searches error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting recent searches'
+        });
+    }
+};
+
+// Delete a search history item
+export const deleteSearchHistory = async (req, res) => {
+    try {
+        const { searchId } = req.params;
+        const userId = req.user._id;
+
+        await SearchHistory.findOneAndDelete({
+            _id: searchId,
+            user: userId
+        });
+
+        res.json({
+            success: true,
+            message: 'Search history deleted'
+        });
+    } catch (error) {
+        console.error('Delete search history error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting search history'
+        });
+    }
+};
+
+// Clear all search history
+export const clearSearchHistory = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        await SearchHistory.deleteMany({ user: userId });
+
+        res.json({
+            success: true,
+            message: 'Search history cleared'
+        });
+    } catch (error) {
+        console.error('Clear search history error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error clearing search history'
         });
     }
 }; 

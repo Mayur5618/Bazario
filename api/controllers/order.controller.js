@@ -235,7 +235,7 @@ export const createOrder = async (req, res) => {
         for (const sellerId in itemsBySeller) {
             const sellerItems = itemsBySeller[sellerId];
             const subtotal = sellerItems.reduce((total, item) => total + item.subtotal, 0);
-            const shippingCost = 50; // Fixed shipping cost
+            const shippingCost = 0; // Fixed shipping cost
 
             try {
                 // Create order
@@ -321,7 +321,10 @@ export const getMyOrders = async (req, res) => {
         const orders = await Order.find({ buyer: req.user._id })
             .populate('items.product', 'name images price')
             .populate('items.seller', 'firstname lastname')
-            .sort('-createdAt');
+            .sort({ 
+                status: -1,  // This will sort pending first
+                createdAt: -1 // Then by date, newest first
+            });
 
         res.json({
             success: true,
@@ -562,12 +565,11 @@ export const getSellerOrders = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
     try {
+        const { orderId } = req.params;
         const { status } = req.body;
-        const order = await Order.findOne({ 
-            _id: req.params.id,  // Changed from orderId to _id
-            'items.seller': req.user._id 
-        });
 
+        const order = await Order.findById(orderId);
+        
         if (!order) {
             return res.status(404).json({
                 success: false,
@@ -575,16 +577,13 @@ export const updateOrderStatus = async (req, res) => {
             });
         }
 
-        // Validate status
-        const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid status'
-            });
+        order.status = status;
+        
+        // Set delivery date when order is completed
+        if (status === 'completed') {
+            order.deliveryDate = new Date();
         }
 
-        order.status = status;
         await order.save();
 
         res.json({
@@ -594,9 +593,10 @@ export const updateOrderStatus = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Error in updateOrderStatus:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error updating order status'
         });
     }
 };

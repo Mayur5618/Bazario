@@ -22,8 +22,10 @@ export default function AppLayout() {
         <Stack.Screen name="checkout" />
         <Stack.Screen name="categories" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="account/shipping-address" />
         <Stack.Screen name="search" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="orders" />
         <Stack.Screen 
           name="product/[id]"
           options={{

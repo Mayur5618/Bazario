@@ -1,48 +1,39 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axios from '../config/axios';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
 
   // Fetch cart items when component mounts or auth state changes
   useEffect(() => {
     if (isAuthenticated) {
-      fetchCartItems();
+      fetchCart();
     }
   }, [isAuthenticated]);
 
-  const fetchCartItems = async () => {
+  const fetchCart = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await axios.get('/api/cart/getCartItems');
-      const items = {};
-      
-      // Convert array to object for O(1) lookup
-      response.data.cart.items.forEach(item => {
-        items[item.product._id] = {
-          quantity: item.quantity,
-          price: item.product.price,
-          name: item.product.name,
-          image: item.product.images[0]
-        };
-      });
-      
-      setCartItems(items);
+      setCart(response.data);
+      return response.data;
     } catch (error) {
       console.error('Error fetching cart:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const addToCart = async (productId, product) => {
     try {
       await axios.post('/api/cart/add', { productId, quantity: 1 });
-      setCartItems(prev => ({
+      setCart(prev => ({
         ...prev,
         [productId]: {
           quantity: 1,
@@ -61,7 +52,7 @@ export const CartProvider = ({ children }) => {
     try {
       await axios.put(`/api/cart/update/${productId}`, { quantity: newQuantity });
       
-      setCartItems(prev => {
+      setCart(prev => {
         const updated = { ...prev };
         if (newQuantity <= 0) {
           delete updated[productId];
@@ -80,26 +71,25 @@ export const CartProvider = ({ children }) => {
   };
 
   const isInCart = (productId) => {
-    return Boolean(cartItems[productId]);
+    return Boolean(cart[productId]);
   };
 
   const getQuantity = (productId) => {
-    return cartItems[productId]?.quantity || 0;
+    return cart[productId]?.quantity || 0;
   };
 
-  return (
-    <CartContext.Provider value={{
-      cartItems,
-      loading,
-      addToCart,
-      updateQuantity,
-      isInCart,
-      getQuantity,
-      refreshCart: fetchCartItems
-    }}>
-      {children}
-    </CartContext.Provider>
-  );
+  const value = {
+    cart,
+    loading,
+    fetchCart,
+    setCart,
+    addToCart,
+    updateQuantity,
+    isInCart,
+    getQuantity
+  };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {
