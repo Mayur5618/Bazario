@@ -12,7 +12,6 @@ export const CartProvider = ({ children }) => {
     try {
       const response = await axios.get('/api/cart/getCartItems');
       if (response.data.success) {
-        // Convert array to object with productId as key
         const cartObject = response.data.cart.items.reduce((acc, item) => {
           acc[item.product._id] = item;
           return acc;

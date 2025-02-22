@@ -33,7 +33,7 @@ const cardHeight = cardWidth * 1.4; // Proportional height
 const HomeScreen = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
-  const { cartItems, loading: cartLoading, getCart, updateQuantity } = useCart();
+  const { cartItems, loading: cartLoading, getCart, updateQuantity, addToCart } = useCart();
   const dispatch = useDispatch();
   const cartItemsRedux = useSelector((state) => state.cart.items) || {};
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -145,13 +145,11 @@ const HomeScreen = () => {
     }
 
     try {
-      setLoading(true); // Add loading state
-      await updateQuantity(product._id, 1);
+      await addToCart(product._id, 1);
+      Alert.alert('Success', 'Product added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
-    } finally {
-      setLoading(false); // Remove loading state
+      Alert.alert('Error', 'Failed to add item to cart');
     }
   };
 
