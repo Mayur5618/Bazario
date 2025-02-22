@@ -33,10 +33,9 @@ const cardHeight = cardWidth * 1.4; // Proportional height
 const HomeScreen = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
-  const { cart, addToCart, updateQuantity, fetchCart, removeFromCart } = useCart();
+  const { cartItems, loading: cartLoading, getCart, updateQuantity } = useCart();
   const dispatch = useDispatch();
-  const cartItems = useSelector((state) => state.cart.items) || {};
-  console.log('Current cart items:', cartItems); // Debug log
+  const cartItemsRedux = useSelector((state) => state.cart.items) || {};
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +47,17 @@ const HomeScreen = () => {
   // Fetch cart data when component mounts
   useEffect(() => {
     if (isAuthenticated) {
-      fetchCart().catch(error => {
-        console.error('Error fetching cart:', error);
-      });
+      loadCart();
     }
-  }, [isAuthenticated, fetchCart]);
+  }, [isAuthenticated]);
+
+  const loadCart = async () => {
+    try {
+      await getCart();
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    }
+  };
 
   // Fetch featured products
   useEffect(() => {
@@ -126,42 +131,57 @@ const HomeScreen = () => {
     setRefreshing(false);
   };
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = async (product) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Login Required',
+        'Please login to add items to cart',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/(auth)/login') }
+        ]
+      );
+      return;
+    }
+
     try {
-      // Dispatch the action with correct payload structure
-      dispatch(addToCart({
-        productId: product._id,
-        price: product.price,
-        name: product.name,
-        image: product.images[0]
-      }));
-      
-      // Optional: Show success message
-      Alert.alert('Success', 'Product added to cart!');
+      setLoading(true); // Add loading state
+      await updateQuantity(product._id, 1);
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart');
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+    } finally {
+      setLoading(false); // Remove loading state
     }
   };
 
-  const handleUpdateQuantity = async (productId, newQuantity) => {
-    try {
-      if (newQuantity < 1) {
-        const response = await axios.delete(`/api/cart/remove/${productId}`);
-        if (response.data.success) {
-          dispatch(removeFromCart(productId));
-        }
-      } else {
-        const response = await axios.put(`/api/cart/update/${productId}`, {
-          quantity: newQuantity
-        });
-        if (response.data.success) {
-          dispatch(updateQuantity({ productId, quantity: newQuantity }));
-        }
+  const handleUpdateQuantity = async (productId, currentQuantity, change) => {
+    const newQuantity = currentQuantity + change;
+    if (newQuantity < 1) {
+      Alert.alert(
+        'Remove Item',
+        'Do you want to remove this item from cart?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await updateQuantity(productId, 0);
+              } catch (error) {
+                Alert.alert('Error', 'Failed to remove item');
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      try {
+        await updateQuantity(productId, newQuantity);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
       }
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      Alert.alert('Error', 'Failed to update quantity');
     }
   };
 
@@ -208,8 +228,8 @@ const HomeScreen = () => {
 
       <View style={styles.productsGrid}>
         {featuredProducts.map((product) => {
-          const cartItem = cartItems[product._id];
-          console.log('Cart item for product:', cartItem); // Debug log
+          // Find the cart item for this product
+          const cartItem = cartItems?.[product._id];
           
           return (
             <TouchableOpacity 
@@ -224,9 +244,6 @@ const HomeScreen = () => {
                   style={styles.gridImage}
                   resizeMode="cover"
                 />
-                <TouchableOpacity style={styles.wishlistButton}>
-                  <Ionicons name="heart-outline" size={18} color="#666" />
-                </TouchableOpacity>
               </View>
               
               <View style={styles.gridInfo}>
@@ -239,14 +256,14 @@ const HomeScreen = () => {
 
                 <View style={styles.bottomRow}>
                   <Text style={styles.ratingText}>
-                    ⭐ {product.rating.toFixed(1)} ({product.numReviews})
+                    ⭐ {product.rating?.toFixed(1) || '0.0'} ({product.numReviews || 0})
                   </Text>
                   
                   {cartItem ? (
                     <View style={styles.quantityControl}>
                       <TouchableOpacity 
                         style={styles.quantityButton}
-                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity - 1)}
+                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
                       >
                         <Text style={styles.quantityButtonText}>-</Text>
                       </TouchableOpacity>
@@ -255,7 +272,7 @@ const HomeScreen = () => {
                       
                       <TouchableOpacity 
                         style={styles.quantityButton}
-                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity + 1)}
+                        onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
                       >
                         <Text style={styles.quantityButtonText}>+</Text>
                       </TouchableOpacity>
@@ -725,7 +742,7 @@ const styles = StyleSheet.create({
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f5f5f5',
     borderRadius: 4,
     paddingHorizontal: 4,
   },

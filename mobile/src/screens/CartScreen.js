@@ -1,177 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Image,
   Alert,
-  ActivityIndicator,
-  SafeAreaView,
-  FlatList
+  ActivityIndicator
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import axios from '../config/axios';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useSelector, useDispatch } from 'react-redux';
-import { updateQuantity, removeFromCart } from '../store/slices/cartSlice';
 
 const CartScreen = () => {
   const router = useRouter();
-  const { cart, cartTotal, fetchCart } = useCart();
-  const [loading, setLoading] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
-  const dispatch = useDispatch();
+  const { isAuthenticated } = useAuth();
+  const { cartItems, loading, getCart, updateQuantity } = useCart();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const handleUpdateQuantity = (productId, quantity, price) => {
-    dispatch(updateQuantity({ productId, quantity, price }));
-  };
-
-  const handleRemove = (productId, price) => {
-    dispatch(removeFromCart({ productId, price }));
-  };
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
-      Alert.alert('Error', 'Please enter a coupon code');
-      return;
+    if (isAuthenticated) {
+      loadCart();
     }
+  }, [isAuthenticated]);
 
+  const loadCart = async () => {
     try {
-      const response = await axios.post('/api/cart/apply-coupon', {
-        code: couponCode
-      });
-      
-      if (response.data.success) {
-        Alert.alert('Success', 'Coupon applied successfully!');
-        fetchCart();
-      }
+      setIsLoading(true);
+      await getCart();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to apply coupon');
+      console.error('Error loading cart:', error);
+      Alert.alert('Error', 'Failed to load cart items');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const renderCartItem = (item) => (
-    <View key={item.product._id} style={styles.cartItem}>
-      <Image 
-        source={{ 
-          uri: item.product.images[0] || 'https://via.placeholder.com/100' 
-        }}
-        style={styles.productImage}
-      />
-      <View style={styles.itemDetails}>
-        <Text style={styles.productName}>{item.product.name}</Text>
-        <Text style={styles.productPrice}>₹{item.price}</Text>
-        <View style={styles.quantityControl}>
-          <TouchableOpacity 
-            style={styles.quantityButton}
-            onPress={() => handleUpdateQuantity(item.product._id, item.quantity - 1, item.price)}
-          >
-            <Text>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.quantityText}>{item.quantity}</Text>
-          <TouchableOpacity 
-            style={styles.quantityButton}
-            onPress={() => handleUpdateQuantity(item.product._id, item.quantity + 1, item.price)}
-          >
-            <Text>+</Text>
-          </TouchableOpacity>
-        </View>
+  const handleUpdateQuantity = async (productId, currentQuantity, change) => {
+    const newQuantity = currentQuantity + change;
+    if (newQuantity < 1) {
+      Alert.alert(
+        'Remove Item',
+        'Do you want to remove this item from cart?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await updateQuantity(productId, 0);
+              } catch (error) {
+                Alert.alert('Error', 'Failed to remove item');
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      try {
+        await updateQuantity(productId, newQuantity);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    }
+  };
+
+  const calculateTotal = () => {
+    return Object.values(cartItems).reduce((total, item) => {
+      return total + (item.product.price * item.quantity);
+    }, 0);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.messageText}>Please login to view your cart</Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => router.push('/(auth)/login')}
+        >
+          <Text style={styles.loginButtonText}>Login</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={styles.deleteButton}
-        onPress={() => handleRemove(item.product._id, item.price)}
-      >
-        <Ionicons name="trash-outline" size={24} color="red" />
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#4B0082" />
+      </View>
+    );
+  }
+
+  const cartItemsArray = Object.values(cartItems);
+
+  if (cartItemsArray.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.messageText}>Your cart is empty</Text>
+        <TouchableOpacity
+          style={styles.shopButton}
+          onPress={() => router.push('/(app)')}
+        >
+          <Text style={styles.shopButtonText}>Start Shopping</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Shopping Cart</Text>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : cart?.items?.length > 0 ? (
-        <>
-          <FlatList
-            data={Object.entries(cart.items).map(([id, item]) => ({
-              id,
-              ...item,
-            }))}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.cartItem}>
-                <Image 
-                  source={{ 
-                    uri: item.product.images[0] || 'https://via.placeholder.com/100' 
-                  }}
-                  style={styles.productImage}
-                />
-                <View style={styles.itemDetails}>
-                  <Text style={styles.productName}>{item.product.name}</Text>
-                  <Text style={styles.productPrice}>₹{item.price}</Text>
-                  <View style={styles.quantityControl}>
-                    <TouchableOpacity 
-                      style={styles.quantityButton}
-                      onPress={() => handleUpdateQuantity(item.id, item.quantity - 1, item.price)}
-                    >
-                      <Text>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantityText}>{item.quantity}</Text>
-                    <TouchableOpacity 
-                      style={styles.quantityButton}
-                      onPress={() => handleUpdateQuantity(item.id, item.quantity + 1, item.price)}
-                    >
-                      <Text>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={() => handleRemove(item.id, item.price)}
+    <View style={styles.container}>
+      <ScrollView style={styles.cartList}>
+        {cartItemsArray.map((item) => (
+          <View key={item.product._id} style={styles.cartItem}>
+            <Image
+              source={{ uri: item.product.images[0] }}
+              style={styles.productImage}
+            />
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>{item.product.name}</Text>
+              <Text style={styles.productPrice}>₹{item.product.price}</Text>
+              
+              <View style={styles.quantityControl}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleUpdateQuantity(item.product._id, item.quantity, -1)}
                 >
-                  <Ionicons name="trash-outline" size={24} color="red" />
+                  <Text style={styles.quantityButtonText}>-</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.quantityText}>{item.quantity}</Text>
+                
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleUpdateQuantity(item.product._id, item.quantity, 1)}
+                >
+                  <Text style={styles.quantityButtonText}>+</Text>
                 </TouchableOpacity>
               </View>
-            )}
-          />
-          <View style={styles.footer}>
-            <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalAmount}>₹{cartTotal.toFixed(2)}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.checkoutButton}
-              onPress={() => router.push('/(app)/checkout')}
-            >
-              <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-            </TouchableOpacity>
           </View>
-        </>
-      ) : (
-        <View style={styles.emptyCart}>
-          <Text style={styles.emptyCartText}>Your cart is empty</Text>
-          <TouchableOpacity 
-            style={styles.shopButton}
-            onPress={() => router.push('/(app)/home')}
-          >
-            <Text style={styles.shopButtonText}>Start Shopping</Text>
-          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalText}>Total:</Text>
+          <Text style={styles.totalAmount}>₹{calculateTotal()}</Text>
         </View>
-      )}
-    </SafeAreaView>
+        
+        <TouchableOpacity
+          style={styles.checkoutButton}
+          onPress={() => router.push('/(app)/checkout')}
+        >
+          <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
@@ -180,16 +169,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    padding: 20,
   },
-  headerTitle: {
-    fontSize: 24,
+  messageText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+  },
+  loginButton: {
+    backgroundColor: '#4B0082',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  shopButton: {
+    backgroundColor: '#4B0082',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  shopButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   cartList: {
@@ -199,16 +209,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'center',
+    borderBottomColor: '#f0f0f0',
   },
   productImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
   },
-  itemDetails: {
+  productInfo: {
     flex: 1,
     marginLeft: 16,
   },
@@ -219,77 +227,52 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 16,
-    color: '#2563eb',
+    color: '#4B0082',
     fontWeight: '600',
     marginBottom: 8,
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    alignSelf: 'flex-start',
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-    padding: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
   },
   quantityButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 6,
-  },
-  quantityText: {
-    marginHorizontal: 16,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deleteButton: {
     padding: 8,
   },
-  couponContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-  },
-  couponInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  applyButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  applyButtonText: {
-    color: '#fff',
+  quantityButtonText: {
+    fontSize: 18,
+    color: '#4B0082',
     fontWeight: '600',
   },
-  summary: {
+  quantityText: {
+    fontSize: 16,
+    marginHorizontal: 16,
+  },
+  footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
   },
-  row: {
+  totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  summaryText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  summaryValue: {
+  totalText: {
     fontSize: 18,
     fontWeight: '600',
   },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4B0082',
+  },
   checkoutButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#4B0082',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -299,57 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  emptyCart: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyCartText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  shopButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    shadowColor: '#2563eb',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  shopButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e5e5'
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: '600'
-  },
-  totalAmount: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2563eb'
-  }
 });
 
 export default CartScreen; 

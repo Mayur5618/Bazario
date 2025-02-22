@@ -1,10 +1,12 @@
+import React from 'react';
+import { View, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import OrderHistoryScreen from '../../../src/screens/OrderHistoryScreen';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
-export default function Orders() {
+export default function OrdersScreen() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -18,15 +20,13 @@ export default function Orders() {
     <>
       <Stack.Screen 
         options={{
-          title: 'Order History',
+          title: 'My Orders',
           headerShown: true,
-          headerStyle: {
-            backgroundColor: '#fff',
-          },
-          headerShadowVisible: false,
         }}
       />
-      <OrderHistoryScreen />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Orders Screen</Text>
+      </View>
     </>
   );
 } 

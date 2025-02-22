@@ -166,8 +166,8 @@ const AccountScreen = () => {
     },
     {
       icon: 'heart-outline',
-      title: 'Wishlist',
-      onPress: () => router.push('/wishlist')
+      title: 'My Wishlist',
+      route: '/account/wishlist',
     },
     {
       icon: 'location-outline',
@@ -190,6 +190,22 @@ const AccountScreen = () => {
       onPress: () => router.push('/settings')
     }
   ];
+
+  const renderMenuItem = (item) => (
+    <TouchableOpacity
+      key={item.title}
+      style={styles.menuItem}
+      onPress={() => router.push(item.route || item.onPress)}
+    >
+      <View style={styles.menuItemContent}>
+        <View style={[styles.iconContainer, { backgroundColor: item.color + '10' }]}>
+          <Ionicons name={item.icon} size={24} color={item.color} />
+        </View>
+        <Text style={styles.menuItemText}>{item.title}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={24} color="#666" />
+    </TouchableOpacity>
+  );
 
   return (
     <ScrollView style={styles.container}>
@@ -338,19 +354,7 @@ const AccountScreen = () => {
 
       {/* Menu Items */}
       <View style={styles.menuContainer}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuItem}
-            onPress={item.onPress}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name={item.icon} size={24} color="#4B5563" />
-              <Text style={styles.menuItemText}>{item.title}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#4B5563" />
-          </TouchableOpacity>
-        ))}
+        {menuItems.map(renderMenuItem)}
       </View>
 
       {/* Logout Button */}
@@ -549,19 +553,26 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#f0f0f0',
+    justifyContent: 'space-between',
   },
-  menuItemLeft: {
+  menuItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   menuItemText: {
     fontSize: 16,
-    color: '#1F2937',
-    marginLeft: 12,
+    color: '#333',
   },
   logoutButton: {
     flexDirection: 'row',

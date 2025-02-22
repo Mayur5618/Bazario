@@ -6,18 +6,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 import axios from '../config/axios';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 const ProductDetailScreen = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { id } = route.params;
+  const { id } = useLocalSearchParams();
   const { addToCart, updateQuantity, cart } = useCart();
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
   
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -25,10 +29,17 @@ const ProductDetailScreen = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showQuantityControls, setShowQuantityControls] = useState(false);
   const [activeTab, setActiveTab] = useState('description'); // 'description' or 'reviews'
+  const [isInWishlist, setIsInWishlist] = useState(false);
 
   useEffect(() => {
     fetchProductDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (wishlistItems && id) {
+      setIsInWishlist(wishlistItems.includes(id));
+    }
+  }, [wishlistItems, id]);
 
   const fetchProductDetails = async () => {
     try {
@@ -58,6 +69,42 @@ const ProductDetailScreen = () => {
     }
   };
 
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Login Required',
+        'Please login to add items to wishlist',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Login', 
+            onPress: () => router.push('/(auth)/login')
+          }
+        ]
+      );
+      return;
+    }
+
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist(id);
+        Toast.show({
+          type: 'success',
+          text1: 'Removed from wishlist'
+        });
+      } else {
+        await addToWishlist(id);
+        Toast.show({
+          type: 'success',
+          text1: 'Added to wishlist'
+        });
+      }
+    } catch (error) {
+      console.error('Wishlist operation failed:', error);
+      Alert.alert('Error', 'Failed to update wishlist. Please try again.');
+    }
+  };
+
   if (loading || !product) {
     return (
       <View style={styles.loadingContainer}>
@@ -70,12 +117,22 @@ const ProductDetailScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
-        <TouchableOpacity>
-          <Ionicons name="share-social-outline" size={24} color="#333" />
+        <TouchableOpacity 
+          style={styles.wishlistButton} 
+          onPress={handleWishlistToggle}
+        >
+          <Ionicons 
+            name={isInWishlist ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isInWishlist ? "#FF4B4B" : "#666"}
+          />
         </TouchableOpacity>
       </View>
 
@@ -132,9 +189,6 @@ const ProductDetailScreen = () => {
           <View style={styles.priceContainer}>
             <Text style={styles.price}>₹{product.price}</Text>
             <Text style={styles.perKg}>per kg</Text>
-            <TouchableOpacity style={styles.wishlistButton}>
-              <Ionicons name="heart-outline" size={24} color="#FF69B4" />
-            </TouchableOpacity>
           </View>
 
           {/* Stock Status */}

@@ -1,95 +1,80 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import axios from '../config/axios';
-import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
+  const [cartItems, setCartItems] = useState({});
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated } = useAuth();
 
-  // Fetch cart items when component mounts or auth state changes
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchCart();
-    }
-  }, [isAuthenticated]);
-
-  const fetchCart = useCallback(async () => {
+  // Get cart items
+  const getCart = async () => {
     try {
-      setLoading(true);
       const response = await axios.get('/api/cart/getCartItems');
-      setCart(response.data);
-      return response.data;
+      if (response.data.success) {
+        // Convert array to object with productId as key
+        const cartObject = response.data.cart.items.reduce((acc, item) => {
+          acc[item.product._id] = item;
+          return acc;
+        }, {});
+        setCartItems(cartObject);
+      }
     } catch (error) {
       console.error('Error fetching cart:', error);
+      setCartItems({});
+    }
+  };
+
+  // Add to cart
+  const addToCart = async (productId, quantity = 1) => {
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/cart/add', {
+        productId,
+        quantity
+      });
+
+      if (response.data.success) {
+        await getCart(); // Refresh cart after adding
+        return true;
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const addToCart = async (productId, product) => {
+  // Update quantity
+  const updateQuantity = async (productId, quantity) => {
     try {
-      await axios.post('/api/cart/add', { productId, quantity: 1 });
-      setCart(prev => ({
-        ...prev,
-        [productId]: {
-          quantity: 1,
-          price: product.price,
-          name: product.name,
-          image: product.images[0]
-        }
-      }));
+      setLoading(true);
+      if (quantity < 1) {
+        await axios.delete(`/api/cart/remove/${productId}`);
+      } else {
+        await axios.put(`/api/cart/update/${productId}`, { quantity });
+      }
+      await getCart(); // Refresh cart after update
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      console.error('Error updating cart:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateQuantity = async (productId, newQuantity) => {
-    try {
-      await axios.put(`/api/cart/update/${productId}`, { quantity: newQuantity });
-      
-      setCart(prev => {
-        const updated = { ...prev };
-        if (newQuantity <= 0) {
-          delete updated[productId];
-        } else {
-          updated[productId] = {
-            ...updated[productId],
-            quantity: newQuantity
-          };
-        }
-        return updated;
-      });
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      throw error;
-    }
-  };
-
-  const isInCart = (productId) => {
-    return Boolean(cart[productId]);
-  };
-
-  const getQuantity = (productId) => {
-    return cart[productId]?.quantity || 0;
-  };
-
-  const value = {
-    cart,
-    loading,
-    fetchCart,
-    setCart,
-    addToCart,
-    updateQuantity,
-    isInCart,
-    getQuantity
-  };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={{
+      cartItems,
+      loading,
+      getCart,
+      addToCart,
+      updateQuantity
+    }}>
+      {children}
+    </CartContext.Provider>
+  );
 };
 
 export const useCart = () => {
@@ -100,4 +85,4 @@ export const useCart = () => {
   return context;
 };
 
-export default CartContext; 
+export default CartProvider; 

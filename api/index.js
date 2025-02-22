@@ -14,6 +14,7 @@ import bodyParser from 'body-parser';
 import otpRoutes from './routes/otp.route.js';
 import shippingAddressRoutes from './routes/shippingAddress.routes.js';
 import mobileSearchRoutes from './routes/Mobile_search.routes.js';
+import wishlistRoutes from './routes/wishlist.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -53,6 +54,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/user', shippingAddressRoutes);
 app.use('/api/search', mobileSearchRoutes);
+app.use('/api/user/wishlist', wishlistRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);
@@ -63,15 +65,13 @@ app.listen(5000, () => {
 });
 
 app.use((err, req, res, next) => {
-  if (res.headersSent) {
-    return next(err); 
-  }
-  const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-
-  res.status(statusCode).json({
+  const status = err.status || 500;
+  const message = err.message || "Something went wrong";
+  
+  res.status(status).json({
     success: false,
-    statusCode,
+    status,
     message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : {}
   });
 });

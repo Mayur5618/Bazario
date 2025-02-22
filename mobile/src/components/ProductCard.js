@@ -1,54 +1,77 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import Toast from 'react-native-toast-message';
 
-const ProductCard = ({ product, onAddToCart, cartItem, onUpdateQuantity }) => {
+const ProductCard = ({ product }) => {
   const router = useRouter();
-  
+  const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Login Required',
+        'Please login to add items to cart',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/(auth)/login') }
+        ]
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Debug log
+      console.log('Adding product to cart:', product._id);
+      
+      await addToCart(product._id, 1);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Added to cart successfully',
+        position: 'bottom'
+      });
+    } catch (error) {
+      console.error('Add to cart error:', error);
+      Toast.show({
+        type: 'error',
+        text1: error.response?.data?.message || 'Failed to add to cart',
+        position: 'bottom'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => router.push(`/product/${product._id}`)}
+      onPress={() => router.push(`/(app)/product/${product._id}`)}
     >
-      <Image
-        source={{ uri: product.images[0] }}
+      <Image 
+        source={{ uri: product.images[0] }} 
         style={styles.image}
         resizeMode="cover"
       />
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {product.name}
-        </Text>
+      <View style={styles.content}>
+        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.price}>₹{product.price}</Text>
         
-        {cartItem ? (
-          // Show quantity controls if item is in cart
-          <View style={styles.quantityControls}>
-            <TouchableOpacity 
-              style={styles.quantityButton}
-              onPress={() => onUpdateQuantity(product._id, cartItem.quantity - 1)}
-            >
-              <Text style={styles.quantityButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.quantity}>{cartItem.quantity}</Text>
-            <TouchableOpacity 
-              style={styles.quantityButton}
-              onPress={() => onUpdateQuantity(product._id, cartItem.quantity + 1)}
-            >
-              <Text style={styles.quantityButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          // Show add to cart button if item is not in cart
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => onAddToCart(product._id)}
-          >
-            <Ionicons name="cart-outline" size={18} color="#FFF" />
-            <Text style={styles.addButtonText}>Add to Cart</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={[styles.addButton, loading && styles.addButtonDisabled]}
+          onPress={handleAddToCart}
+          disabled={loading}
+        >
+          <Text style={styles.addButtonText}>
+            {loading ? 'Adding...' : 'Add'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -56,74 +79,47 @@ const ProductCard = ({ product, onAddToCart, cartItem, onUpdateQuantity }) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: '48%',
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    overflow: 'hidden',
     elevation: 3,
+    margin: 8,
+    flex: 1,
   },
   image: {
     width: '100%',
     height: 150,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    backgroundColor: '#f5f5f5',
   },
-  info: {
+  content: {
     padding: 12,
   },
   name: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 8,
+    color: '#333',
   },
   price: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2563eb',
-    marginBottom: 8,
+    fontWeight: '600',
+    color: '#4B6BFB',
   },
   addButton: {
+    backgroundColor: '#4B0082',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563eb',
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 6,
     gap: 4,
+  },
+  addButtonDisabled: {
+    opacity: 0.7,
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    padding: 4,
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 6,
-  },
-  quantityButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
-  quantity: {
-    marginHorizontal: 16,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

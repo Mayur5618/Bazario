@@ -1,20 +1,21 @@
-import { Stack } from 'expo-router';
-import OrderDetailScreen from '../../../src/screens/OrderDetailScreen';
+import React from 'react';
+import { View, Text } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
-export default function OrderDetail() {
+export default function OrderDetailScreen() {
+  const { id } = useLocalSearchParams();
+  
   return (
     <>
       <Stack.Screen 
         options={{
-          title: 'Order Details',
+          title: `Order #${id}`,
           headerShown: true,
-          headerStyle: {
-            backgroundColor: '#fff',
-          },
-          headerShadowVisible: false,
         }}
       />
-      <OrderDetailScreen />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Order Detail Screen for order {id}</Text>
+      </View>
     </>
   );
 } 
