@@ -22,7 +22,17 @@ export default function AppLayout() {
         <Stack.Screen name="checkout" />
         <Stack.Screen name="categories" />
         <Stack.Screen name="account" />
-        <Stack.Screen name="account/shipping-address" />
+        <Stack.Screen 
+          name="account/shipping-address" 
+          options={{
+            headerShown: true,
+            title: 'Shipping Address',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerShadowVisible: false,
+          }}
+        />
         <Stack.Screen name="account/wishlist" />
         <Stack.Screen name="search" />
         <Stack.Screen name="settings" />

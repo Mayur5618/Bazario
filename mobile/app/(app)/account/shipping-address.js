@@ -6,7 +6,7 @@ export default function ShippingAddress() {
     <>
       <Stack.Screen 
         options={{
-          title: 'Shipping Address',
+          title: 'Shipping Addresses',
           headerShown: true,
           headerStyle: {
             backgroundColor: '#fff',

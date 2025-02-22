@@ -153,6 +153,10 @@ const AccountScreen = () => {
     );
   };
 
+  const handleNavigateToShippingAddress = () => {
+    router.push('/account/shipping-address');
+  };
+
   const menuItems = [
     {
       icon: 'person-outline',
@@ -172,7 +176,7 @@ const AccountScreen = () => {
     {
       icon: 'location-outline',
       title: 'Shipping Address',
-      onPress: () => router.push('/(app)/account/shipping-address')
+      onPress: handleNavigateToShippingAddress
     },
     {
       icon: 'card-outline',

@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -113,7 +115,25 @@ const CartScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#4169E1" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Cart</Text>
+        <View style={styles.rightHeader}>
+          <TouchableOpacity onPress={() => router.push('/(app)/search')}>
+            <Ionicons name="search" size={24} color="#4169E1" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView style={styles.cartList}>
         {cartItemsArray.map((item) => (
           <View key={item.product._id} style={styles.cartItem}>
@@ -160,7 +180,7 @@ const CartScreen = () => {
           <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -168,6 +188,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    elevation: 2, // for Android shadow
+    shadowColor: '#000', // for iOS shadow
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  rightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   centerContainer: {
     flex: 1,
@@ -181,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loginButton: {
-    backgroundColor: '#4B0082',
+    backgroundColor: '#4169E1',
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,
@@ -192,7 +243,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   shopButton: {
-    backgroundColor: '#4B0082',
+    backgroundColor: '#4169E1',
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,
@@ -227,7 +278,7 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 16,
-    color: '#4B0082',
+    color: '#4169E1',
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -244,7 +295,7 @@ const styles = StyleSheet.create({
   },
   quantityButtonText: {
     fontSize: 18,
-    color: '#4B0082',
+    color: '#4169E1',
     fontWeight: '600',
   },
   quantityText: {
@@ -269,10 +320,10 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#4B0082',
+    color: '#4169E1',
   },
   checkoutButton: {
-    backgroundColor: '#4B0082',
+    backgroundColor: '#4169E1',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
