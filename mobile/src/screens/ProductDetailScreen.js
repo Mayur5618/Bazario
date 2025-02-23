@@ -459,9 +459,9 @@ const ProductDetailScreen = () => {
 
           {/* Rating Overview Card */}
           <View style={styles.ratingCard}>
-            <View style={styles.ratingHeader}>
-              <View style={styles.ratingNumberContainer}>
-                <Text style={styles.ratingNumber}>{ratingStats.averageRating.toFixed(1)}</Text>
+            <View style={styles.ratingMainSection}>
+              <Text style={styles.ratingScore}>{ratingStats.averageRating.toFixed(1)}</Text>
+              <View style={styles.starsContainer}>
                 <Rating
                   readonly
                   startingValue={ratingStats.averageRating}
@@ -469,38 +469,34 @@ const ProductDetailScreen = () => {
                   style={styles.starRating}
                   tintColor="#f8f9fd"
                 />
-                <Text style={styles.reviewCount}>
-                  {ratingStats.totalReviews} {ratingStats.totalReviews === 1 ? 'review' : 'reviews'}
-                </Text>
               </View>
+              <Text style={styles.reviewsText}>Based on {ratingStats.totalReviews} review</Text>
+            </View>
 
-              {/* Rating Bars */}
-              <View style={styles.ratingBarsContainer}>
-                {[5, 4, 3, 2, 1].map(star => {
-                  const percentage = ratingStats.totalReviews > 0 
-                    ? (ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100)
-                    : 0;
-                  
-                  return (
-                    <View key={star} style={styles.ratingBarRow}>
-                      <Text style={styles.starCount}>{star}</Text>
-                      <Ionicons name="star" size={14} color="#FFD700" style={styles.starIcon} />
-                      <View style={styles.progressBarBg}>
-                        <Animated.View 
-                          style={[
-                            styles.progressBarFill,
-                            { 
-                              width: `${percentage}%`,
-                              backgroundColor: percentage > 0 ? '#4CAF50' : '#e0e0e0'
-                            }
-                          ]} 
-                        />
-                      </View>
-                      <Text style={styles.percentageText}>{percentage.toFixed(0)}%</Text>
+            <View style={styles.ratingBarsSection}>
+              {[5, 4, 3, 2, 1].map(star => {
+                const percentage = ratingStats.totalReviews > 0 
+                  ? (ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100)
+                  : 0;
+                
+                return (
+                  <View key={star} style={styles.ratingBarRow}>
+                    <Text style={styles.starText}>{star} star</Text>
+                    <View style={styles.progressBarBg}>
+                      <View 
+                        style={[
+                          styles.progressBarFill,
+                          { 
+                            width: `${percentage}%`,
+                            backgroundColor: percentage > 0 ? '#4CAF50' : '#e0e0e0'
+                          }
+                        ]} 
+                      />
                     </View>
-                  );
-                })}
-              </View>
+                    <Text style={styles.percentageText}>{percentage.toFixed(0)}%</Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
@@ -780,58 +776,77 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   ratingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    marginBottom: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  ratingHeader: {
+  ratingMainSection: {
+    flex: 1,
+    alignItems: 'flex-start',
+    marginRight: 24,
+  },
+  ratingScore: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 8,
+    letterSpacing: -1,
+  },
+  starsContainer: {
+    marginBottom: 8,
+  },
+  starRating: {
+    alignSelf: 'flex-start',
+  },
+  reviewsText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '400',
+  },
+  ratingBarsSection: {
+    flex: 2,
+    justifyContent: 'center',
+  },
+  ratingBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    height: 24,
   },
-  ratingNumberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingNumber: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  starRating: {
-    marginRight: 8,
-  },
-  ratingBarsContainer: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  ratingBarRow: {
-    flex: 1,
-    marginRight: 8,
-  },
-  starCount: {
+  starText: {
+    width: 50,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-  starIcon: {
-    marginRight: 8,
+    color: '#666666',
+    fontWeight: '400',
   },
   progressBarBg: {
-    height: 16,
-    backgroundColor: '#eee',
-    borderRadius: 8,
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    marginHorizontal: 8,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
+    borderRadius: 4,
   },
   percentageText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    width: 45,
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'right',
   },
   reviewCard: {
     paddingVertical: 16,
