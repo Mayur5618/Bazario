@@ -462,13 +462,12 @@ const ProductDetailScreen = () => {
             <View style={styles.ratingMainSection}>
               <Text style={styles.ratingScore}>{ratingStats.averageRating.toFixed(1)}</Text>
               <View style={styles.starsContainer}>
-                <Rating
-                  readonly
-                  startingValue={ratingStats.averageRating}
-                  imageSize={24}
-                  style={styles.starRating}
-                  tintColor="#f8f9fd"
-                />
+                 <Rating
+                      readonly
+                      startingValue={ratingStats.averageRating}
+                      imageSize={16}
+                      style={styles.reviewStars}
+                    />
               </View>
               <Text style={styles.reviewsText}>Based on {ratingStats.totalReviews} review</Text>
             </View>
@@ -777,9 +776,9 @@ const styles = StyleSheet.create({
   },
   ratingCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     padding: 16,
-    marginHorizontal: 16,
+    marginHorizontal: 1,
     marginVertical: 8,
     borderRadius: 12,
     shadowColor: '#000',
@@ -802,12 +801,15 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 8,
     letterSpacing: -1,
+    
   },
   starsContainer: {
     marginBottom: 8,
+    paddingRight: 12,
   },
   starRating: {
     alignSelf: 'flex-start',
+    marginRight: 8,
   },
   reviewsText: {
     fontSize: 14,
