@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { reviewApi } from '../api/reviewApi';
 import { Rating } from 'react-native-ratings';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -454,84 +455,85 @@ const ProductDetailScreen = () => {
 
         {/* Reviews Section */}
         <View style={styles.reviewsSection}>
-          <Text style={styles.sectionTitle}>Customer Reviews</Text>
-          
-          {/* Rating Summary */}
-          <View style={styles.ratingSummary}>
-            <View style={styles.ratingHeader}>
-              <Text style={styles.averageRating}>
-                {ratingStats.averageRating.toFixed(1)}
-              </Text>
-              <Rating
-                readonly
-                startingValue={ratingStats.averageRating}
-                imageSize={20}
-                style={styles.ratingStars}
-              />
-              <Text style={styles.totalReviews}>
-                {ratingStats.totalReviews} {ratingStats.totalReviews === 1 ? 'review' : 'reviews'}
-              </Text>
-            </View>
+          <Text style={styles.reviewTitle}>Customer Reviews</Text>
 
-            {/* Rating Bars */}
-            <View style={styles.ratingBars}>
-              {[5, 4, 3, 2, 1].map(star => (
-                <View key={star} style={styles.ratingBar}>
-                  <Text style={styles.ratingLabel}>{star} star</Text>
-                  <View style={styles.ratingBarContainer}>
-                    <View 
-                      style={[
-                        styles.ratingBarFill,
-                        { 
-                          width: `${(ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100) || 0}%`,
-                          backgroundColor: star > 3 ? '#4CAF50' : star > 2 ? '#FFC107' : '#F44336'
-                        }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={styles.ratingCount}>
-                    {((ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100) || 0).toFixed(0)}%
-                  </Text>
-                </View>
-              ))}
+          {/* Rating Overview Card */}
+          <View style={styles.ratingCard}>
+            <View style={styles.ratingHeader}>
+              <View style={styles.ratingNumberContainer}>
+                <Text style={styles.ratingNumber}>{ratingStats.averageRating.toFixed(1)}</Text>
+                <Rating
+                  readonly
+                  startingValue={ratingStats.averageRating}
+                  imageSize={24}
+                  style={styles.starRating}
+                  tintColor="#f8f9fd"
+                />
+                <Text style={styles.reviewCount}>
+                  {ratingStats.totalReviews} {ratingStats.totalReviews === 1 ? 'review' : 'reviews'}
+                </Text>
+              </View>
+
+              {/* Rating Bars */}
+              <View style={styles.ratingBarsContainer}>
+                {[5, 4, 3, 2, 1].map(star => {
+                  const percentage = ratingStats.totalReviews > 0 
+                    ? (ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100)
+                    : 0;
+                  
+                  return (
+                    <View key={star} style={styles.ratingBarRow}>
+                      <Text style={styles.starCount}>{star}</Text>
+                      <Ionicons name="star" size={14} color="#FFD700" style={styles.starIcon} />
+                      <View style={styles.progressBarBg}>
+                        <Animated.View 
+                          style={[
+                            styles.progressBarFill,
+                            { 
+                              width: `${percentage}%`,
+                              backgroundColor: percentage > 0 ? '#4CAF50' : '#e0e0e0'
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={styles.percentageText}>{percentage.toFixed(0)}%</Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           </View>
 
-          {/* Reviews List */}
+          {/* Individual Reviews */}
           {reviews.map(review => (
-            <View key={review._id} style={styles.reviewItem}>
+            <View key={review._id} style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <View style={styles.userInfo}>
-                  <View style={styles.avatarCircle}>
+                  <LinearGradient
+                    colors={['#4169E1', '#3498db']}
+                    style={styles.avatarGradient}
+                  >
                     <Text style={styles.avatarText}>
-                      {review.buyer.firstname.charAt(0)}
+                      {review.buyer.firstname[0].toUpperCase()}
                     </Text>
-                  </View>
-                  <View style={styles.userDetails}>
-                    <Text style={styles.userName}>
-                      {review.buyer.firstname} {review.buyer.lastname}
-                    </Text>
-                    <View style={styles.ratingDateContainer}>
-                      <Rating
-                        readonly
-                        startingValue={review.rating}
-                        imageSize={14}
-                        style={styles.rating}
-                      />
-                      <Text style={styles.reviewDate}>
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </Text>
-                    </View>
+                  </LinearGradient>
+                  <View style={styles.userMeta}>
+                    <Text style={styles.userName}>{review.buyer.firstname}</Text>
+                    <Rating
+                      readonly
+                      startingValue={review.rating}
+                      imageSize={16}
+                      style={styles.reviewStars}
+                    />
                   </View>
                 </View>
+                <Text style={styles.reviewDate}>
+                  {new Date(review.createdAt).toLocaleDateString()}
+                </Text>
               </View>
               <Text style={styles.reviewText}>{review.comment}</Text>
               {review.images?.length > 0 && (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.reviewImagesContainer}
-                >
+                <View style={styles.reviewImagesGrid}>
                   {review.images.map((image, index) => (
                     <Image
                       key={index}
@@ -539,7 +541,7 @@ const ProductDetailScreen = () => {
                       style={styles.reviewImage}
                     />
                   ))}
-                </ScrollView>
+                </View>
               )}
             </View>
           ))}
@@ -771,13 +773,67 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 16,
   },
-  sectionTitle: {
+  reviewTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
     marginBottom: 16,
   },
-  reviewItem: {
+  ratingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ratingNumberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingNumber: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  starRating: {
+    marginRight: 8,
+  },
+  ratingBarsContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  ratingBarRow: {
+    flex: 1,
+    marginRight: 8,
+  },
+  starCount: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+  },
+  starIcon: {
+    marginRight: 8,
+  },
+  progressBarBg: {
+    height: 16,
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  percentageText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  reviewCard: {
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -791,39 +847,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarCircle: {
+  avatarGradient: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4169E1',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   avatarText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  userDetails: {
-    flex: 1,
+  userMeta: {
+    marginLeft: 12,
   },
   userName: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-    marginBottom: 4,
-  },
-  ratingDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  rating: {
-    marginRight: 8,
+    fontWeight: '600',
   },
   reviewDate: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
   },
   reviewText: {
@@ -832,41 +876,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 8,
   },
-  reviewImagesContainer: {
-    marginTop: 12,
+  reviewImagesGrid: {
+    flexDirection: 'row',
+    marginTop: 8,
   },
   reviewImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     marginRight: 8,
-  },
-  writeReviewButton: {
-    backgroundColor: '#4169E1',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  writeReviewText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  noReviewsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noReviewsText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
-  },
-  noReviewsSubText: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
   },
   modalContainer: {
     flex: 1,
@@ -916,54 +934,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '500',
-  },
-  ratingSummary: {
-    marginBottom: 16,
-  },
-  ratingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  averageRating: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  ratingStars: {
-    marginRight: 8,
-  },
-  totalReviews: {
-    fontSize: 16,
-    color: '#666',
-  },
-  ratingBars: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  ratingBar: {
-    flex: 1,
-    marginRight: 8,
-  },
-  ratingBarContainer: {
-    height: 16,
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  ratingBarFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-  },
-  ratingLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-  ratingCount: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
   },
 });
 
