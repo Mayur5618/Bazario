@@ -9,6 +9,8 @@ import {
   Alert,
   Animated,
   Easing,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useCart } from '../context/CartContext';
@@ -17,6 +19,8 @@ import { useAuth } from '../context/AuthContext';
 import axios from '../config/axios';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { reviewApi } from '../api/reviewApi';
+import { Rating } from 'react-native-ratings';
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -29,6 +33,18 @@ const ProductDetailScreen = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [cartItem, setCartItem] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [ratingStats, setRatingStats] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  });
+  const [canReview, setCanReview] = useState(false);
+  const [orderId, setOrderId] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewImages, setReviewImages] = useState([]);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -54,6 +70,53 @@ const ProductDetailScreen = () => {
       setIsInWishlist(wishlistItems.includes(id));
     }
   }, [wishlistItems, id]);
+
+  useEffect(() => {
+    const checkReviewEligibility = async () => {
+      if (!isAuthenticated || !product?._id) return;
+      
+      try {
+        const { canReview: canReviewProduct, orderId: orderIdFromApi } = 
+          await reviewApi.checkUserReview(product._id);
+        setCanReview(canReviewProduct);
+        setOrderId(orderIdFromApi);
+      } catch (error) {
+        console.error('Error checking review eligibility:', error);
+      }
+    };
+
+    checkReviewEligibility();
+  }, [isAuthenticated, product?._id]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!product?._id) return;
+      try {
+        const response = await reviewApi.getProductReviews(product._id);
+        setReviews(response.reviews);
+        
+        // Calculate rating statistics
+        const total = response.reviews.length;
+        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        let sum = 0;
+        
+        response.reviews.forEach(review => {
+          counts[review.rating] = (counts[review.rating] || 0) + 1;
+          sum += review.rating;
+        });
+
+        setRatingStats({
+          averageRating: total > 0 ? sum / total : 0,
+          totalReviews: total,
+          ratingCounts: counts
+        });
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      }
+    };
+
+    fetchReviews();
+  }, [product?._id]);
 
   const fetchProductDetails = async () => {
     try {
@@ -217,30 +280,24 @@ const ProductDetailScreen = () => {
     }
   };
 
-  // Add this function to handle scroll
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { 
-      useNativeDriver: true,
-      listener: (event) => {
-        const offsetY = event.nativeEvent.contentOffset.y;
-        setShowScrollToTop(offsetY > 300);
-        
-        // Hide/show tab bar based on scroll direction
-        if (offsetY > 50) {
-          Animated.spring(tabBarAnimation, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        } else {
-          Animated.spring(tabBarAnimation, {
-            toValue: 1,
-            useNativeDriver: true,
-          }).start();
-        }
-      }
+  // Fix the scroll handler
+  const handleScroll = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setShowScrollToTop(offsetY > 300);
+    
+    // Hide/show tab bar based on scroll direction
+    if (offsetY > 50) {
+      Animated.spring(tabBarAnimation, {
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.spring(tabBarAnimation, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
     }
-  );
+  };
 
   const scrollToTop = () => {
     if (scrollViewRef.current) {
@@ -250,6 +307,43 @@ const ProductDetailScreen = () => {
 
   // Add scroll view ref
   const scrollViewRef = useRef(null);
+
+  // Add function to handle review submission
+  const handleSubmitReview = async () => {
+    if (!rating || !reviewText) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please provide both rating and review text'
+      });
+      return;
+    }
+
+    try {
+      const reviewData = {
+        rating,
+        comment: reviewText,
+        images: reviewImages,
+        orderId
+      };
+
+      await reviewApi.createReview(product._id, reviewData);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Review submitted successfully'
+      });
+      
+      setShowReviewModal(false);
+      // Refresh reviews
+      fetchReviews();
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to submit review',
+        text2: error.message
+      });
+    }
+  };
 
   if (loading || !product) {
     return (
@@ -276,20 +370,22 @@ const ProductDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Main Content */}
+      {/* Main Scrollable Content */}
       <ScrollView 
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        style={styles.scrollView}
       >
+        {/* Product Image */}
         <Image
           source={{ uri: product.images[activeImageIndex] }}
           style={styles.mainImage}
-          resizeMode="cover"
+          resizeMode="contain"
+          backgroundColor="#fff"
         />
 
+        {/* Product Info */}
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.price}>₹{product.price}</Text>
@@ -304,76 +400,196 @@ const ProductDetailScreen = () => {
               {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
             </Text>
           </View>
+        </View>
+
+        {/* Action Buttons - Moved above reviews */}
+        <View style={styles.actionButtonsContainer}>
+          <View style={styles.buttonWrapper}>
+            {!cartItem ? (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.addToCartButton]}
+                onPress={handleAddToCart}
+              >
+                <Text style={styles.actionButtonText}>Add to Cart</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.quantityControlsContainer}>
+                <TouchableOpacity 
+                  style={styles.quantityButtonLeft}
+                  onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+                >
+                  <Text style={styles.quantityButtonText}>-</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.quantityTextContainer}>
+                  <Animated.Text style={[
+                    styles.quantityText,
+                    {
+                      transform: [{ scale: scaleAnim }]
+                    }
+                  ]}>
+                    {cartItem.quantity}
+                  </Animated.Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={styles.quantityButtonRight}
+                  onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
+                >
+                  <Text style={styles.quantityButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
           
-          {/* Add padding for bottom buttons */}
-          <View style={{ height: 120 }} />
+          <View style={styles.buttonWrapper}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.buyNowButton]}
+              onPress={() => router.push('/checkout')}
+            >
+              <Text style={styles.actionButtonText}>Buy Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Reviews Section */}
+        <View style={styles.reviewsSection}>
+          <Text style={styles.sectionTitle}>Customer Reviews</Text>
+          
+          {/* Rating Summary */}
+          <View style={styles.ratingSummary}>
+            <View style={styles.ratingHeader}>
+              <Text style={styles.averageRating}>
+                {ratingStats.averageRating.toFixed(1)}
+              </Text>
+              <Rating
+                readonly
+                startingValue={ratingStats.averageRating}
+                imageSize={20}
+                style={styles.ratingStars}
+              />
+              <Text style={styles.totalReviews}>
+                {ratingStats.totalReviews} {ratingStats.totalReviews === 1 ? 'review' : 'reviews'}
+              </Text>
+            </View>
+
+            {/* Rating Bars */}
+            <View style={styles.ratingBars}>
+              {[5, 4, 3, 2, 1].map(star => (
+                <View key={star} style={styles.ratingBar}>
+                  <Text style={styles.ratingLabel}>{star} star</Text>
+                  <View style={styles.ratingBarContainer}>
+                    <View 
+                      style={[
+                        styles.ratingBarFill,
+                        { 
+                          width: `${(ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100) || 0}%`,
+                          backgroundColor: star > 3 ? '#4CAF50' : star > 2 ? '#FFC107' : '#F44336'
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.ratingCount}>
+                    {((ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100) || 0).toFixed(0)}%
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Reviews List */}
+          {reviews.map(review => (
+            <View key={review._id} style={styles.reviewItem}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.userInfo}>
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarText}>
+                      {review.buyer.firstname.charAt(0)}
+                    </Text>
+                  </View>
+                  <View style={styles.userDetails}>
+                    <Text style={styles.userName}>
+                      {review.buyer.firstname} {review.buyer.lastname}
+                    </Text>
+                    <View style={styles.ratingDateContainer}>
+                      <Rating
+                        readonly
+                        startingValue={review.rating}
+                        imageSize={14}
+                        style={styles.rating}
+                      />
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.reviewText}>{review.comment}</Text>
+              {review.images?.length > 0 && (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.reviewImagesContainer}
+                >
+                  {review.images.map((image, index) => (
+                    <Image
+                      key={index}
+                      source={{ uri: image }}
+                      style={styles.reviewImage}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          ))}
         </View>
       </ScrollView>
 
-      {/* Scroll to top button */}
-      {showScrollToTop && (
-        <TouchableOpacity 
-          style={styles.scrollTopButton}
-          onPress={scrollToTop}
-        >
-          <Ionicons name="arrow-up" size={24} color="#FFF" />
-        </TouchableOpacity>
-      )}
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtonsContainer}>
-        <View style={styles.buttonWrapper}>
-          {!cartItem ? (
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.addToCartButton]}
-              onPress={handleAddToCart}
-            >
-              <Animated.View style={{
-                transform: [{ scale: scaleAnim }],
-                opacity: fadeAnim,
-              }}>
-                <Text style={styles.actionButtonText}>Add to Cart</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.quantityControlsContainer}>
+      {/* Review Modal */}
+      <Modal
+        visible={showReviewModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowReviewModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Write a Review</Text>
+            
+            <Rating
+              showRating
+              onFinishRating={setRating}
+              style={{ paddingVertical: 10 }}
+            />
+            
+            <TextInput
+              style={styles.reviewInput}
+              multiline
+              numberOfLines={4}
+              placeholder="Write your review here..."
+              value={reviewText}
+              onChangeText={setReviewText}
+            />
+            
+            <View style={styles.modalButtons}>
               <TouchableOpacity 
-                style={styles.quantityButtonLeft}
-                onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowReviewModal(false)}
               >
-                <Text style={styles.quantityButtonText}>-</Text>
+                <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               
-              <View style={styles.quantityTextContainer}>
-                <Animated.Text style={[
-                  styles.quantityText,
-                  {
-                    transform: [{ scale: scaleAnim }]
-                  }
-                ]}>
-                  {cartItem.quantity}
-                </Animated.Text>
-              </View>
-              
               <TouchableOpacity 
-                style={styles.quantityButtonRight}
-                onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleSubmitReview}
               >
-                <Text style={styles.quantityButtonText}>+</Text>
+                <Text style={styles.buttonText}>Submit</Text>
               </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
-        
-        <View style={styles.buttonWrapper}>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.buyNowButton]}
-            onPress={() => router.push('/checkout')}
-          >
-            <Text style={styles.actionButtonText}>Buy Now</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </Modal>
     </View>
   );
 };
@@ -397,12 +613,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  scrollView: {
+  mainContainer: {
     flex: 1,
   },
+  scrollContent: {
+    padding: 16,
+  },
   mainImage: {
-    width: '100%',
+    width: '90%',
     height: 300,
+    resizeMode: 'contain',
+    backgroundColor: '#fff',
+    alignSelf: 'center',
+    marginVertical: 15,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   productInfo: {
     padding: 16,
@@ -454,14 +686,9 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   actionButtonsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
     padding: 16,
+    backgroundColor: '#fff',
+    marginTop: 16, // Add some space above buttons
   },
   buttonWrapper: {
     width: '100%',
@@ -538,6 +765,205 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  reviewsSection: {
+    padding: 16,
+    backgroundColor: '#fff',
+    marginTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 16,
+  },
+  reviewItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4169E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000',
+    marginBottom: 4,
+  },
+  ratingDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  rating: {
+    marginRight: 8,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  reviewText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  reviewImagesContainer: {
+    marginTop: 12,
+  },
+  reviewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  writeReviewButton: {
+    backgroundColor: '#4169E1',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  writeReviewText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  noReviewsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noReviewsText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+  },
+  noReviewsSubText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 16,
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  submitButton: {
+    backgroundColor: '#4169E1',
+  },
+  buttonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  ratingSummary: {
+    marginBottom: 16,
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  averageRating: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  ratingStars: {
+    marginRight: 8,
+  },
+  totalReviews: {
+    fontSize: 16,
+    color: '#666',
+  },
+  ratingBars: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  ratingBar: {
+    flex: 1,
+    marginRight: 8,
+  },
+  ratingBarContainer: {
+    height: 16,
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  ratingBarFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  ratingLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+  },
+  ratingCount: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
 
