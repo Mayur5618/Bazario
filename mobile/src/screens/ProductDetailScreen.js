@@ -6,17 +6,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Alert,
   Animated,
-  Easing
+  Easing,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import axios from '../config/axios';
-import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
 const ProductDetailScreen = () => {
@@ -34,6 +33,11 @@ const ProductDetailScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+
+  // Add this animation value for tab bar
+  const tabBarAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     fetchProductDetails();
@@ -103,33 +107,26 @@ const ProductDetailScreen = () => {
   };
 
   const animateQuantityChange = () => {
+    // Reset animations
+    scaleAnim.setValue(1);
     bounceAnim.setValue(0);
+
     Animated.sequence([
       // Quick scale down
       Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
+        toValue: 0.8,
+        duration: 100,
         useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
+        easing: Easing.ease,
       }),
-      // Bounce effect
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 3,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.spring(bounceAnim, {
-          toValue: 1,
-          friction: 3,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(() => {
-      bounceAnim.setValue(0);
-    });
+      // Bounce back
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
   };
 
   const handleAddToCart = async () => {
@@ -149,8 +146,16 @@ const ProductDetailScreen = () => {
       animateAddToCart();
       await addToCart(product._id, 1);
       setCartItem({ quantity: 1 });
+      Toast.show({
+        type: 'success',
+        text1: 'Added to cart successfully'
+      });
     } catch (error) {
       console.error('Error adding to cart:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to add to cart'
+      });
     }
   };
 
@@ -163,8 +168,16 @@ const ProductDetailScreen = () => {
       if (newQuantity === 0) {
         setCartItem(null);
       }
+      Toast.show({
+        type: 'success',
+        text1: newQuantity === 0 ? 'Removed from cart' : 'Updated quantity'
+      });
     } catch (error) {
       console.error('Error updating cart:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to update quantity'
+      });
     }
   };
 
@@ -204,6 +217,40 @@ const ProductDetailScreen = () => {
     }
   };
 
+  // Add this function to handle scroll
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { 
+      useNativeDriver: true,
+      listener: (event) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        setShowScrollToTop(offsetY > 300);
+        
+        // Hide/show tab bar based on scroll direction
+        if (offsetY > 50) {
+          Animated.spring(tabBarAnimation, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          Animated.spring(tabBarAnimation, {
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
+        }
+      }
+    }
+  );
+
+  const scrollToTop = () => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+  };
+
+  // Add scroll view ref
+  const scrollViewRef = useRef(null);
+
   if (loading || !product) {
     return (
       <View style={styles.loadingContainer}>
@@ -213,7 +260,7 @@ const ProductDetailScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -229,21 +276,25 @@ const ProductDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Product Images */}
+      {/* Main Content */}
+      <ScrollView 
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        style={styles.scrollView}
+      >
         <Image
           source={{ uri: product.images[activeImageIndex] }}
           style={styles.mainImage}
           resizeMode="cover"
         />
 
-        {/* Product Info */}
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.price}>₹{product.price}</Text>
           <Text style={styles.description}>{product.description}</Text>
           
-          {/* Stock Status */}
           <View style={styles.stockInfo}>
             <Text style={styles.stockLabel}>Stock Status:</Text>
             <Text style={[
@@ -253,42 +304,77 @@ const ProductDetailScreen = () => {
               {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
             </Text>
           </View>
+          
+          {/* Add padding for bottom buttons */}
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
 
-      {/* Bottom Action Bar */}
-      <View style={styles.footer}>
-        {cartItem ? (
-          <View style={styles.quantityContainer}>
+      {/* Scroll to top button */}
+      {showScrollToTop && (
+        <TouchableOpacity 
+          style={styles.scrollTopButton}
+          onPress={scrollToTop}
+        >
+          <Ionicons name="arrow-up" size={24} color="#FFF" />
+        </TouchableOpacity>
+      )}
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <View style={styles.buttonWrapper}>
+          {!cartItem ? (
             <TouchableOpacity 
-              style={styles.minusButton}
-              onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+              style={[styles.actionButton, styles.addToCartButton]}
+              onPress={handleAddToCart}
             >
-              <Text style={styles.quantityButtonText}>-</Text>
+              <Animated.View style={{
+                transform: [{ scale: scaleAnim }],
+                opacity: fadeAnim,
+              }}>
+                <Text style={styles.actionButtonText}>Add to Cart</Text>
+              </Animated.View>
             </TouchableOpacity>
-            
-            <View style={styles.quantityTextContainer}>
-              <Text style={styles.quantityText}>{cartItem.quantity}</Text>
+          ) : (
+            <View style={styles.quantityControlsContainer}>
+              <TouchableOpacity 
+                style={styles.quantityButtonLeft}
+                onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+              >
+                <Text style={styles.quantityButtonText}>-</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.quantityTextContainer}>
+                <Animated.Text style={[
+                  styles.quantityText,
+                  {
+                    transform: [{ scale: scaleAnim }]
+                  }
+                ]}>
+                  {cartItem.quantity}
+                </Animated.Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.quantityButtonRight}
+                onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
+              >
+                <Text style={styles.quantityButtonText}>+</Text>
+              </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.plusButton}
-              onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
-            >
-              <Text style={styles.quantityButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
+          )}
+        </View>
+        
+        <View style={styles.buttonWrapper}>
           <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddToCart}
+            style={[styles.actionButton, styles.buyNowButton]}
+            onPress={() => router.push('/checkout')}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#FFF" style={styles.addIcon} />
-            <Text style={styles.addButtonText}>Add</Text>
+            <Text style={styles.actionButtonText}>Buy Now</Text>
           </TouchableOpacity>
-        )}
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -301,13 +387,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
   },
   mainImage: {
     width: '100%',
@@ -331,10 +422,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 16,
+    lineHeight: 24,
   },
   stockInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
   },
   stockLabel: {
     fontSize: 16,
@@ -344,65 +437,96 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  scrollTopButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    backgroundColor: '#4169E1',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  actionButtonsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    backgroundColor: '#fff',
+    padding: 16,
   },
-  addButton: {
-    backgroundColor: '#4169E1',
+  buttonWrapper: {
+    width: '100%',
+    height: 45,
+    marginBottom: 12,
+  },
+  actionButton: {
+    width: '100%',
+    height: 45,
     borderRadius: 8,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 6,
   },
-  addIcon: {
-    marginTop: 1,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  quantityContainer: {
-    flexDirection: 'row',
+  addToCartButton: {
     backgroundColor: '#4169E1',
+  },
+  buyNowButton: {
+    backgroundColor: '#22C55E',
+    marginTop: 12,
+  },
+  quantityControlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 45,
+    backgroundColor: '#fff',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4169E1',
     overflow: 'hidden',
   },
-  minusButton: {
-    flex: 1,
+  quantityButtonLeft: {
+    width: 45,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#4169E1',
   },
-  plusButton: {
-    flex: 1,
+  quantityButtonRight: {
+    width: 45,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#4169E1',
   },
   quantityTextContainer: {
     flex: 1,
+    height: '100%',
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  quantityText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
   },
   quantityButtonText: {
     color: '#fff',
+    fontSize: 22,
+    fontWeight: '500',
+  },
+  quantityText: {
+    color: '#000',
     fontSize: 18,
     fontWeight: '500',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   backButton: {
     padding: 8,
