@@ -11,6 +11,7 @@ import {
   Easing,
   Modal,
   TextInput,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useCart } from '../context/CartContext';
@@ -22,6 +23,7 @@ import Toast from 'react-native-toast-message';
 import { reviewApi } from '../api/reviewApi';
 import { Rating } from 'react-native-ratings';
 import { LinearGradient } from 'expo-linear-gradient';
+import ImageZoom from 'react-native-image-pan-zoom';
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -46,6 +48,9 @@ const ProductDetailScreen = () => {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [reviewImages, setReviewImages] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -346,6 +351,41 @@ const ProductDetailScreen = () => {
     }
   };
 
+  // Add this custom ImageViewer component
+  const CustomImageViewer = ({ visible, image, onClose }) => {
+    if (!visible) return null;
+    
+    return (
+      <Modal
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={onClose}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          
+          <ImageZoom
+            cropWidth={screenWidth}
+            cropHeight={screenHeight}
+            imageWidth={screenWidth}
+            imageHeight={screenHeight}
+          >
+            <Image
+              source={{ uri: image }}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
+          </ImageZoom>
+        </View>
+      </Modal>
+    );
+  };
+
   if (loading || !product) {
     return (
       <View style={styles.loadingContainer}>
@@ -502,16 +542,21 @@ const ProductDetailScreen = () => {
           {/* Individual Reviews */}
           {reviews.map(review => (
             <View key={review._id} style={styles.reviewCard}>
+              {/* Review Header with User Info */}
               <View style={styles.reviewHeader}>
                 <View style={styles.userInfo}>
-                  <LinearGradient
-                    colors={['#4169E1', '#3498db']}
-                    style={styles.avatarGradient}
-                  >
-                    <Text style={styles.avatarText}>
-                      {review.buyer.firstname[0].toUpperCase()}
-                    </Text>
-                  </LinearGradient>
+                  {review.buyer.profilePic ? (
+                    <Image 
+                      source={{ uri: review.buyer.profilePic }}
+                      style={styles.userAvatar}
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarText}>
+                        {review.buyer.firstname[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.userMeta}>
                     <Text style={styles.userName}>{review.buyer.firstname}</Text>
                     <Rating
@@ -519,23 +564,40 @@ const ProductDetailScreen = () => {
                       startingValue={review.rating}
                       imageSize={16}
                       style={styles.reviewStars}
+                      type="custom"
+                      ratingColor="#FFD700"
+                      ratingBorderColor="#FFD700"
                     />
                   </View>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </Text>
                 </View>
-                <Text style={styles.reviewDate}>
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </Text>
               </View>
+
+              {/* Review Content */}
               <Text style={styles.reviewText}>{review.comment}</Text>
+
+              {/* Review Images */}
               {review.images?.length > 0 && (
-                <View style={styles.reviewImagesGrid}>
-                  {review.images.map((image, index) => (
-                    <Image
-                      key={index}
-                      source={{ uri: image }}
-                      style={styles.reviewImage}
-                    />
-                  ))}
+                <View style={styles.imageSection}>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imageScroll}
+                  >
+                    {review.images.map((image, index) => (
+                      <TouchableOpacity 
+                        key={index}
+                        onPress={() => setSelectedImage(image)}
+                      >
+                        <Image 
+                          source={{ uri: image }}
+                          style={styles.reviewImage}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
             </View>
@@ -587,6 +649,13 @@ const ProductDetailScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Image Viewer Modal */}
+      <CustomImageViewer
+        visible={!!selectedImage}
+        image={selectedImage}
+        onClose={() => setSelectedImage(null)}
+      />
     </View>
   );
 };
@@ -905,9 +974,41 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 20,
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 999,
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+  },
+  fullImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  imageSection: {
+    marginVertical: 12,
+  },
+  imageScroll: {
+    flexDirection: 'row',
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 8,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCountText: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
   modalContent: {
     backgroundColor: '#fff',
