@@ -161,7 +161,7 @@ const AccountScreen = () => {
     {
       icon: 'person-outline',
       title: 'Profile Details',
-      onPress: () => router.push('/profile-details')
+      route: '/profile-details'
     },
     {
       icon: 'cart-outline',
@@ -199,7 +199,7 @@ const AccountScreen = () => {
     <TouchableOpacity
       key={item.title}
       style={styles.menuItem}
-      onPress={() => router.push(item.route || item.onPress)}
+      onPress={item.onPress || (() => router.push(item.route))}
     >
       <View style={styles.menuItemContent}>
         <View style={[styles.iconContainer, { backgroundColor: item.color + '10' }]}>

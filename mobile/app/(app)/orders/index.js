@@ -1,5 +1,4 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import OrderHistoryScreen from '../../../src/screens/OrderHistoryScreen';
 import { useAuth } from '../../../src/context/AuthContext';
@@ -22,11 +21,13 @@ export default function OrdersScreen() {
         options={{
           title: 'My Orders',
           headerShown: true,
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerShadowVisible: false,
         }}
       />
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Orders Screen</Text>
-      </View>
+      <OrderHistoryScreen />
     </>
   );
 } 

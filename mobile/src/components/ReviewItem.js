@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 
 const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const { user } = useAuth();
   const isLiked = review.likes?.includes(user?._id);
   const isOwnReview = currentUserId === review.buyer._id;
@@ -20,6 +21,32 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
           style: 'destructive'
         }
       ]
+    );
+  };
+
+  const renderComment = () => {
+    const MAX_LENGTH = 100;
+    
+    if (review.comment.length <= MAX_LENGTH || isExpanded) {
+      return (
+        <Text style={styles.comment}>
+          {review.comment}
+        </Text>
+      );
+    }
+
+    return (
+      <View>
+        <Text style={styles.comment}>
+          {review.comment.slice(0, MAX_LENGTH)}...
+          <Text 
+            style={styles.readMore}
+            onPress={() => setIsExpanded(true)}
+          >
+            {' '}Read more
+          </Text>
+        </Text>
+      </View>
     );
   };
 
@@ -79,8 +106,8 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
         </View>
       </View>
 
-      {/* Review Content */}
-      <Text style={styles.comment}>{review.comment}</Text>
+      {/* Review Content with Read More */}
+      {renderComment()}
 
       {/* Review Images */}
       {review.images?.length > 0 && (
@@ -175,6 +202,10 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
     marginBottom: 12,
+  },
+  readMore: {
+    color: '#2196F3',
+    fontWeight: '600',
   },
   imagesContainer: {
     flexDirection: 'row',

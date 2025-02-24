@@ -94,5 +94,29 @@ export const reviewApi = {
         message: error.response?.data?.message || 'Failed to update review'
       };
     }
+  },
+
+  deleteReview: async (reviewId) => {
+    try {
+      console.log('Deleting review with ID:', reviewId);
+      const response = await axios.delete(`/api/reviews/${reviewId}`);
+      
+      console.log('Delete API Response:', response.data);
+      
+      if (response.data && response.data.success) {
+        return {
+          success: true,
+          message: 'Review deleted successfully'
+        };
+      }
+      
+      throw new Error(response.data.message || 'Failed to delete review');
+    } catch (error) {
+      console.error('Delete review error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to delete review'
+      };
+    }
   }
 }; 

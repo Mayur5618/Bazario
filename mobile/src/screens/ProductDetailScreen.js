@@ -479,19 +479,23 @@ const ProductDetailScreen = () => {
   const handleReviewDelete = async (reviewId) => {
     try {
       const response = await reviewApi.deleteReview(reviewId);
+      
       if (response.success) {
         Toast.show({
           type: 'success',
           text1: 'Review deleted successfully'
         });
-        // Refresh reviews after deletion
-        await fetchReviews();
+        
+        // रिव्यू लिस्ट को अपडेट करें
+        setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+      } else {
+        throw new Error(response.message);
       }
     } catch (error) {
       console.error('Delete review error:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to delete review'
+        text1: error.message || 'Failed to delete review'
       });
     }
   };

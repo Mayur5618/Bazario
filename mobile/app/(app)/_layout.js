@@ -36,8 +36,15 @@ export default function AppLayout() {
         <Stack.Screen name="account/wishlist" />
         <Stack.Screen name="search" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="orders/index" />
+        {/* <Stack.Screen name="orders/index" />
         <Stack.Screen name="orders/[id]" />
+        <Stack.Screen 
+          name="product/[id]"
+          options={{
+            presentation: 'modal'
+          }}
+        /> */}
+          <Stack.Screen name="orders" />
         <Stack.Screen 
           name="product/[id]"
           options={{
