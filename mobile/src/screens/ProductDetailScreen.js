@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { Rating } from 'react-native-ratings';
 import { LinearGradient } from 'expo-linear-gradient';
 import ImageZoom from 'react-native-image-pan-zoom';
 import ReviewItem from '../components/ReviewItem';
+import { useReview } from '../context/ReviewContext';
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -63,6 +64,51 @@ const ProductDetailScreen = () => {
   // Add this animation value for tab bar
   const tabBarAnimation = useRef(new Animated.Value(1)).current;
 
+  const { shouldRefresh, resetRefresh } = useReview();
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const response = await reviewApi.getProductReviews(id);
+      if (response.success) {
+        setReviews(response.reviews);
+        
+        // Calculate rating statistics
+        const total = response.reviews.length;
+        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        let sum = 0;
+        
+        response.reviews.forEach(review => {
+          counts[review.rating] = (counts[review.rating] || 0) + 1;
+          sum += review.rating;
+        });
+
+        setRatingStats({
+          averageRating: total > 0 ? sum / total : 0,
+          totalReviews: total,
+          ratingCounts: counts
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to load reviews'
+      });
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  // Add this effect to handle refresh
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchReviews();
+      resetRefresh();
+    }
+  }, [shouldRefresh]);
+
   useEffect(() => {
     fetchProductDetails();
   }, [id]);
@@ -95,36 +141,6 @@ const ProductDetailScreen = () => {
 
     checkReviewEligibility();
   }, [isAuthenticated, product?._id]);
-
-  useEffect(() => {
-    const fetchReviews = async () => {
-      if (!product?._id) return;
-      try {
-        const response = await reviewApi.getProductReviews(product._id);
-        setReviews(response.reviews);
-        
-        // Calculate rating statistics
-        const total = response.reviews.length;
-        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        let sum = 0;
-        
-        response.reviews.forEach(review => {
-          counts[review.rating] = (counts[review.rating] || 0) + 1;
-          sum += review.rating;
-        });
-
-        setRatingStats({
-          averageRating: total > 0 ? sum / total : 0,
-          totalReviews: total,
-          ratingCounts: counts
-        });
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-      }
-    };
-
-    fetchReviews();
-  }, [product?._id]);
 
   const fetchProductDetails = async () => {
     try {
@@ -480,15 +496,20 @@ const ProductDetailScreen = () => {
     }
   };
 
-  const handleReviewEdit = (review) => {
+  const handleReviewEdit = useCallback((review) => {
+    const refreshAndNavigateBack = async () => {
+      await fetchReviews(); // Refresh reviews when coming back
+    };
+
     router.push({
-      pathname: '/(app)/product/edit-review',
+      pathname: '/product/edit-review',
       params: { 
         reviewId: review._id,
         productId: id,
+        onUpdate: refreshAndNavigateBack // Pass the refresh function
       }
     });
-  };
+  }, [id, fetchReviews]);
 
   const renderReviews = () => {
     return (

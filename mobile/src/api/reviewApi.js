@@ -77,15 +77,22 @@ export const reviewApi = {
 
   editReview: async (reviewId, reviewData) => {
     try {
-      const response = await axios.patch(`/api/reviews/${reviewId}`, {
-        rating: reviewData.rating,
-        comment: reviewData.comment,
-        // अन्य फील्ड्स जो अपडेट करने हैं
-      });
-      return response.data;
+      const response = await axios.patch(`/api/reviews/${reviewId}`, reviewData);
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          review: response.data.review
+        };
+      }
+      
+      throw new Error(response.data.message || 'Failed to update review');
     } catch (error) {
       console.error('Edit review error:', error);
-      throw error;
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update review'
+      };
     }
   }
 }; 

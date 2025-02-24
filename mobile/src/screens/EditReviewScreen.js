@@ -4,10 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Rating } from 'react-native-ratings';
 import { reviewApi } from '../api/reviewApi';
 import Toast from 'react-native-toast-message';
+import { useReview } from '../context/ReviewContext';
 
 const EditReviewScreen = () => {
   const router = useRouter();
-  const { reviewId, productId } = useLocalSearchParams();
+  const { triggerRefresh } = useReview();
+  const { reviewId, productId, onUpdate } = useLocalSearchParams();
   
   const [review, setReview] = useState({
     rating: 0,
@@ -38,19 +40,27 @@ const EditReviewScreen = () => {
 
   const handleSubmit = async () => {
     try {
-      const response = await reviewApi.editReview(reviewId, review);
+      const response = await reviewApi.editReview(reviewId, {
+        rating: review.rating,
+        comment: review.comment.trim()
+      });
+
       if (response.success) {
         Toast.show({
           type: 'success',
           text1: 'Review updated successfully'
         });
+        
+        triggerRefresh();
         router.back();
+      } else {
+        throw new Error(response.message || 'Failed to update review');
       }
     } catch (error) {
-      console.error('Error updating review:', error);
+      console.error('Submit error:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to update review'
+        text1: error.message || 'Failed to update review'
       });
     }
   };
@@ -126,7 +136,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 });
 
