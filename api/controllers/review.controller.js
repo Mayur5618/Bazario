@@ -182,12 +182,12 @@ export const voteReview = async (req, res) => {
     }
 };
 
-// Add this to your existing review controller
 export const toggleLike = async (req, res) => {
     try {
         const { reviewId } = req.params;
-        const userId = req.user._id;
+        const userId = req.user._id;  // Current user's ID
 
+        // Find the review
         const review = await Review.findById(reviewId);
         
         if (!review) {
@@ -197,26 +197,41 @@ export const toggleLike = async (req, res) => {
             });
         }
 
-        // Check if user has already liked
-        const likeIndex = review.likes.indexOf(userId);
-        
-        if (likeIndex === -1) {
-            // Add like
-            review.likes.push(userId);
-        } else {
-            // Remove like
-            review.likes.splice(likeIndex, 1);
+        // Initialize likes array if it doesn't exist
+        if (!review.likes) {
+            review.likes = [];
         }
 
-        review.likesCount = review.likes.length;
-        await review.save();
+        // Check if user has already liked this review
+        const hasLiked = review.likes.includes(userId);
 
-        res.status(200).json({
-            success: true,
-            message: likeIndex === -1 ? 'Review liked' : 'Review unliked',
-            likesCount: review.likes.length,
-            isLiked: likeIndex === -1
-        });
+        if (hasLiked) {
+            // User already liked, so unlike
+            review.likes = review.likes.filter(id => id.toString() !== userId.toString());
+            review.likesCount = review.likes.length;
+            await review.save();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Review unliked successfully',
+                isLiked: false,
+                likesCount: review.likes.length,
+                likes: review.likes
+            });
+        } else {
+            // User hasn't liked, so add like
+            review.likes.push(userId);
+            review.likesCount = review.likes.length;
+            await review.save();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Review liked successfully',
+                isLiked: true,
+                likesCount: review.likes.length,
+                likes: review.likes
+            });
+        }
 
     } catch (error) {
         console.error('Toggle like error:', error);

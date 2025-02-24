@@ -44,6 +44,14 @@ export default function AppLayout() {
             presentation: 'modal'
           }}
         />
+        <Stack.Screen 
+          name="product/edit-review"
+          options={{
+            headerShown: true,
+            title: 'Edit Review',
+            animation: 'slide_from_right'
+          }}
+        />
       </Stack>
       <BottomTabs />
     </View>

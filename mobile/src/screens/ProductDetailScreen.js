@@ -13,7 +13,7 @@ import {
   TextInput,
   Dimensions,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useRouter } from 'expo-router';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../context/AuthContext';
@@ -24,12 +24,14 @@ import { reviewApi } from '../api/reviewApi';
 import { Rating } from 'react-native-ratings';
 import { LinearGradient } from 'expo-linear-gradient';
 import ImageZoom from 'react-native-image-pan-zoom';
+import ReviewItem from '../components/ReviewItem';
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
   const { cartItems, addToCart, updateQuantity } = useCart();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const router = useRouter();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -386,6 +388,126 @@ const ProductDetailScreen = () => {
     );
   };
 
+  const handleReviewLike = async (reviewId) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Login Required',
+        'Please login to like reviews',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/(auth)/login') }
+        ]
+      );
+      return;
+    }
+
+    try {
+      // Get current review and user ID
+      const currentReview = reviews.find(r => r._id === reviewId);
+      const userId = user._id; // Get from auth context
+
+      // Check if user already liked
+      const userLikedIndex = currentReview.likes.findIndex(
+        id => id.toString() === userId.toString()
+      );
+      
+      // Create new likes array based on current state
+      const newLikes = userLikedIndex !== -1
+        ? currentReview.likes.filter(id => id.toString() !== userId.toString())
+        : [...currentReview.likes, userId];
+
+      // Optimistically update UI
+      setReviews(prevReviews =>
+        prevReviews.map(review =>
+          review._id === reviewId
+            ? {
+                ...review,
+                likes: newLikes
+              }
+            : review
+        )
+      );
+
+      // Call API
+      const response = await reviewApi.toggleReviewLike(reviewId);
+
+      // Update with server response if needed
+      if (!response.success) {
+        // Revert to original state if API fails
+        setReviews(prevReviews =>
+          prevReviews.map(review =>
+            review._id === reviewId
+              ? { ...review, likes: currentReview.likes }
+              : review
+          )
+        );
+      }
+
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Revert to original state on error
+      setReviews(prevReviews =>
+        prevReviews.map(review =>
+          review._id === reviewId
+            ? { ...review, likes: currentLikes }
+            : review
+        )
+      );
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to update like'
+      });
+    }
+  };
+
+  const handleReviewDelete = async (reviewId) => {
+    try {
+      const response = await reviewApi.deleteReview(reviewId);
+      if (response.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Review deleted successfully'
+        });
+        // Refresh reviews after deletion
+        await fetchReviews();
+      }
+    } catch (error) {
+      console.error('Delete review error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to delete review'
+      });
+    }
+  };
+
+  const handleReviewEdit = (review) => {
+    router.push({
+      pathname: '/(app)/product/edit-review',
+      params: { 
+        reviewId: review._id,
+        productId: id,
+      }
+    });
+  };
+
+  const renderReviews = () => {
+    return (
+      <View style={styles.reviewsSection}>
+        <Text style={styles.reviewsTitle}>Reviews ({reviews.length})</Text>
+        {reviews.map(review => (
+          <ReviewItem
+            key={review._id}
+            review={review}
+            onLike={handleReviewLike}
+            onDelete={handleReviewDelete}
+            onEdit={handleReviewEdit}
+            currentUserId={user?._id}
+          />
+        ))}
+      </View>
+    );
+  };
+
   if (loading || !product) {
     return (
       <View style={styles.loadingContainer}>
@@ -494,115 +616,7 @@ const ProductDetailScreen = () => {
         </View>
 
         {/* Reviews Section */}
-        <View style={styles.reviewsSection}>
-          <Text style={styles.reviewTitle}>Customer Reviews</Text>
-
-          {/* Rating Overview Card */}
-          <View style={styles.ratingCard}>
-            <View style={styles.ratingMainSection}>
-              <Text style={styles.ratingScore}>{ratingStats.averageRating.toFixed(1)}</Text>
-              <View style={styles.starsContainer}>
-                 <Rating
-                      readonly
-                      startingValue={ratingStats.averageRating}
-                      imageSize={16}
-                      style={styles.reviewStars}
-                    />
-              </View>
-              <Text style={styles.reviewsText}>Based on {ratingStats.totalReviews} review</Text>
-            </View>
-
-            <View style={styles.ratingBarsSection}>
-              {[5, 4, 3, 2, 1].map(star => {
-                const percentage = ratingStats.totalReviews > 0 
-                  ? (ratingStats.ratingCounts[star] / ratingStats.totalReviews * 100)
-                  : 0;
-                
-                return (
-                  <View key={star} style={styles.ratingBarRow}>
-                    <Text style={styles.starText}>{star} star</Text>
-                    <View style={styles.progressBarBg}>
-                      <View 
-                        style={[
-                          styles.progressBarFill,
-                          { 
-                            width: `${percentage}%`,
-                            backgroundColor: percentage > 0 ? '#4CAF50' : '#e0e0e0'
-                          }
-                        ]} 
-                      />
-                    </View>
-                    <Text style={styles.percentageText}>{percentage.toFixed(0)}%</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Individual Reviews */}
-          {reviews.map(review => (
-            <View key={review._id} style={styles.reviewCard}>
-              {/* Review Header with User Info */}
-              <View style={styles.reviewHeader}>
-                <View style={styles.userInfo}>
-                  {review.buyer.profilePic ? (
-                    <Image 
-                      source={{ uri: review.buyer.profilePic }}
-                      style={styles.userAvatar}
-                    />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarText}>
-                        {review.buyer.firstname[0].toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.userMeta}>
-                    <Text style={styles.userName}>{review.buyer.firstname}</Text>
-                    <Rating
-                      readonly
-                      startingValue={review.rating}
-                      imageSize={16}
-                      style={styles.reviewStars}
-                      type="custom"
-                      ratingColor="#FFD700"
-                      ratingBorderColor="#FFD700"
-                    />
-                  </View>
-                  <Text style={styles.reviewDate}>
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Review Content */}
-              <Text style={styles.reviewText}>{review.comment}</Text>
-
-              {/* Review Images */}
-              {review.images?.length > 0 && (
-                <View style={styles.imageSection}>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.imageScroll}
-                  >
-                    {review.images.map((image, index) => (
-                      <TouchableOpacity 
-                        key={index}
-                        onPress={() => setSelectedImage(image)}
-                      >
-                        <Image 
-                          source={{ uri: image }}
-                          style={styles.reviewImage}
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
+        {renderReviews()}
       </ScrollView>
 
       {/* Review Modal */}
@@ -837,140 +851,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 16,
   },
-  reviewTitle: {
+  reviewsTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
     marginBottom: 16,
-  },
-  ratingCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 16,
-    marginHorizontal: 1,
-    marginVertical: 8,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  ratingMainSection: {
-    flex: 1,
-    alignItems: 'flex-start',
-    marginRight: 24,
-  },
-  ratingScore: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
-    letterSpacing: -1,
-    
-  },
-  starsContainer: {
-    marginBottom: 8,
-    paddingRight: 12,
-  },
-  starRating: {
-    alignSelf: 'flex-start',
-    marginRight: 8,
-  },
-  reviewsText: {
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '400',
-  },
-  ratingBarsSection: {
-    flex: 2,
-    justifyContent: 'center',
-  },
-  ratingBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    height: 24,
-  },
-  starText: {
-    width: 50,
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '400',
-  },
-  progressBarBg: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    marginHorizontal: 8,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  percentageText: {
-    width: 45,
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'right',
-  },
-  reviewCard: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  userMeta: {
-    marginLeft: 12,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  reviewDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  reviewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  reviewImagesGrid: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  reviewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 8,
   },
   modalContainer: {
     flex: 1,
@@ -990,25 +875,6 @@ const styles = StyleSheet.create({
   fullImage: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
-  },
-  imageSection: {
-    marginVertical: 12,
-  },
-  imageScroll: {
-    flexDirection: 'row',
-  },
-  imageCounter: {
-    position: 'absolute',
-    bottom: 8,
-    right: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  imageCountText: {
-    color: '#FFFFFF',
-    fontSize: 12,
   },
   modalContent: {
     backgroundColor: '#fff',

@@ -43,5 +43,49 @@ export const reviewApi = {
       console.error('Toggle review like error:', error);
       throw error;
     }
+  },
+
+  getReview: async (reviewId) => {
+    try {
+      console.log('Fetching review with ID:', reviewId);
+      // सही API endpoint का उपयोग
+      const response = await axios.get(`/api/reviews/reviews/${reviewId}`);
+      
+      console.log('Review API Response:', response.data);
+      
+      if (response.data && response.data.success) {
+        return {
+          success: true,
+          review: {
+            rating: response.data.review.rating,
+            comment: response.data.review.comment,
+            images: response.data.review.images || [],
+            // अन्य फील्ड्स जो आपको चाहिए
+          }
+        };
+      }
+      
+      throw new Error(response.data.message || 'Review not found');
+    } catch (error) {
+      console.error('Get review error details:', error.response || error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to fetch review'
+      };
+    }
+  },
+
+  editReview: async (reviewId, reviewData) => {
+    try {
+      const response = await axios.patch(`/api/reviews/${reviewId}`, {
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        // अन्य फील्ड्स जो अपडेट करने हैं
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Edit review error:', error);
+      throw error;
+    }
   }
 }; 
