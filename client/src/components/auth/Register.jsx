@@ -1,1779 +1,517 @@
-// // components/auth/Register.jsx
-// import React, { useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import axios from "axios";
-// import { toast } from "react-hot-toast";
-
-// const Register = () => {
-//   const navigate = useNavigate();
-//   const [step, setStep] = useState(1);
-//   const [formData, setFormData] = useState({
-//     mobileno: "",
-//     address: "",
-//   });
-
-//   const [otp, setOtp] = useState({
-//     sent: false,
-//     value: "",
-//     verified: false,
-//   });
-
-//   const [errors, setErrors] = useState({});
-//   const [serverError, setServerError] = useState("");
-
-//   // Add new state for OTP digits
-//   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  
-//   // Add ref for OTP inputs
-//   const otpRefs = Array(6).fill(0).map(() => React.createRef());
-
-//   // Validate mobile number
-//   const validateMobile = (number) => {
-//     return /^[0-9]{10}$/.test(number);
-//   };
-
-//   // Handle mobile number input
-//   const handleMobileSubmit = async () => {
-//     if (!validateMobile(formData.mobileno)) {
-//       setErrors({ mobileno: "Please enter a valid 10-digit mobile number" });
-//       return;
-//     }
-
-//     try {
-//       // First check if mobile exists
-//       const checkResponse = await axios.post('/api/otp/check-mobile', { 
-//         mobileno: formData.mobileno 
-//       });
-      
-//       if (checkResponse.data.exists) {
-//         setErrors({ mobileno: "Mobile number already registered" });
-//         return;
-//       }
-
-//       // If mobile doesn't exist, send OTP
-//       const response = await axios.post('/api/otp/send-otp', {
-//         mobileno: formData.mobileno
-//       });
-      
-//       if (response.data.success) {
-//         setOtp(prev => ({ 
-//           ...prev, 
-//           sent: true,
-//           // In development, store the OTP from response
-//           value: response.data.otp 
-//         }));
-//         toast.success("OTP sent successfully!");
-//       }
-//     } catch (error) {
-//       console.error('API Error:', error);
-//       setServerError(error.response?.data?.message || "Failed to send OTP");
-//       toast.error(error.response?.data?.message || "Failed to send OTP");
-//     }
-//   };
-
-//   // Handle OTP digit input
-//   const handleOtpDigitChange = (index, value) => {
-//     if (!/^\d*$/.test(value)) return;
-
-//     const newOtpDigits = [...otpDigits];
-//     newOtpDigits[index] = value;
-//     setOtpDigits(newOtpDigits);
-
-//     // Combine OTP digits and update main OTP state
-//     setOtp(prev => ({
-//       ...prev,
-//       value: newOtpDigits.join('')
-//     }));
-
-//     // Auto-focus next input
-//     if (value && index < 5) {
-//       otpRefs[index + 1].current.focus();
-//     }
-//   };
-
-//   // Handle backspace
-//   const handleKeyDown = (index, e) => {
-//     if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-//       otpRefs[index - 1].current.focus();
-//     }
-//   };
-
-//   // Handle OTP verification
-//   const handleOtpVerify = async () => {
-//     try {
-//       const response = await axios.post('/api/otp/verify-otp', {
-//         mobileno: formData.mobileno,
-//         otp: otp.value
-//       });
-
-//       if (response.data.success) {
-//         setOtp(prev => ({ ...prev, verified: true }));
-//         setStep(2);
-//         toast.success("Mobile number verified successfully!");
-//       }
-//     } catch (error) {
-//       setErrors({ otp: "Invalid OTP" });
-//       toast.error("Invalid OTP");
-//     }
-//   };
-
-//   // Handle final registration
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     if (!otp.verified || !formData.address) {
-//       setServerError("Please complete all steps");
-//       return;
-//     }
-
-//     try {
-      
-//        const response = await axios.post("/api/users/signup", {
-//         ...formData,
-//         userType: "buyer"
-//       });
-
-//       if (response.data.success) {
-//         toast.success("Registration successful!");
-//         navigate("/login");
-//       }
-//     } catch (error) {
-//       setServerError(error.response?.data?.message || "Registration failed");
-//       toast.error(error.response?.data?.message || "Registration failed");
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-//       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-//         <div className="text-center">
-//           <h2 className="text-3xl font-extrabold text-gray-900">
-//             Create Account
-//           </h2>
-//           <p className="mt-2 text-sm text-gray-600">
-//             Step {step} of 2
-//           </p>
-//         </div>
-
-//         {serverError && (
-//           <div className="bg-red-50 text-red-500 p-4 rounded-md">
-//             {serverError}
-//           </div>
-//         )}
-
-//         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-//           {step === 1 && (
-//             <div className="space-y-4">
-//               {!otp.sent ? (
-//                 // Mobile Number Input
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     Mobile Number
-//                   </label>
-//                   <div className="mt-1 flex rounded-md shadow-sm">
-//                     <input
-//                       type="tel"
-//                       value={formData.mobileno}
-//                       onChange={(e) => setFormData(prev => ({
-//                         ...prev,
-//                         mobileno: e.target.value
-//                       }))}
-//                       className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-//                       placeholder="Enter 10-digit mobile number"
-//                     />
-//                     <button
-//                       type="button"
-//                       onClick={handleMobileSubmit}
-//                       className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-//                     >
-//                       Send OTP
-//                     </button>
-//                   </div>
-//                   {errors.mobileno && (
-//                     <p className="mt-2 text-sm text-red-600">{errors.mobileno}</p>
-//                   )}
-//                 </div>
-//               ) : (
-//                 // OTP Input
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-4">
-//                     Verify Your Account
-//                   </label>
-//                   <p className="text-sm text-gray-500 mb-4">
-//                     We are sending a OTP to validate your mobile number, Hang on!
-//                   </p>
-//                   <div className="flex justify-center gap-2 mb-4">
-//                     {otpDigits.map((digit, index) => (
-//                       <input
-//                         key={index}
-//                         ref={otpRefs[index]}
-//                         type="text"
-//                         maxLength={1}
-//                         value={digit}
-//                         onChange={(e) => handleOtpDigitChange(index, e.target.value)}
-//                         onKeyDown={(e) => handleKeyDown(index, e)}
-//                         className="w-12 h-12 text-center border rounded-md text-lg font-semibold focus:border-blue-500 focus:ring-blue-500"
-//                       />
-//                     ))}
-//                   </div>
-//                   <p className="text-sm text-gray-500 text-center mb-4">
-//                     A SMS has been sent to {formData.mobileno}
-//                   </p>
-//                   <button
-//                     type="button"
-//                     onClick={handleOtpVerify}
-//                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-//                   >
-//                     Submit
-//                   </button>
-//                   {errors.otp && (
-//                     <p className="mt-2 text-sm text-red-600 text-center">{errors.otp}</p>
-//                   )}
-//                 </div>
-//               )}
-//             </div>
-//           )}
-
-//           {step === 2 && (
-//             <div className="space-y-4">
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700">
-//                   Delivery Address
-//                 </label>
-//                 <textarea
-//                   value={formData.address}
-//                   onChange={(e) => setFormData(prev => ({
-//                     ...prev,
-//                     address: e.target.value
-//                   }))}
-//                   rows={4}
-//                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-//                   placeholder="Enter your complete delivery address"
-//                 />
-//               </div>
-
-//               <button
-//                 type="submit"
-//                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-//               >
-//                 Complete Registration
-//               </button>
-//             </div>
-//           )}
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Register;
-// components/auth/Register.jsx
-// import React, { useState, useEffect } from "react";
-// import { useNavigate, Link } from "react-router-dom";
-// import axios from "axios";
-
-// const Register = () => {
-//   const navigate = useNavigate();
-//   const [isAuthenticated, setIsAuthenticated] = useState(false);
-//   const [step, setStep] = useState(1);
-//   const [formData, setFormData] = useState({
-//     firstname: "",
-//     lastname: "",
-//     mobileno: "",
-//     password: "",
-//     userType: "buyer", // Default user type set to 'buyer'
-//   });
-
-//   useEffect(() => {
-//        const token = localStorage.getItem('token'); // Check for token in local storage
-//        if (token) {
-//          setIsAuthenticated(true); // Set authenticated state if token exists
-//        }
-//       }, []);
-
-//   const [errors, setErrors] = useState({});
-//   const [serverError, setServerError] = useState("");
-
-  // Validation rules
-  // const validateField = (name, value) => {
-  //   switch (name) {
-  //     case "firstname":
-  //     case "lastname":
-  //       return value.trim() === ""
-  //         ? "This field is required"
-  //         : value.length < 2
-  //         ? "Must be at least 2 characters"
-  //         : value.length > 50
-  //         ? "Must be less than 50 characters"
-  //         : !/^[a-zA-Z\s]*$/.test(value)
-  //         ? "Only letters and spaces allowed"
-  //         : "";
-
-  //     case "mobileno":
-  //       return value.trim() === ""
-  //         ? "Mobile number is required"
-  //         : !/^[0-9]{10}$/.test(value)
-  //         ? "Must be 10 digits"
-  //         : "";
-
-  //     case "password":
-  //       return value.trim() === ""
-  //         ? "Password is required"
-  //         : value.length < 8
-  //         ? "Must be at least 8 characters"
-  //         : !/(?=.*[a-z])/.test(value)
-  //         ? "Must include lowercase letter"
-  //         : !/(?=.*[A-Z])/.test(value)
-  //         ? "Must include uppercase letter"
-  //         : !/(?=.*\d)/.test(value)
-  //         ? "Must include number"
-  //         : !/(?=.*[@$!%*?&])/.test(value)
-  //         ? "Must include special character"
-  //         : "";
-
-  //     case "pincode":
-  //       return value.trim() === ""
-  //         ? "Pincode is required"
-  //         : !/^[0-9]{6}$/.test(value)
-  //         ? "Must be 6 digits"
-  //         : "";
-
-  //     case "address":
-  //     case "country":
-  //     case "state":
-  //     case "city":
-  //       return value.trim() === ""
-  //         ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required`
-  //         : "";
-
-  //     default:
-  //       return "";
-  //   }
-  // };
-
-  // Handle input changes with validation
-  // const handleChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     [name]: value,
-  //   }));
-
-    // Validate field
-//     const error = validateField(name, value);
-//     setErrors((prev) => ({
-//       ...prev,
-//       [name]: error,
-//     }));
-//   };
-
-//   // Validate step before proceeding
-//   const validateStep = (stepNumber) => {
-//     const stepFields = {
-//       1: ["firstname", "lastname", "mobileno", "password"],
-//       2: ["address", "country", "state", "city", "pincode"],
-//     };
-
-//     const newErrors = {};
-//     stepFields[stepNumber].forEach((field) => {
-//       const error = validateField(field, formData[field]);
-//       if (error) newErrors[field] = error;
-//     });
-
-//     setErrors(newErrors);
-//     return Object.keys(newErrors).length === 0;
-//   };
-
-//   const handleNextStep = () => {
-//     if (validateStep(step)) {
-//       setStep((prev) => prev + 1);
-//     }
-//   };
-
-//   const handlePrevStep = () => {
-//     setStep((prev) => prev - 1);
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     if (!validateStep(2)) {
-//       return;
-//     }
-
-//     try {
-//       const response = await axios.post("/api/users/signup", formData);
-//       if (response.data.success) {
-//         navigate("/login");
-//       }
-//     } catch (error) {
-//       setServerError(error.response?.data?.message || "Registration failed");
-//     }
-//   };
-
-//   // Error message component
-//   const ErrorMessage = ({ error }) =>
-//     error ? <p className="text-red-500 text-xs mt-1">{error}</p> : null;
-
-//   return (
-//     <div className="flex items-center justify-center py-3 px-4 sm:px-6 lg:px-8">
-//        <>
-//        {isAuthenticated ? ( // Conditional rendering based on authentication
-//         <div> {/* Display a success message or redirect */}
-//            <h2>Welcome back!</h2>
-//            <Link to="/">Go back to Home</Link>
-//          </div>
-//        ) :
-//        (
-//       <div className="border-[1px] border-gray-300 max-w-md w-full p-6 rounded-xl shadow-lg">
-//         <div>
-//           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-//             Create Account
-//           </h2>
-//           <p className="mt-2 text-center text-sm text-gray-600">
-//             Step {step} of 2
-//           </p>
-//         </div>
-
-//         {serverError && (
-//           <div className="bg-red-50 text-red-500 p-4 rounded-md">
-//             {serverError}
-//           </div>
-//         )}
-
-//         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-//           {/* Step 1: Personal Information */}
-//           {step === 1 && (
-//             <div className="space-y-6">
-//               <div className="grid grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     First Name
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="firstname"
-//                     value={formData.firstname}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   {errors.firstname && (
-//                     <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                       <svg
-//                         xmlns="http://www.w3.org/2000/svg"
-//                         viewBox="0 0 24 24"
-//                         fill="currentColor"
-//                         className="h-5 w-5 text-red-500"
-//                       >
-//                         <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                       </svg>
-//                       {errors.firstname}
-//                     </p>
-//                   )}
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     Last Name
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="lastname"
-//                     value={formData.lastname}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   {errors.lastname && (
-//                     <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                       <svg
-//                         xmlns="http://www.w3.org/2000/svg"
-//                         viewBox="0 0 24 24"
-//                         fill="currentColor"
-//                         className="h-5 w-5 text-red-500"
-//                       >
-//                         <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                       </svg>
-//                       {errors.lastname}
-//                     </p>
-//                   )}
-//                 </div>
-//               </div>
-
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700">
-//                   Mobile Number
-//                 </label>
-//                 <input
-//                   type="text"
-//                   name="mobileno"
-//                   value={formData.mobileno}
-//                   onChange={handleChange}
-//                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                 />
-//                 {errors.mobileno && (
-//                   <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                     <svg
-//                       xmlns="http://www.w3.org/2000/svg"
-//                       viewBox="0 0 24 24"
-//                       fill="currentColor"
-//                       className="h-5 w-5 text-red-500"
-//                     >
-//                       <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                     </svg>
-//                     {errors.mobileno}
-//                   </p>
-//                 )}
-//               </div>
-
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700">
-//                   Password
-//                 </label>
-//                 <input
-//                   type="password"
-//                   name="password"
-//                   value={formData.password}
-//                   onChange={handleChange}
-//                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                 />
-//                 {errors.password && (
-//                   <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                     <svg
-//                       xmlns="http://www.w3.org/2000/svg"
-//                       viewBox="0 0 24 24"
-//                       fill="currentColor"
-//                       className="h-5 w-5 text-red-500"
-//                     >
-//                       <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                     </svg>
-//                     {errors.password}
-//                   </p>
-//                 )}
-//               </div>
-
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700">
-//                   Confirm Password
-//                 </label>
-//                 <input
-//                   type="password"
-//                   name="confirmPassword"
-//                   value={formData.confirmPassword}
-//                   onChange={handleChange}
-//                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                 />
-//                 {formData.password &&
-//                   formData.confirmPassword &&
-//                   formData.password !== formData.confirmPassword && (
-//                     <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                       <svg
-//                         xmlns="http://www.w3.org/2000/svg"
-//                         viewBox="0 0 24 24"
-//                         fill="currentColor"
-//                         className="h-5 w-5 text-red-500"
-//                       >
-//                         <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                       </svg>
-//                       {/* <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg> */}
-//                       Passwords do not match
-//                     </p>
-//                   )}
-//               </div>
-
-//               <div className="flex justify-between">
-//                 <button
-//                   type="button"
-//                   onClick={handleNextStep}
-//                   className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                 >
-//                   Next
-//                 </button>
-//               </div>
-//             </div>
-//           )}
-
-//           {/* Step 2: Address Information */}
-//           {step === 2 && (
-//             <div className="space-y-6">
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700">
-//                   Address *
-//                 </label>
-//                 <input
-//                   type="text"
-//                   name="address"
-//                   value={formData.address}
-//                   onChange={handleChange}
-//                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                 />
-//                 <ErrorMessage error={errors.address} />
-//               </div>
-
-//               <div className="grid grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     Country
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="country"
-//                     value={formData.country}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   <ErrorMessage error={errors.country} />
-//                 </div>
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     State
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="state"
-//                     value={formData.state}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   <ErrorMessage error={errors.state} />
-//                 </div>
-//               </div>
-
-//               <div className="grid grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     City
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="city"
-//                     value={formData.city}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   <ErrorMessage error={errors.city} />
-//                 </div>
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700">
-//                     Pincode
-//                   </label>
-//                   <input
-//                     type="text"
-//                     name="pincode"
-//                     value={formData.pincode}
-//                     onChange={handleChange}
-//                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                   />
-//                   <ErrorMessage error={errors.pincode} />
-//                 </div>
-//               </div>
-
-//               <div className="flex justify-between">
-//                 <button
-//                   type="button"
-//                   onClick={handlePrevStep}
-//                   className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                 >
-//                   Back
-//                 </button>
-//                 <button
-//                   type="submit"
-//                   className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                 >
-//                   Register
-//                 </button>
-//               </div>
-//             </div>
-//           )}
-//         </form>
-
-//         <div className="text-center mt-2">
-//         <p className="text-sm text-gray-600">
-//         Don't have an account?{' '}
-//           <Link
-//             to="/login"
-//             className="text-sm text-indigo-600 hover:text-indigo-500"
-//           >
-//              Login
-//           </Link>
-//           </p>
-//         </div>
-//       </div>
-//       )}
-//     </>
-//     </div>
-//   );
-// };
-
-// export default Register;
-
-// components/auth/Register.jsx
-// import React, { useState, useEffect } from "react";
-// import { useNavigate, Link } from "react-router-dom";
-// import axios from "axios";
-
-// const Register = () => {
-//   const navigate = useNavigate();
-//   const [isAuthenticated, setIsAuthenticated] = useState(false);
-//   const [step, setStep] = useState(1);
-//   const [showPassword, setShowPassword] = useState(false); // State for password visibility
-//   const [showConfirmPassword, setShowConfirmPassword] = useState(false); // State for confirm password visibility
-
-//   const [formData, setFormData] = useState({
-//     firstname: "",
-//     lastname: "",
-//     mobileno: "",
-//     password: "",
-//     userType: "buyer", // Default user type set to 'buyer'
-//   });
-
-//   useEffect(() => {
-//     const token = localStorage.getItem("token"); // Check for token in local storage
-//     if (token) {
-//       setIsAuthenticated(true); // Set authenticated state if token exists
-//     }
-//   }, []);
-
-//   const [errors, setErrors] = useState({});
-//   const [serverError, setServerError] = useState("");
-
-//   // Validation rules
-//   const validateField = (name, value) => {
-//     switch (name) {
-//       case "firstname":
-//       case "lastname":
-//         return value.trim() === ""
-//           ? "This field is required"
-//           : value.length < 2
-//           ? "Must be at least 2 characters"
-//           : value.length > 50
-//           ? "Must be less than 50 characters"
-//           : !/^[a-zA-Z\s]*$/.test(value)
-//           ? "Only letters and spaces allowed"
-//           : "";
-
-//       case "mobileno":
-//         return value.trim() === ""
-//           ? "Mobile number is required"
-//           : !/^[0-9]{10}$/.test(value)
-//           ? "Must be 10 digits"
-//           : "";
-
-//       case "password":
-//         return value.trim() === ""
-//           ? "Password is required"
-//           : value.length < 8
-//           ? "Must be at least 8 characters"
-//           : !/(?=.*[a-z])/.test(value)
-//           ? "Must include lowercase letter"
-//           : !/(?=.*[A-Z])/.test(value)
-//           ? "Must include uppercase letter"
-//           : !/(?=.*\d)/.test(value)
-//           ? "Must include number"
-//           : !/(?=.*[@$!%*?&])/.test(value)
-//           ? "Must include special character"
-//           : "";
-
-//       case "confirmPassword":
-//         return value.trim() === ""
-//           ? "Confirm Password is required"
-//           : value !== formData.password
-//           ? "Passwords do not match"
-//           : "";
-
-//       case "pincode":
-//         return value.trim() === ""
-//           ? "Pincode is required"
-//           : !/^[0-9]{6}$/.test(value)
-//           ? "Must be 6 digits"
-//           : "";
-
-//       case "address":
-//       case "country":
-//       case "state":
-//       case "city":
-//         return value.trim() === ""
-//           ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required`
-//           : "";
-
-//       default:
-//         return "";
-//     }
-//   };
-
-//   // Handle input changes with validation
-//   const handleChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: value,
-//     }));
-
-//     // Validate field
-//     const error = validateField(name, value);
-//     setErrors((prev) => ({
-//       ...prev,
-//       [name]: error,
-//     }));
-//   };
-
-//   // Validate step before proceeding
-//   const validateStep = (stepNumber) => {
-//     const stepFields = {
-//       1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"],
-//       2: ["address", "country", "state", "city", "pincode"],
-//     };
-
-//     const newErrors = {};
-//     stepFields[stepNumber].forEach((field) => {
-//       const error = validateField(field, formData[field]);
-//       if (error) newErrors[field] = error;
-//     });
-
-//     setErrors(newErrors);
-//     return Object.keys(newErrors).length === 0;
-//   };
-
-//   const handleNextStep = () => {
-//     if (validateStep(step)) {
-//       // Only proceed if there are no errors
-//       setStep((prev) => prev + 1);
-//     }
-//   };
-
-//   const handlePrevStep = () => {
-//     setStep((prev) => prev - 1);
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     if (!validateStep(2)) {
-//       return;
-//     }
-
-//     try {
-//       const response = await axios.post("/api/users/signup", formData);
-//       if (response.data.success) {
-//         navigate("/login");
-//       }
-//     } catch (error) {
-//       setServerError(error.response?.data?.message || "Registration failed");
-//     }
-//   };
-
-//   // Error message component
-//   const ErrorMessage = ({ error }) =>
-//     error ? <p className="text-red-500 text-xs mt-1">{error}</p> : null;
-
-//   return (
-//     <div className="flex items-center justify-center py-3 px-4 sm:px-6 lg:px-8">
-//       <>
-//         {isAuthenticated ? (
-//           <div>
-//             <h2>Welcome back!</h2>
-//             <Link to="/">Go back to Home</Link>
-//           </div>
-//         ) : (
-//           <div className="border-[1px] border-gray-300 max-w-md w-full p-6 rounded-xl shadow-lg">
-//             <div>
-//               <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-//                 Create Account
-//               </h2>
-//               <p className="mt-2 text-center text-sm text-gray-600">
-//                 Step {step} of 2
-//               </p>
-//             </div>
-
-//             {serverError && (
-//               <div className="bg-red-50 text-red-500 p-4 rounded-md">
-//                 {serverError}
-//               </div>
-//             )}
-
-//             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-//               {/* Step 1: Personal Information */}
-//               {step === 1 && (
-//                 <div className="space-y-6">
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         First Name
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="firstname"
-//                         value={formData.firstname}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       {errors.firstname && (
-//                         <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                           <svg
-//                             xmlns="http://www.w3.org/2000/svg"
-//                             viewBox="0 0 24 24"
-//                             fill="currentColor"
-//                             className="h-5 w-5 text-red-500"
-//                           >
-//                             <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                           </svg>
-//                           {errors.firstname}
-//                         </p>
-//                       )}
-//                     </div>
-
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         Last Name
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="lastname"
-//                         value={formData.lastname}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       {errors.lastname && (
-//                         <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                           <svg
-//                             xmlns="http://www.w3.org/2000/svg"
-//                             viewBox="0 0 24 24"
-//                             fill="currentColor"
-//                             className="h-5 w-5 text-red-500"
-//                           >
-//                             <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                           </svg>
-//                           {errors.lastname}
-//                         </p>
-//                       )}
-//                     </div>
-//                   </div>
-
-//                   <div>
-//                     <label className="block text-sm font-medium text-gray-700">
-//                       Mobile Number
-//                     </label>
-//                     <input
-//                       type="text"
-//                       name="mobileno"
-//                       value={formData.mobileno}
-//                       onChange={handleChange}
-//                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                     />
-//                     {errors.mobileno && (
-//                       <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//                         <svg
-//                           xmlns="http://www.w3.org/2000/svg"
-//                           viewBox="0 0 24 24"
-//                           fill="currentColor"
-//                           className="h-5 w-5 text-red-500"
-//                         >
-//                           <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//                         </svg>
-//                         {errors.mobileno}
-//                       </p>
-//                     )}
-//                   </div>
-
-//                   <div>
-//                     <label className="block text-sm font-medium text-gray-700">
-//                       Password
-//                     </label>
-//                     <div className="relative">
-//                       <input
-//                         type={showPassword ? "text" : "password"}
-//                         name="password"
-//                         value={formData.password}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       <button
-//                         type="button"
-//                         onClick={() => setShowPassword((prev) => !prev)}
-//                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-//                       >
-//                         {showPassword ? (
-//                           <svg
-//                           class="w-6 h-6 text-gray-800 dark:text-black"
-//                           aria-hidden="true"
-//                           xmlns="http://www.w3.org/2000/svg"
-//                           width="24"
-//                           height="24"
-//                           fill="currentColor"
-//                           viewBox="0 0 24 24"
-//                         >
-//                           <path d="m4 15.6 3.055-3.056A4.913 4.913 0 0 1 7 12.012a5.006 5.006 0 0 1 5-5c.178.009.356.027.532.054l1.744-1.744A8.973 8.973 0 0 0 12 5.012c-5.388 0-10 5.336-10 7A6.49 6.49 0 0 0 4 15.6Z" />
-//                           <path d="m14.7 10.726 4.995-5.007A.998.998 0 0 0 18.99 4a1 1 0 0 0-.71.305l-4.995 5.007a2.98 2.98 0 0 0-.588-.21l-.035-.01a2.981 2.981 0 0 0-3.584 3.583c0 .012.008.022.01.033.05.204.12.402.211.59l-4.995 4.983a1 1 0 1 0 1.414 1.414l4.995-4.983c.189.091.386.162.59.211.011 0 .021.007.033.01a2.982 2.982 0 0 0 3.584-3.584c0-.012-.008-.023-.011-.035a3.05 3.05 0 0 0-.21-.588Z" />
-//                           <path d="m19.821 8.605-2.857 2.857a4.952 4.952 0 0 1-5.514 5.514l-1.785 1.785c.767.166 1.55.25 2.335.251 6.453 0 10-5.258 10-7 0-1.166-1.637-2.874-2.179-3.407Z" />
-//                         </svg>
-                         
-//                         ) : (
-//                           <svg
-//                           class="w-6 h-6 text-gray-800 dark:text-black"
-//                           aria-hidden="true"
-//                           xmlns="http://www.w3.org/2000/svg"
-//                           width="24"
-//                           height="24"
-//                           fill="none"
-//                           viewBox="0 0 24 24"
-//                         >
-//                           <path
-//                             stroke="currentColor"
-//                             stroke-width="2"
-//                             d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z"
-//                           />
-//                           <path
-//                             stroke="currentColor"
-//                             stroke-width="2"
-//                             d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-//                           />
-//                         </svg>
-//                         )}
-//                       </button>
-//                     </div>
-//                   </div>
-//                   <div>
-//   <label className="block text-sm font-medium text-gray-700">
-//     Confirm Password
-//   </label>
-//   <div className="relative">
-//     <input
-//       type={showConfirmPassword ? "text" : "password"} // Toggle confirm password visibility
-//       name="confirmPassword"
-//       value={formData.confirmPassword}
-//       onChange={handleChange}
-//       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 pr-10" // Added pr-10 for padding
-//     />
-//     <button
-//       type="button"
-//       onClick={() => setShowConfirmPassword(!showConfirmPassword)} // Toggle visibility
-//       className="absolute inset-y-0 right-0 flex items-center pr-3"
-//     >
-//       {showConfirmPassword ? (
-//          <svg
-//          class="w-6 h-6 text-gray-800 dark:text-black"
-//          aria-hidden="true"
-//          xmlns="http://www.w3.org/2000/svg"
-//          width="24"
-//          height="24"
-//          fill="currentColor"
-//          viewBox="0 0 24 24"
-//        >
-//          <path d="m4 15.6 3.055-3.056A4.913 4.913 0 0 1 7 12.012a5.006 5.006 0 0 1 5-5c.178.009.356.027.532.054l1.744-1.744A8.973 8.973 0 0 0 12 5.012c-5.388 0-10 5.336-10 7A6.49 6.49 0 0 0 4 15.6Z" />
-//          <path d="m14.7 10.726 4.995-5.007A.998.998 0 0 0 18.99 4a1 1 0 0 0-.71.305l-4.995 5.007a2.98 2.98 0 0 0-.588-.21l-.035-.01a2.981 2.981 0 0 0-3.584 3.583c0 .012.008.022.01.033.05.204.12.402.211.59l-4.995 4.983a1 1 0 1 0 1.414 1.414l4.995-4.983c.189.091.386.162.59.211.011 0 .021.007.033.01a2.982 2.982 0 0 0 3.584-3.584c0-.012-.008-.023-.011-.035a3.05 3.05 0 0 0-.21-.588Z" />
-//          <path d="m19.821 8.605-2.857 2.857a4.952 4.952 0 0 1-5.514 5.514l-1.785 1.785c.767.166 1.55.25 2.335.251 6.453 0 10-5.258 10-7 0-1.166-1.637-2.874-2.179-3.407Z" />
-//        </svg>
-      // 
-//       ) : (
-//         <svg
-//        class="w-6 h-6 text-gray-800 dark:text-black"
-//        aria-hidden="true"
-//        xmlns="http://www.w3.org/2000/svg"
-//        width="24"
-//        height="24"
-//        fill="none"
-//        viewBox="0 0 24 24"
-//      >
-//        <path
-//          stroke="currentColor"
-//          stroke-width="2"
-//          d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z"
-//        />
-//        <path
-//          stroke="currentColor"
-//          stroke-width="2"
-//          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-//        />
-//      </svg>
-//       )}
-//     </button>
-//   </div>
-//   {errors.confirmPassword && (
-//     <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-//       <svg
-//         xmlns="http://www.w3.org/2000/svg"
-//         viewBox="0 0 24 24"
-//         fill="currentColor"
-//         className="h-5 w-5 text-red-500"
-//       >
-//         <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-//       </svg>
-//       {errors.confirmPassword}
-//     </p>
-//   )}
-// </div>
-
-//                   <div className="flex justify-between">
-//                     <button
-//                       type="button"
-//                       onClick={handleSubmit}
-//                       className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                     >
-//                       Next
-//                     </button>
-//                   </div>
-//                 </div>
-//               )}
-
-//               {/* Step 2: Address Information */}
-//               {step === 2 && (
-//                 <div className="space-y-6">
-//                   <div>
-//                     <label className="block text-sm font-medium text-gray-700">
-//                       Address
-//                     </label>
-//                     <input
-//                       type="text"
-//                       name="address"
-//                       value={formData.address}
-//                       onChange={handleChange}
-//                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                     />
-//                     <ErrorMessage error={errors.address} />
-//                   </div>
-
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         Country
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="country"
-//                         value={formData.country}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       <ErrorMessage error={errors.country} />
-//                     </div>
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         State
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="state"
-//                         value={formData.state}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       <ErrorMessage error={errors.state} />
-//                     </div>
-//                   </div>
-
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         City
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="city"
-//                         value={formData.city}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       <ErrorMessage error={errors.city} />
-//                     </div>
-//                     <div>
-//                       <label className="block text-sm font-medium text-gray-700">
-//                         Pincode
-//                       </label>
-//                       <input
-//                         type="text"
-//                         name="pincode"
-//                         value={formData.pincode}
-//                         onChange={handleChange}
-//                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//                       />
-//                       <ErrorMessage error={errors.pincode} />
-//                     </div>
-//                   </div>
-
-//                   <div className="flex justify-between">
-//                     <button
-//                       type="button"
-//                       onClick={handlePrevStep}
-//                       className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                     >
-//                       Back
-//                     </button>
-//                     <button
-//                       type="submit"
-//                       className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-//                     >
-//                       Register
-//                     </button>
-//                   </div>
-//                 </div>
-//               )}
-//             </form>
-
-//             <div className="text-center mt-2">
-//               <p className="text-sm text-gray-600">
-//                 Don't have an account?{" "}
-//                 <Link
-//                   to="/login"
-//                   className="text-sm text-indigo-600 hover:text-indigo-500"
-//                 >
-//                   Login
-//                 </Link>
-//               </p>
-//             </div>
-//           </div>
-//         )}
-//       </>
-//     </div>
-//   );
-// };
-
-// export default Register;
-
-
-// components/auth/Register.jsx
-// components/auth/Register.jsx
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import { FaEye, FaEyeSlash, FaLocationArrow } from 'react-icons/fa';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState("");
   const [formData, setFormData] = useState({
-    firstname: "",
-    lastname: "",
-    mobileno: "",
-    password: "",
-    confirmPassword: "", // Added confirm password field
-    address: "",
-    country: "",
-    state: "",
-    city: "",
-    pincode: "",
-    userType: "buyer", // Default user type set to 'buyer'
+    firstName: '',
+    lastName: '', 
+    mobile: '',
+    password: '',
+    confirmPassword: ''
   });
 
-  useEffect(() => {
-    const token = localStorage.getItem("token"); // Check for token in local storage
-    if (token) {
-      setIsAuthenticated(true); // Set authenticated state if token exists
-    }
-  }, []);
-
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
-  
-  
-  // Validation rules
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+
+  // Validation function
   const validateField = (name, value) => {
     switch (name) {
-      case "firstname":
-        case "lastname":
-          return value.trim() === ""
-          ? "This field is required"
-          : value.length < 2
-          ? "Must be at least 2 characters"
-          : value.length > 50
-          ? "Must be less than 50 characters"
-          : !/^[a-zA-Z\s]*$/.test(value)
-          ? "Only letters and spaces allowed"
-          : "";
-          
-          case "mobileno":
-        return value.trim() === ""
-          ? "Mobile number is required"
-          : !/^[0-9]{10}$/.test(value)
-          ? "Must be 10 digits"
-          : "";
-          
-          case "password":
-            return value.trim() === ""
-            ? "Password is required"
-            : value.length < 8
-          ? "Must be at least 8 characters"
-          : !/(?=.*[a-z])/.test(value)
-          ? "Must include lowercase letter"
-          : !/(?=.*[A-Z])/.test(value)
-          ? "Must include uppercase letter"
-          : !/(?=.*\d)/.test(value)
-          ? "Must include number"
-          : !/(?=.*[@$!%*?&])/.test(value)
-          ? "Must include special character"
-          : "";
-          
-          case "confirmPassword":
-            return value.trim() === ""
-            ? "Confirm Password is required"
-          : value !== formData.password
-          ? "Passwords do not match"
-          : "";
-
-          case "address":
-            case "country":
-      case "state":
-      case "city":
-        return value.trim() === ""
-          ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required`
-          : "";
-          
-          case "pincode":
-        return value.trim() === ""
-        ? "Pincode is required"
-        : !/^[0-9]{6}$/.test(value)
-        ? "Must be 6 digits"
-          : "";
-
-          default:
-            return "";
-          }
+      case 'firstName':
+      case 'lastName':
+        return !value.trim() ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required` : '';
+      case 'mobile':
+        return !value.trim() 
+          ? 'Mobile number is required' 
+          : !/^\d{10}$/.test(value) 
+          ? 'Invalid mobile number' 
+          : '';
+      case 'password':
+        return !value 
+          ? 'Password is required' 
+          : value.length < 6 
+          ? 'Password must be at least 6 characters' 
+          : '';
+      case 'confirmPassword':
+        return !value 
+          ? 'Please confirm password' 
+          : value !== formData.password 
+          ? 'Passwords do not match' 
+          : '';
+      default:
+        return !value.trim() ? `${name.charAt(0).toUpperCase() + name.slice(1)} is required` : '';
+    }
   };
 
-  const handleChange = async (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
 
-    // Check mobile number existence when it's exactly 10 digits
-    if (name === 'mobileno' && value.length === 10) {
-      try {
-        const response = await axios.post('/api/users/check-mobile', { mobileno: value });
-        if (response.data.exists) {
-          setErrors(prev => ({
-            ...prev,
-            mobileno: "Mobile number already in use"
-          }));
-        } else {
-          // Only validate the field if mobile number doesn't exist
-          const error = validateField(name, value);
-          setErrors(prev => ({
-            ...prev,
-            mobileno: error
-          }));
-        }
-      } catch (error) {
-        console.error('Error checking mobile number:', error);
-      }
-    } else {
-      // For all other fields and mobile numbers not 10 digits, use normal validation
-      const error = validateField(name, value);
-      setErrors((prev) => ({
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => ({
         ...prev,
-        [name]: error,
+        [e.target.name]: ''
       }));
     }
-};
-  // Handle input changes with validation
-  // const handleChange = (e) => {
-    //   const { name, value } = e.target;
-    //   setFormData((prev) => ({
-  //     ...prev,
-  //     [name]: value,
-  //   }));
+  };
 
-  //   // Validate field
-  //   const error = validateField(name, value);
-  //   setErrors((prev) => ({
-  //     ...prev,
-  //     [name]: error,
-  //   }));
-  // };
-
-  // Validate step before proceeding
   const validateStep = (stepNumber) => {
-    const stepFields = {
-      1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"], // Fields for step 1
-      2: ["address", "country", "state", "city", "pincode"], // Fields for step 2
-    };
-
     const newErrors = {};
-    stepFields[stepNumber].forEach((field) => {
+    let fieldsToValidate = [];
+
+    if (stepNumber === 1) {
+      fieldsToValidate = ['firstName', 'lastName', 'mobile', 'password', 'confirmPassword'];
+    } else if (stepNumber === 2) {
+      fieldsToValidate = ['address', 'country', 'state', 'city', 'pincode'];
+    }
+
+    fieldsToValidate.forEach(field => {
       const error = validateField(field, formData[field]);
-      if (error) newErrors[field] = error;
+      if (error) {
+        newErrors[field] = error;
+      }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const hasStepErrors = () => {
-    const stepFields = {
-      1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"],
-      2: ["address", "country", "state", "city", "pincode"],
-    };
-  
-    // Check if any field in current step has an error
-    return stepFields[step].some(field => errors[field]);
+  const checkPhoneExists = async (phone) => {
+    try {
+      const response = await axios.post('/api/users/check-mobile', { 
+        mobileno: phone // Changed from phone to mobileno to match server expectation
+      });
+      return response.data.exists;
+    } catch (error) {
+      console.error('Error checking phone:', error);
+      toast.error('Error checking phone number');
+      throw error;
+    }
   };
-  
-  // Add this function to check if all required fields are filled
-  const hasEmptyFields = () => {
-    const stepFields = {
-      1: ["firstname", "lastname", "mobileno", "password", "confirmPassword"],
-      2: ["address", "country", "state", "city", "pincode"],
-    };
-  
-    // Check if any required field in current step is empty
-    return stepFields[step].some(field => !formData[field]);
-  };
-
-  // const handleNextStep = () => {
-  //   if (validateStep(step)) {
-  //     setStep((prev) => prev + 1);
-  //   }
-  // };
 
   const handleNextStep = async () => {
-    // First check if there are any validation errors
-    if (!validateStep(step)) {
-      return;
+    // First validate all fields
+    const stepErrors = {};
+    
+    if (!formData.firstName.trim()) {
+      stepErrors.firstName = 'First name is required';
     }
-  
-    // If we're on step 1 and mobile number is filled
-    if (step === 1 && formData.mobileno) {
-      try {
-        // Check if mobile number exists
-        const response = await axios.post('/api/users/check-mobile', { 
-          mobileno: formData.mobileno 
-        });
-        
-        if (response.data.exists) {
-          // If mobile exists, set error and prevent moving to next step
-          setErrors(prev => ({
-            ...prev,
-            mobileno: "Mobile number already in use"
-          }));
-          return;
-        }
-        
-        // If mobile doesn't exist and all validations pass, proceed to next step
-        setStep((prev) => prev + 1);
-      } catch (error) {
-        console.error('Error checking mobile number:', error);
-        setServerError("Error validating mobile number");
-      }
-    } else {
-      // For other steps, just proceed if validation passes
-      setStep((prev) => prev + 1);
+    if (!formData.lastName.trim()) {
+      stepErrors.lastName = 'Last name is required';
     }
-  };
+    if (!formData.mobile.trim()) {
+      stepErrors.mobile = 'Mobile number is required';
+    } else if (!/^\d{10}$/.test(formData.mobile)) {
+      stepErrors.mobile = 'Invalid mobile number format';
+    }
+    if (!formData.password) {
+      stepErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      stepErrors.password = 'Password must be at least 6 characters';
+    }
+    if (!formData.confirmPassword) {
+      stepErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      stepErrors.confirmPassword = 'Passwords do not match';
+    }
 
-  const handlePrevStep = () => {
-    setStep((prev) => prev - 1);
-  };
+    setErrors(stepErrors);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateStep(2)) {
+    // If there are any validation errors, don't proceed
+    if (Object.keys(stepErrors).length > 0) {
+      toast.error('Please fix the errors before proceeding');
       return;
     }
 
     try {
-      const response = await axios.post("/api/users/signup", formData);
-      if (response.data.success) {
-        navigate("/login");
+      // Check if phone number already exists
+      const phoneExists = await checkPhoneExists(formData.mobile);
+      
+      if (phoneExists) {
+        setErrors(prev => ({
+          ...prev,
+          mobile: 'This phone number is already registered'
+        }));
+        toast.error('This phone number is already registered');
+        return;
       }
+
+      // If everything is valid and phone is not registered, proceed to next step
+      setStep(2);
+      toast.success('Step 1 completed successfully');
     } catch (error) {
-      setServerError(error.response?.data?.message || "Registration failed");
+      console.error('Error:', error);
+      toast.error('Something went wrong. Please try again.');
     }
   };
 
-  // Error message component
-  const ErrorMessage = ({ error }) =>
-    error ? <p className="text-red-500 text-xs mt-1">{error}</p> : null;
+  const handlePrevStep = () => {
+    setStep(1);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateStep(2)) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post('/api/users/register', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        mobile: formData.mobile,
+        password: formData.password
+      });
+
+      if (response.data.success) {
+        toast.success('Registration successful!');
+        navigate('/login');
+      }
+    } catch (error) {
+      setServerError(error.response?.data?.message || 'Registration failed');
+      toast.error(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    setIsLocationLoading(true);
+    try {
+      if ("geolocation" in navigator) {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+
+        const { latitude, longitude } = position.coords;
+
+        // Get address from coordinates using reverse geocoding
+        const response = await axios.get(
+          `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`
+        );
+
+        if (response.data.results.length > 0) {
+          const location = response.data.results[0].components;
+          
+          setFormData(prev => ({
+            ...prev,
+            address: location.road || location.neighbourhood || '',
+            city: location.city || location.town || '',
+            state: location.state || '',
+            country: location.country || '',
+            pincode: location.postcode || ''
+          }));
+
+          toast.success('Location fetched successfully!');
+        } else {
+          toast.error('Could not fetch address details');
+        }
+      } else {
+        toast.error('Geolocation is not supported by your browser');
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      toast.error('Failed to get location. Please enter manually.');
+    } finally {
+      setIsLocationLoading(false);
+    }
+  };
+
+  const ErrorMessage = ({ error }) => (
+    error ? <p className="text-red-500 text-xs mt-1">{error}</p> : null
+  );
 
   return (
-    <div className="flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8">
-      <>
-        {isAuthenticated ? (
-          <div>
-            <h2>Welcome back!</h2>
-            <Link to="/">Go back to Home</Link>
-          </div>
-        ) : (
-          <div className="border-[1px] border-gray-300 max-w-md w-full p-6 rounded-xl shadow-lg">
-            
-            <div>
-              <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900">
-                Create Account
-              </h2>
-              <p className="mt-2 text-center text-sm text-gray-600">
-                Step {step} of 2
-              </p>
-            </div>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create Account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Step {step} of 2
+          </p>
+        </div>
 
-            {serverError && (
-              <div className="bg-red-50 text-red-500 p-4 rounded-md">
-                {serverError}
-              </div>
-            )}
-
-            <form className="mt-7  space-y-6" onSubmit={handleSubmit}>
-              {/* Step 1: Personal Information */}
-              {step === 1 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        name="firstname"
-                        value={formData.firstname}
-                        onChange={handleChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {errors.firstname && (
-                        <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            className="h-5 w-5 text-red-500"
-                          >
-                            <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-                          </svg>
-                          {errors.firstname}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        name="lastname"
-                        value={formData.lastname}
-                        onChange={handleChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {errors.lastname && (
-                        <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            className="h-5 w-5 text-red-500"
-                          >
-                            <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-                          </svg>
-                          {errors.lastname}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Mobile Number
-                    </label>
-                    <input
-                      type="text"
-                      name="mobileno"
-                      value={formData.mobileno}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.mobileno && (
-                      <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="h-5 w-5 text-red-500"
-                        >
-                          <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-                        </svg>
-                        {errors.mobileno}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.password && (
-                      <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="h-5 w-5 text-red-500"
-                        >
-                          <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-                        </svg>
-                        {errors.password}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Confirm Password
-                    </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.confirmPassword && (
-                      <p className="text-xs mt-1 flex items-center gap-1 text-red-500">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="h-5 w-5 text-red-500"
-                        >
-                          <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path>
-                        </svg>
-                        {errors.confirmPassword}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between">
-    <button
-      type="button"
-      onClick={handleNextStep}
-      disabled={hasStepErrors() || hasEmptyFields()}
-      className={`inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-        ${hasStepErrors() || hasEmptyFields() 
-          ? 'bg-indigo-600 cursor-not-allowed hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' 
-          : 'bg-indigo-600 cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
-        }`}
-    >
-      Next
-    </button>
-  </div>
-                </div>
-              )}
-
-              {/* Step 2: Address Information */}
-              {step === 2 && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Address
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.address && <ErrorMessage error={errors.address} />}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Country
-                    </label>
-                    <input
-                      type="text"
-                      name="country"
-                      value={formData.country}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.country && <ErrorMessage error={errors.country} />}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        State
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {errors.state && <ErrorMessage error={errors.state} />}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {errors.city && <ErrorMessage error={errors.city} />}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Pincode
-                      </label>
-                      <input
-                        type="text"
-                        name="pincode"
-                        value={formData.pincode}
-                        onChange={handleChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {errors.pincode && <ErrorMessage error={errors.pincode} />}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <button
-                      type="button"
-                      onClick={handlePrevStep}
-                      className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Register
-                    </button>
-                  </div>
-                </div>
-              )}
-            </form>
-
-            <div className="text-center mt-2">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link
-                  to="/login"
-                  className="text-sm text-indigo-600 hover:text-indigo-500"
-                >
-                  Login
-                </Link>
-              </p>
-            </div>
+        {serverError && (
+          <div className="bg-red-50 text-red-500 p-4 rounded-md">
+            {serverError}
           </div>
         )}
-      </>
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Step 1 Form Fields */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.firstName ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    required
+                  />
+                  {errors.firstName && (
+                    <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.lastName ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    required
+                  />
+                  {errors.lastName && (
+                    <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="mobile" className="block text-sm font-medium text-gray-700">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  name="mobile"
+                  id="mobile"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.mobile ? 'border-red-500' : 'border-gray-300'
+                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                  required
+                />
+                {errors.mobile && (
+                  <p className="mt-2 text-sm text-red-600">{errors.mobile}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    id="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.password ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-2 text-sm text-red-600">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isLoading}
+                  className={`inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+                    ${isLoading ? 'bg-indigo-600 cursor-not-allowed hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' : 'bg-indigo-600 cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'}`}
+                >
+                  {isLoading ? 'Loading...' : 'Next'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 Form Fields */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  disabled={isLocationLoading}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  {isLocationLoading ? (
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 border-2 border-t-2 border-indigo-600 rounded-full animate-spin mr-2"></div>
+                      Loading...
+                    </div>
+                  ) : (
+                    <>
+                      <FaLocationArrow className="mr-2" />
+                      Use Current Location
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.address ? 'border-red-500' : 'border-gray-300'
+                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                />
+                {errors.address && <ErrorMessage error={errors.address} />}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pincode
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.pincode ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Register
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default Register;
-// components/auth/Register.jsx

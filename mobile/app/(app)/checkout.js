@@ -6,7 +6,12 @@ export default function Checkout() {
     <>
       <Stack.Screen 
         options={{
-          headerShown: false,
+          title: 'Checkout',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerShadowVisible: false,
           animation: 'slide_from_right'
         }} 
       />

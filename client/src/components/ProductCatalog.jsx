@@ -8,7 +8,7 @@ import { cartAdd, cartRemove } from "../store/cartSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/catelog.css";
 import "../styles/recentlyViewed.css";
-import { addToWishlist, removeFromWishlist } from '../store/wishlistSlice';
+import { addToWishlist, removeFromWishlist, setWishlistItems } from '../store/wishlistSlice';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
 
 const ProductCatalog = () => {
@@ -21,6 +21,8 @@ const ProductCatalog = () => {
   const [cartItemsMap, setCartItemsMap] = useState({});
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const [imageLoading, setImageLoading] = useState({});
+  const [removingItems, setRemovingItems] = useState({});
+  const [isWishlistLoading, setIsWishlistLoading] = useState({});
 
   // Animation variants for products
   const containerVariants = {
@@ -80,6 +82,37 @@ const ProductCatalog = () => {
       setCartItemsMap({});
     }
   }, [userData]);
+
+  // Fetch initial wishlist data
+  useEffect(() => {
+    if (userData) {
+      fetchWishlistData();
+    }
+  }, [userData]);
+
+  const fetchWishlistData = async () => {
+    try {
+      const response = await axios.get('/api/user/wishlist', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.data.success) {
+        // Get full product details for wishlist items
+        const productsResponse = await axios.post('/api/products/bulk', {
+          productIds: response.data.wishlist
+        });
+
+        if (productsResponse.data.success) {
+          dispatch(setWishlistItems(productsResponse.data.products));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      toast.error("Failed to fetch wishlist");
+    }
+  };
 
   const handleAddToCart = async (productId) => {
     if (!userData) {
@@ -151,20 +184,60 @@ const ProductCatalog = () => {
     }
   };
 
-  const handleWishlist = (e, productId) => {
+  // Check if a product is in wishlist
+  const isProductInWishlist = (productId) => {
+    return wishlistItems.some(item => item._id === productId);
+  };
+
+  const handleWishlist = async (e, product) => {
     e.preventDefault();
+    e.stopPropagation();
     
     if (!userData) {
       toast.error("Please login to manage wishlist");
       return;
     }
 
-    if (wishlistItems.includes(productId)) {
-      dispatch(removeFromWishlist(productId));
-      toast.success("Removed from wishlist");
-    } else {
-      dispatch(addToWishlist(productId));
-      toast.success("Added to wishlist");
+    if (isWishlistLoading[product._id]) return;
+
+    setIsWishlistLoading(prev => ({ ...prev, [product._id]: true }));
+
+    try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const isInWishlist = isProductInWishlist(product._id);
+
+      if (!isInWishlist) {
+        // Add to wishlist
+        const response = await axios.post('/api/user/wishlist/add', {
+          productId: product._id
+        }, config);
+
+        if (response.data.success) {
+          dispatch(addToWishlist(product));
+          toast.success("Added to wishlist");
+        }
+      } else {
+        // Remove from wishlist
+        const response = await axios.post('/api/user/wishlist/remove', {
+          productId: product._id
+        }, config);
+
+        if (response.data.success) {
+          dispatch(removeFromWishlist(product._id));
+          toast.success("Removed from wishlist");
+        }
+      }
+    } catch (error) {
+      console.error("Wishlist error:", error);
+      toast.error(error.response?.data?.message || "Failed to update wishlist");
+    } finally {
+      setIsWishlistLoading(prev => ({ ...prev, [product._id]: false }));
     }
   };
 
@@ -263,67 +336,72 @@ const ProductCatalog = () => {
               variants={productVariants}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
             >
-              <Link to={`/product/${product._id}`}>
-                <div className="relative h-48 rounded-t-lg overflow-hidden">
-                  {/* Loading Skeleton */}
-                  {(!product.images[0] || imageLoading[product._id] !== false) && (
-                    <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                  )}
-                  
-                  {/* Product Image */}
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className={`w-full h-full object-cover transition-opacity duration-300 ${
-                      imageLoading[product._id] === false ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    onLoad={() => handleImageLoad(product._id)}
-                  />
-                </div>
+              <div className="relative">
+                <Link to={`/product/${product._id}`}>
+                  <div className="relative h-48 rounded-t-lg overflow-hidden">
+                    {/* Loading Skeleton */}
+                    {(!product.images[0] || imageLoading[product._id] !== false) && (
+                      <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                    )}
+                    
+                    {/* Product Image */}
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        imageLoading[product._id] === false ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      onLoad={() => handleImageLoad(product._id)}
+                    />
+                  </div>
+                </Link>
+                
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => handleWishlist(e, product)}
+                  disabled={isWishlistLoading[product._id]}
+                  className={`absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white 
+                    transition-colors ${isWishlistLoading[product._id] ? 'opacity-50' : ''}`}
+                >
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    {isProductInWishlist(product._id) ? (
+                      <FaHeart className={`w-6 h-6 text-red-500 
+                        ${isWishlistLoading[product._id] && 'animate-pulse'}`} 
+                      />
+                    ) : (
+                      <FaRegHeart className={`w-6 h-6 text-gray-400 
+                        ${isWishlistLoading[product._id] && 'animate-pulse'}`} 
+                      />
+                    )}
+                  </div>
+                </motion.button>
+              </div>
 
-                <div className="p-4">
-                  <h3 className="text-lg font-medium text-gray-900 truncate">
-                    {product.name}
-                  </h3>
-                  
-                  <div className="mt-2 flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-900 font-medium">₹{product.price}</p>
-                      <p className="text-sm text-gray-500">per {product.unitSize} {product.unitType}</p>
+              <div className="p-4">
+                <h3 className="text-lg font-medium text-gray-900 truncate">
+                  {product.name}
+                </h3>
+                
+                <div className="mt-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-900 font-medium">₹{product.price}</p>
+                    <p className="text-sm text-gray-500">per {product.unitSize} {product.unitType}</p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center">
+                      <span className="text-sm text-yellow-500">★ {product.rating}</span>
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({product.reviews?.length || 0})
+                      </span>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center">
-                        <span className="text-sm text-yellow-500">★ {product.rating}</span>
-                        <span className="text-sm text-gray-500 ml-1">
-                          ({product.reviews?.length || 0})
-                        </span>
-                      </div>
-                      <p className={`text-sm font-medium ${
-                        product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                      </p>
-                    </div>
+                    <p className={`text-sm font-medium ${
+                      product.stock > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </p>
                   </div>
                 </div>
-              </Link>
-
-              {/* Wishlist Button */}
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleWishlist(e, product._id);
-                }}
-                className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
-              >
-                <div className="w-8 h-8 flex items-center justify-center">
-                  {wishlistItems.includes(product._id) ? (
-                    <FaHeart className="w-6 h-6 text-red-500" />
-                  ) : (
-                    <FaRegHeart className="w-6 h-6 text-gray-400" />
-                  )}
-                </div>
-              </button>
+              </div>
             </motion.div>
           ))}
         </motion.div>

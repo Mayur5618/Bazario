@@ -444,7 +444,9 @@ export const signin = async (req, res) => {
                 mobileno: user.mobileno,
                 userType: user.userType,
                 platformType: user.platformType,
-                profileImage: user.profileImage          
+                profileImage: user.profileImage,
+                wishlist: user.wishlist,
+                token: token
               }
         });
 

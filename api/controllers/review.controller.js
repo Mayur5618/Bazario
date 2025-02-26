@@ -8,63 +8,39 @@ export const createReview = async (req, res) => {
         const { rating, comment, images, orderId } = req.body;
         const userId = req.user._id;
 
-        // Match your order route's status check
-        const validOrderStatuses = ['delivered', 'completed', 'Delivered', 'Completed'];
-
         // Check if the order exists and is completed/delivered
         const order = await Order.findOne({
             _id: orderId,
             buyer: userId,
             'items.product': productId,
-            status: { $in: validOrderStatuses }
+            status: { $in: ['delivered', 'completed', 'Delivered', 'Completed'] }
         });
 
         if (!order) {
-            console.log('Order validation failed:', {
-                orderFound: !!order,
-                orderId,
-                userId,
-                productId
-            });
-            return res.status(403).json({
+            return res.status(400).json({
                 success: false,
                 message: 'You can only review products from completed or delivered orders'
             });
         }
 
-        // Check if user has already reviewed
+        // Check if user has already reviewed this product for this order
         const existingReview = await Review.findOne({
             product: productId,
-            buyer: userId
+            buyer: userId,
+            order: orderId
         });
 
         if (existingReview) {
             return res.status(400).json({
                 success: false,
-                message: 'You have already reviewed this product'
+                message: 'You have already reviewed this product for this order'
             });
         }
 
-        // Upload images if present
+        // Process and upload images if provided
         let imageUrls = [];
-        if (Array.isArray(images) && images.length > 0) {
-            try {
-                const uploadPromises = images.map(async (base64String) => {
-                    if (base64String && typeof base64String === 'string') {
-                        return await uploadToFirebase(base64String);
-                    }
-                    return null;
-                });
-
-                imageUrls = (await Promise.all(uploadPromises)).filter(url => url !== null);
-            } catch (uploadError) {
-                console.error('Image upload error:', uploadError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to upload images',
-                    error: uploadError.message
-                });
-            }
+        if (images && images.length > 0) {
+            imageUrls = await Promise.all(images.map(image => uploadToFirebase(image)));
         }
 
         // Create the review
@@ -78,8 +54,6 @@ export const createReview = async (req, res) => {
         };
 
         const newReview = await Review.create(reviewData);
-
-        // Populate buyer details
         const populatedReview = await Review.findById(newReview._id)
             .populate('buyer', 'firstname lastname');
 

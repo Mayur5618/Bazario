@@ -17,7 +17,7 @@ const ProductDetail = () => {
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
-  const isInWishlist = wishlistItems.includes(id);
+  const isInWishlist = wishlistItems.some(item => item._id === id);
 
   // Product states
   const [product, setProduct] = useState(null);
@@ -51,6 +51,9 @@ const ProductDetail = () => {
   const [cartItems, setCartItems] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartItem, setCartItem] = useState(null);
+
+  // Add loading state for wishlist actions
+  const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
   useEffect(() => {
     fetchProductDetails();
@@ -403,18 +406,46 @@ const ProductDetail = () => {
     }
   };
 
-  const handleWishlist = () => {
+  const handleWishlist = async () => {
     if (!userData) {
       toast.error("Please login to manage wishlist");
+      navigate('/login');
       return;
     }
 
-    if (isInWishlist) {
-      dispatch(removeFromWishlist(id));
-      toast.success("Removed from wishlist");
-    } else {
-      dispatch(addToWishlist(id));
-      toast.success("Added to wishlist");
+    setIsWishlistLoading(true);
+    try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      if (!isInWishlist) {
+        const response = await axios.post('/api/user/wishlist/add', {
+          productId: id
+        }, config);
+
+        if (response.data.success) {
+          dispatch(addToWishlist(product));
+          toast.success("Added to wishlist");
+        }
+      } else {
+        const response = await axios.post('/api/user/wishlist/remove', {
+          productId: id
+        }, config);
+
+        if (response.data.success) {
+          dispatch(removeFromWishlist(id));
+          toast.success("Removed from wishlist");
+        }
+      }
+    } catch (error) {
+      console.error("Wishlist error:", error);
+      toast.error(error.response?.data?.message || "Failed to update wishlist");
+    } finally {
+      setIsWishlistLoading(false);
     }
   };
 
@@ -727,13 +758,20 @@ const ProductDetail = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleWishlist}
+                disabled={isWishlistLoading}
                 className={`w-14 h-14 flex items-center justify-center rounded-xl border-2 transition-colors ${
                   isInWishlist 
                     ? 'border-red-500 bg-red-50 text-red-500' 
                     : 'border-gray-200 hover:border-red-500 hover:bg-red-50 text-gray-400 hover:text-red-500'
                 }`}
               >
-                {isInWishlist ? (
+                {isWishlistLoading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
+                  />
+                ) : isInWishlist ? (
                   <FaHeart className="text-xl" />
                 ) : (
                   <FaRegHeart className="text-xl" />

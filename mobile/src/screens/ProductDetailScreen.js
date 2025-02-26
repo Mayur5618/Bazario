@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router, useRouter } from 'expo-router';
 import { useCart } from '../context/CartContext';
@@ -26,6 +27,294 @@ import { LinearGradient } from 'expo-linear-gradient';
 import ImageZoom from 'react-native-image-pan-zoom';
 import ReviewItem from '../components/ReviewItem';
 import { useReview } from '../context/ReviewContext';
+import * as ImagePicker from 'expo-image-picker';
+
+const CustomImageViewer = ({ visible, image, onClose }) => {
+  if (!visible || !image) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.imageViewerContainer}>
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={onClose}
+        >
+          <Ionicons name="close" size={24} color="#fff" />
+        </TouchableOpacity>
+        
+        <ImageZoom
+          cropWidth={Dimensions.get('window').width}
+          cropHeight={Dimensions.get('window').height}
+          imageWidth={Dimensions.get('window').width}
+          imageHeight={Dimensions.get('window').height}
+        >
+          <Image
+            source={{ uri: image }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+        </ImageZoom>
+      </View>
+    </Modal>
+  );
+};
+
+const ReviewForm = ({ onSubmit, productId }) => {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [images, setImages] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleImagePick = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Toast.show({
+          type: 'error',
+          text1: 'Permission to access media library is required!'
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaType.Images,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        aspect: [4, 3],
+        maxFiles: 5,
+      });
+
+      if (!result.canceled) {
+        const selectedImages = result.assets.map(asset => asset.uri);
+        if (selectedImages.length > 5) {
+          Toast.show({
+            type: 'error',
+            text1: 'Maximum 5 images allowed'
+          });
+          return;
+        }
+        setImages(prevImages => [...prevImages, ...selectedImages].slice(0, 5));
+        simulateUploadProgress();
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to pick image'
+      });
+    }
+  };
+
+  const simulateUploadProgress = () => {
+    setUploadProgress(0);
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 100);
+  };
+
+  const removeImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async () => {
+    if (!rating) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a rating'
+      });
+      return;
+    }
+
+    if (!comment.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please write a review'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // First check if user can review
+      const eligibilityResponse = await reviewApi.checkUserReview(productId);
+      console.log('Eligibility response:', eligibilityResponse);
+
+      if (!eligibilityResponse.data || !eligibilityResponse.data.orderId) {
+        Toast.show({
+          type: 'error',
+          text1: 'You can only review products from completed orders'
+        });
+        return;
+      }
+
+      // Create review data object
+      const reviewData = {
+        rating,
+        comment: comment.trim(),
+        images,
+        orderId: eligibilityResponse.data.orderId
+      };
+
+      // Submit the review
+      const response = await axios.post(
+        `/api/reviews/products/${productId}/reviews`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.data.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Review submitted successfully'
+        });
+        
+        // Reset form
+        setRating(0);
+        setComment('');
+        setImages([]);
+        
+        if (onSubmit) {
+          onSubmit(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Review submission error:', error.response?.data || error);
+      Toast.show({
+        type: 'error',
+        text1: error.response?.data?.message || 'Failed to submit review'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Animated.View style={styles.formContainer}>
+      {/* Rating Section */}
+      <View style={styles.ratingSection}>
+        <Text style={styles.sectionTitle}>Rate this Product</Text>
+        <View style={styles.starsContainer}>
+          <Rating
+            type="custom"
+            ratingCount={5}
+            imageSize={35}
+            startingValue={rating}
+            onFinishRating={setRating}
+            ratingColor="#FFD700"
+            ratingBackgroundColor="#d4d4d4"
+            tintColor="#f8f8f8"
+            showRating={false}
+          />
+          <Text style={styles.ratingText}>
+            {rating > 0 ? `${rating} Stars` : 'Tap to rate'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Review Text Section */}
+      <View style={styles.reviewSection}>
+        <Text style={styles.sectionTitle}>Write Your Review</Text>
+        <TextInput
+          style={styles.reviewInput}
+          multiline
+          numberOfLines={4}
+          placeholder="Share your experience with this product..."
+          placeholderTextColor="#999"
+          value={comment}
+          onChangeText={setComment}
+          maxLength={500}
+        />
+        <Text style={styles.characterCount}>
+          {comment.length}/500 characters
+        </Text>
+      </View>
+
+      {/* Image Upload Section */}
+      <View style={styles.imageSection}>
+        <Text style={styles.sectionTitle}>Add Photos</Text>
+        <Text style={styles.imageSubtitle}>
+          Share photos of your experience (Optional)
+        </Text>
+        
+        <View style={styles.imageGrid}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imagePreviewContainer}>
+              <Image 
+                source={{ uri }} 
+                style={styles.previewImage}
+              />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => removeImage(index)}
+              >
+                <Ionicons name="close-circle" size={24} color="#FF4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          
+          {images.length < 5 && (
+            <TouchableOpacity
+              style={styles.addImageButton}
+              onPress={handleImagePick}
+            >
+              <Ionicons name="camera" size={30} color="#666" />
+              <Text style={styles.addImageText}>
+                Add Photo
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <View style={styles.progressContainer}>
+            <View 
+              style={[
+                styles.progressBar, 
+                { width: `${uploadProgress}%` }
+              ]} 
+            />
+            <Text style={styles.progressText}>
+              Uploading... {uploadProgress}%
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Submit Button */}
+      <TouchableOpacity
+        style={[
+          styles.submitButton,
+          isSubmitting && styles.submitButtonDisabled
+        ]}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.submitButtonText}>
+            Submit Review
+          </Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 const ProductDetailScreen = () => {
   const { id } = useLocalSearchParams();
@@ -66,6 +355,11 @@ const ProductDetailScreen = () => {
 
   const { shouldRefresh, resetRefresh } = useReview();
 
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  // Add this state variable
+  const [hasReviewed, setHasReviewed] = useState(false);
+
   const fetchReviews = useCallback(async () => {
     try {
       const response = await reviewApi.getProductReviews(id);
@@ -101,13 +395,34 @@ const ProductDetailScreen = () => {
     fetchReviews();
   }, [fetchReviews]);
 
-  // Add this effect to handle refresh
-  useEffect(() => {
-    if (shouldRefresh) {
-      fetchReviews();
-      resetRefresh();
+  // Add this function to check if user can review
+  const checkReviewEligibility = async () => {
+    if (!isAuthenticated || !id) return;
+
+    try {
+      const response = await reviewApi.checkUserReview(id);
+      const { canReview: isEligible, hasReviewed: alreadyReviewed, orderId: completedOrderId } = response;
+      
+      setCanReview(isEligible);
+      setHasReviewed(alreadyReviewed);
+      setOrderId(completedOrderId);
+
+      if (!completedOrderId && isEligible) {
+        Toast.show({
+          type: 'error',
+          text1: 'You can only review products from completed orders'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking review eligibility:', error);
     }
-  }, [shouldRefresh]);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && id) {
+      checkReviewEligibility();
+    }
+  }, [isAuthenticated, id]);
 
   useEffect(() => {
     fetchProductDetails();
@@ -124,23 +439,6 @@ const ProductDetailScreen = () => {
       setIsInWishlist(wishlistItems.includes(id));
     }
   }, [wishlistItems, id]);
-
-  useEffect(() => {
-    const checkReviewEligibility = async () => {
-      if (!isAuthenticated || !product?._id) return;
-      
-      try {
-        const { canReview: canReviewProduct, orderId: orderIdFromApi } = 
-          await reviewApi.checkUserReview(product._id);
-        setCanReview(canReviewProduct);
-        setOrderId(orderIdFromApi);
-      } catch (error) {
-        console.error('Error checking review eligibility:', error);
-      }
-    };
-
-    checkReviewEligibility();
-  }, [isAuthenticated, product?._id]);
 
   const fetchProductDetails = async () => {
     try {
@@ -231,7 +529,7 @@ const ProductDetailScreen = () => {
 
     try {
       animateAddToCart();
-      await addToCart(product._id, 1);
+      await addToCart(id, 1);
       setCartItem({ quantity: 1 });
       Toast.show({
         type: 'success',
@@ -332,143 +630,102 @@ const ProductDetailScreen = () => {
   // Add scroll view ref
   const scrollViewRef = useRef(null);
 
-  // Add function to handle review submission
-  const handleSubmitReview = async () => {
-    if (!rating || !reviewText) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please provide both rating and review text'
-      });
-      return;
-    }
-
+  // Update handleReviewSubmit to set hasReviewed
+  const handleReviewSubmit = async (reviewData) => {
     try {
-      const reviewData = {
-        rating,
-        comment: reviewText,
-        images: reviewImages,
-        orderId
-      };
+      const formData = new FormData();
+      formData.append('rating', reviewData.rating.toString());
+      formData.append('comment', reviewData.comment);
+      formData.append('orderId', reviewData.orderId);
 
-      await reviewApi.createReview(product._id, reviewData);
-      
-      Toast.show({
-        type: 'success',
-        text1: 'Review submitted successfully'
-      });
-      
-      setShowReviewModal(false);
-      // Refresh reviews
-      fetchReviews();
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to submit review',
-        text2: error.message
-      });
-    }
-  };
-
-  // Add this custom ImageViewer component
-  const CustomImageViewer = ({ visible, image, onClose }) => {
-    if (!visible) return null;
-    
-    return (
-      <Modal
-        transparent={true}
-        visible={visible}
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={onClose}
-          >
-            <Ionicons name="close" size={28} color="#fff" />
-          </TouchableOpacity>
-          
-          <ImageZoom
-            cropWidth={screenWidth}
-            cropHeight={screenHeight}
-            imageWidth={screenWidth}
-            imageHeight={screenHeight}
-          >
-            <Image
-              source={{ uri: image }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          </ImageZoom>
-        </View>
-      </Modal>
-    );
-  };
-
-  const handleReviewLike = async (reviewId) => {
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Login Required',
-        'Please login to like reviews',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/(auth)/login') }
-        ]
-      );
-      return;
-    }
-
-    try {
-      // Get current review and user ID
-      const currentReview = reviews.find(r => r._id === reviewId);
-      const userId = user._id; // Get from auth context
-
-      // Check if user already liked
-      const userLikedIndex = currentReview.likes.findIndex(
-        id => id.toString() === userId.toString()
-      );
-      
-      // Create new likes array based on current state
-      const newLikes = userLikedIndex !== -1
-        ? currentReview.likes.filter(id => id.toString() !== userId.toString())
-        : [...currentReview.likes, userId];
-
-      // Optimistically update UI
-      setReviews(prevReviews =>
-        prevReviews.map(review =>
-          review._id === reviewId
-            ? {
-                ...review,
-                likes: newLikes
-              }
-            : review
-        )
-      );
-
-      // Call API
-      const response = await reviewApi.toggleReviewLike(reviewId);
-
-      // Update with server response if needed
-      if (!response.success) {
-        // Revert to original state if API fails
-        setReviews(prevReviews =>
-          prevReviews.map(review =>
-            review._id === reviewId
-              ? { ...review, likes: currentReview.likes }
-              : review
-          )
-        );
+      // Add images if any
+      if (reviewData.images && reviewData.images.length > 0) {
+        reviewData.images.forEach((image, index) => {
+          const imageFile = {
+            uri: image,
+            type: 'image/jpeg',
+            name: `review_image_${index}.jpg`
+          };
+          formData.append('images', imageFile);
+        });
       }
 
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      // Revert to original state on error
-      setReviews(prevReviews =>
-        prevReviews.map(review =>
-          review._id === reviewId
-            ? { ...review, likes: currentLikes }
-            : review
-        )
+      console.log('Submitting review with formData:', {
+        productId: id,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        orderId: reviewData.orderId,
+        imagesCount: reviewData.images?.length || 0
+      });
+
+      const response = await axios.post(
+        `/api/reviews/products/${id}/reviews`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
+
+      if (response.data.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Review submitted successfully'
+        });
+        setShowReviewForm(false);
+        setHasReviewed(true);
+        setCanReview(false);
+        fetchReviews();
+      }
+    } catch (error) {
+      console.error('Create review error:', error.response?.data || error);
+      Toast.show({
+        type: 'error',
+        text1: error.response?.data?.message || 'Failed to submit review'
+      });
+    }
+  };
+
+  // Add this function to handle review likes
+  const handleReviewLike = async (reviewId) => {
+    if (!isAuthenticated) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to like reviews'
+      });
+      return;
+    }
+
+    try {
+      const response = await reviewApi.toggleReviewLike(reviewId);
+      if (response.success) {
+        // Update reviews state to reflect the new like status
+        setReviews(prevReviews => 
+          prevReviews.map(review => {
+            if (review._id === reviewId) {
+              const userLikedIndex = review.likes.indexOf(user._id);
+              const updatedLikes = [...review.likes];
+              
+              if (userLikedIndex === -1) {
+                // Add like
+                updatedLikes.push(user._id);
+              } else {
+                // Remove like
+                updatedLikes.splice(userLikedIndex, 1);
+              }
+              
+              return {
+                ...review,
+                likes: updatedLikes
+              };
+            }
+            return review;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling review like:', error);
       Toast.show({
         type: 'error',
         text1: 'Failed to update like'
@@ -476,23 +733,37 @@ const ProductDetailScreen = () => {
     }
   };
 
+  // Update handleReviewDelete to reset hasReviewed
   const handleReviewDelete = async (reviewId) => {
+    if (!isAuthenticated) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to delete review'
+      });
+      return;
+    }
+
     try {
       const response = await reviewApi.deleteReview(reviewId);
-      
       if (response.success) {
+        // Remove the deleted review from state
+        setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+        
+        // Update review stats
+        setRatingStats(prevStats => ({
+          ...prevStats,
+          totalReviews: prevStats.totalReviews - 1
+        }));
+
+        setHasReviewed(false);
+        setCanReview(true);
         Toast.show({
           type: 'success',
           text1: 'Review deleted successfully'
         });
-        
-        // रिव्यू लिस्ट को अपडेट करें
-        setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
-      } else {
-        throw new Error(response.message);
       }
     } catch (error) {
-      console.error('Delete review error:', error);
+      console.error('Error deleting review:', error);
       Toast.show({
         type: 'error',
         text1: error.message || 'Failed to delete review'
@@ -500,35 +771,117 @@ const ProductDetailScreen = () => {
     }
   };
 
-  const handleReviewEdit = useCallback((review) => {
-    const refreshAndNavigateBack = async () => {
-      await fetchReviews(); // Refresh reviews when coming back
-    };
+  // Add this function to handle review editing
+  const handleReviewEdit = async (reviewId, updatedData) => {
+    if (!isAuthenticated) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to edit review'
+      });
+      return;
+    }
 
-    router.push({
-      pathname: '/product/edit-review',
-      params: { 
-        reviewId: review._id,
-        productId: id,
-        onUpdate: refreshAndNavigateBack // Pass the refresh function
+    try {
+      const response = await reviewApi.updateReview(reviewId, updatedData);
+      if (response.success) {
+        // Update the edited review in state
+        setReviews(prevReviews =>
+          prevReviews.map(review =>
+            review._id === reviewId ? { ...review, ...updatedData } : review
+          )
+        );
+
+        Toast.show({
+          type: 'success',
+          text1: 'Review updated successfully'
+        });
       }
-    });
-  }, [id, fetchReviews]);
+    } catch (error) {
+      console.error('Error updating review:', error);
+      Toast.show({
+        type: 'error',
+        text1: error.message || 'Failed to update review'
+      });
+    }
+  };
 
-  const renderReviews = () => {
+  // Modify the reviews section to include the "Write Review" button
+  const renderReviewsHeader = () => (
+    <View style={styles.reviewsHeader}>
+      <Text style={styles.reviewsTitle}>Reviews ({reviews.length})</Text>
+      {canReview && !hasReviewed && (
+        <TouchableOpacity
+          style={styles.writeReviewButton}
+          onPress={() => setShowReviewForm(true)}
+        >
+          <Text style={styles.writeReviewButtonText}>Write Review</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Add this modal to your render method
+  const renderReviewFormModal = () => (
+    <Modal
+      visible={showReviewForm}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowReviewForm(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <ReviewForm
+          productId={id}
+          onSubmit={handleReviewSubmit}
+        />
+      </View>
+    </Modal>
+  );
+
+  const renderReviewSection = () => {
     return (
       <View style={styles.reviewsSection}>
-        <Text style={styles.reviewsTitle}>Reviews ({reviews.length})</Text>
-        {reviews.map(review => (
-          <ReviewItem
-            key={review._id}
-            review={review}
-            onLike={handleReviewLike}
-            onDelete={handleReviewDelete}
-            onEdit={handleReviewEdit}
-            currentUserId={user?._id}
-          />
-        ))}
+        <Text style={styles.sectionTitle}>Reviews</Text>
+
+        {isAuthenticated ? (
+          <>
+            {canReview && !hasReviewed ? (
+              <ReviewForm 
+                productId={id}
+                onSubmit={handleReviewSubmit}
+              />
+            ) : hasReviewed ? (
+              <View style={styles.messageContainer}>
+                <Text style={styles.messageText}>
+                  You have already reviewed this product
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.messageContainer}>
+                <Text style={styles.messageText}>
+                  Only customers who have purchased and received this product can write a review
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>
+              Please login to write a review
+            </Text>
+          </View>
+        )}
+
+        {/* Existing reviews list */}
+        <View style={styles.reviewsList}>
+          {reviews.map(review => (
+            <ReviewItem 
+              key={review._id}
+              review={review}
+              currentUserId={user?._id}
+              onLike={handleReviewLike}
+            />
+          ))}
+        </View>
       </View>
     );
   };
@@ -604,7 +957,7 @@ const ProductDetailScreen = () => {
               <View style={styles.quantityControlsContainer}>
                 <TouchableOpacity 
                   style={styles.quantityButtonLeft}
-                  onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+                  onPress={() => handleUpdateQuantity(id, cartItem.quantity, -1)}
                 >
                   <Text style={styles.quantityButtonText}>-</Text>
                 </TouchableOpacity>
@@ -622,7 +975,7 @@ const ProductDetailScreen = () => {
                 
                 <TouchableOpacity 
                   style={styles.quantityButtonRight}
-                  onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
+                  onPress={() => handleUpdateQuantity(id, cartItem.quantity, 1)}
                 >
                   <Text style={styles.quantityButtonText}>+</Text>
                 </TouchableOpacity>
@@ -640,54 +993,11 @@ const ProductDetailScreen = () => {
           </View>
         </View>
 
-        {/* Reviews Section */}
-        {renderReviews()}
+        {renderReviewSection()}
       </ScrollView>
 
-      {/* Review Modal */}
-      <Modal
-        visible={showReviewModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowReviewModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Write a Review</Text>
-            
-            <Rating
-              showRating
-              onFinishRating={setRating}
-              style={{ paddingVertical: 10 }}
-            />
-            
-            <TextInput
-              style={styles.reviewInput}
-              multiline
-              numberOfLines={4}
-              placeholder="Write your review here..."
-              value={reviewText}
-              onChangeText={setReviewText}
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowReviewModal(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.submitButton]}
-                onPress={handleSubmitReview}
-              >
-                <Text style={styles.buttonText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Add the review form modal */}
+      {renderReviewFormModal()}
 
       {/* Image Viewer Modal */}
       <CustomImageViewer
@@ -943,6 +1253,172 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  formContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  ratingSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  starsContainer: {
+    alignItems: 'center',
+  },
+  ratingText: {
+    marginTop: 8,
+    color: '#666',
+    fontSize: 16,
+  },
+  reviewSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  imageSection: {
+    marginBottom: 24,
+  },
+  imageSubtitle: {
+    color: '#666',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  imagePreviewContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 2,
+  },
+  addImageButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  addImageText: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  progressContainer: {
+    marginTop: 12,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#4CAF50',
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#B0C4DE',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  writeReviewButton: {
+    backgroundColor: '#4169E1',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  writeReviewButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  messageContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  messageText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  reviewsList: {
+    marginTop: 16,
   },
 });
 

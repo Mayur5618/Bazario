@@ -3,83 +3,118 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaHeart, FaShoppingCart } from 'react-icons/fa';
-import { removeFromWishlist } from '../store/wishlistSlice';
+import { removeFromWishlist, setWishlistItems } from '../store/wishlistSlice';
 import { cartAdd } from '../store/cartSlice';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 const Wishlist = () => {
   const dispatch = useDispatch();
-  const { items: wishlistIds } = useSelector((state) => state.wishlist);
+  const { userData } = useSelector((state) => state.user);
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const [wishlistProducts, setWishlistProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cartItemsMap, setCartItemsMap] = useState({});
+  const [removingItems, setRemovingItems] = useState({});
+  const [addingToCart, setAddingToCart] = useState({});
 
   useEffect(() => {
     fetchWishlistProducts();
-    fetchCartItems();
-  }, [wishlistIds]);
+  }, []);
 
   const fetchWishlistProducts = async () => {
     try {
-      if (wishlistIds.length === 0) {
-        setWishlistProducts([]);
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.post('/api/products/bulk', {
-        productIds: wishlistIds
+      const wishlistResponse = await axios.get('/api/user/wishlist', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
-      setWishlistProducts(response.data.products);
+
+      if (wishlistResponse.data.success) {
+        dispatch(setWishlistItems(wishlistResponse.data.wishlist));
+        
+        if (!wishlistResponse.data.wishlist.length) {
+          setWishlistProducts([]);
+          setLoading(false);
+          return;
+        }
+
+        const productsResponse = await axios.post('/api/products/bulk', {
+          productIds: wishlistResponse.data.wishlist
+        });
+
+        if (productsResponse.data.success) {
+          setWishlistProducts(productsResponse.data.products);
+        }
+      }
     } catch (error) {
-      toast.error('Failed to fetch wishlist products');
+      console.error('Error fetching wishlist:', error);
+      toast.error('Failed to fetch wishlist');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCartItems = async () => {
+  const handleRemoveFromWishlist = async (e, productId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (removingItems[productId]) return;
+
     try {
-      const response = await axios.get("/api/cart/getCartItems", {
-        withCredentials: true,
+      setRemovingItems(prev => ({ ...prev, [productId]: true }));
+      
+      const response = await axios.post('/api/user/wishlist/remove', {
+        productId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+
       if (response.data.success) {
-        const itemsMap = {};
-        response.data.cart.items.forEach((item) => {
-          itemsMap[item.product._id] = item;
-        });
-        setCartItemsMap(itemsMap);
+        dispatch(removeFromWishlist(productId));
+        setWishlistProducts(prev => 
+          prev.filter(product => product._id !== productId)
+        );
+        toast.success('Removed from wishlist');
       }
     } catch (error) {
-      console.error("Error fetching cart:", error);
+      console.error("Wishlist error:", error);
+      toast.error("Failed to remove from wishlist");
+    } finally {
+      setRemovingItems(prev => ({ ...prev, [productId]: false }));
     }
   };
 
-  const handleRemoveFromWishlist = (productId) => {
-    dispatch(removeFromWishlist(productId));
-    toast.success('Removed from wishlist');
-  };
-
   const handleAddToCart = async (productId) => {
+    if (!userData) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
+
+    if (addingToCart[productId]) return;
+
     try {
+      setAddingToCart(prev => ({ ...prev, [productId]: true }));
+
       const response = await axios.post("/api/cart/add", {
         productId,
-        quantity: 1,
+        quantity: 1
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
 
       if (response.data.success) {
-        dispatch(cartAdd());
-        const updatedCart = await axios.get("/api/cart/getCartItems");
-        const newItemsMap = {};
-        updatedCart.data.cart.items.forEach((item) => {
-          newItemsMap[item.product._id] = item;
-        });
-        setCartItemsMap(newItemsMap);
-        toast.success("Added to cart!");
+        dispatch(cartAdd(response.data.item));
+        toast.success("Added to cart");
       }
     } catch (error) {
+      console.error("Add to cart error:", error);
       toast.error(error.response?.data?.message || "Failed to add to cart");
+    } finally {
+      setAddingToCart(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -112,80 +147,86 @@ const Wishlist = () => {
           </Link>
         </div>
       ) : (
-        <div className="flex justify-center">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max justify-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <AnimatePresence>
             {wishlistProducts.map((product) => (
               <motion.div
                 key={product._id}
                 layout
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 w-full max-w-[300px]"
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
               >
-                <Link to={`/product/${product._id}`} className="block relative">
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleRemoveFromWishlist(product._id);
-                      }}
-                      className="p-2 rounded-full bg-white shadow-md text-red-500 hover:bg-red-50"
-                    >
-                      <FaHeart className="w-5 h-5" />
-                    </motion.button>
-                  </div>
-                </Link>
+                <div className="relative">
+                  <Link to={`/product/${product._id}`}>
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  </Link>
+                  
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => handleRemoveFromWishlist(e, product._id)}
+                    disabled={removingItems[product._id]}
+                    className={`absolute top-2 right-2 p-2 rounded-full bg-white shadow-md 
+                      ${removingItems[product._id] ? 'opacity-50' : 'hover:bg-red-50'}`}
+                  >
+                    <FaHeart 
+                      className={`w-5 h-5 text-red-500 
+                        ${removingItems[product._id] && 'animate-pulse'}`}
+                    />
+                  </motion.button>
+                </div>
 
                 <div className="p-4">
-                  <Link to={`/product/${product._id}`}>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {product.name}
-                    </h3>
+                  <Link to={`/product/${product._id}`} className="block">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">{product.name}</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold">₹{product.price}</span>
+                      <span className="text-sm text-gray-500">per {product.unitType || 'piece'}</span>
+                    </div>
                   </Link>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-xl font-bold text-gray-900">
-                      ₹{product.price}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      per {product.unitType}
-                    </div>
-                  </div>
 
+                  {/* Add to Cart Button */}
                   {product.stock > 0 ? (
-                    cartItemsMap[product._id] ? (
-                      <div className="text-green-600 text-sm font-medium">
-                        ✓ Added to Cart
-                      </div>
-                    ) : (
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAddToCart(product._id)}
-                        className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                      >
-                        <FaShoppingCart />
-                        <span>Add to Cart</span>
-                      </motion.button>
-                    )
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleAddToCart(product._id)}
+                      disabled={addingToCart[product._id]}
+                      className={`mt-4 w-full py-2 px-4 rounded-lg bg-blue-600 text-white 
+                        flex items-center justify-center gap-2 
+                        ${addingToCart[product._id] ? 'opacity-75' : 'hover:bg-blue-700'}`}
+                    >
+                      {addingToCart[product._id] ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        />
+                      ) : (
+                        <>
+                          <FaShoppingCart />
+                          <span>Add to Cart</span>
+                        </>
+                      )}
+                    </motion.button>
                   ) : (
-                    <div className="text-red-500 text-sm font-medium">
+                    <div className="mt-4 text-center py-2 px-4 rounded-lg bg-red-50 text-red-500">
                       Out of Stock
                     </div>
                   )}
                 </div>
               </motion.div>
             ))}
-          </div>
+          </AnimatePresence>
         </div>
       )}
     </div>
   );
 };
 
-export default Wishlist; 
+export default Wishlist;
