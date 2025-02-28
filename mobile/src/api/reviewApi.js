@@ -15,10 +15,69 @@ export const reviewApi = {
   // Create review
   createReview: async (productId, reviewData) => {
     try {
-      const response = await axios.post(`/api/reviews/products/${productId}/reviews`, reviewData);
+      console.log('ReviewAPI - Creating review with data:', {
+        productId,
+        orderId: reviewData.orderId,
+        rating: reviewData.rating,
+        hasComment: !!reviewData.comment,
+        imagesCount: reviewData.images?.length
+      });
+
+      if (!reviewData.orderId) {
+        throw new Error('Order ID is required');
+      }
+
+      // Create FormData
+      const formData = new FormData();
+      
+      // Convert orderId to string if it's not already
+      const orderIdString = reviewData.orderId.toString();
+      
+      // Append basic data
+      formData.append('orderId', orderIdString);
+      formData.append('rating', reviewData.rating.toString());
+      formData.append('comment', reviewData.comment);
+
+      // Add images if any
+      if (reviewData.images && reviewData.images.length > 0) {
+        reviewData.images.forEach((uri, index) => {
+          const filename = uri.split('/').pop();
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+          formData.append('images', {
+            uri,
+            type,
+            name: filename || `image${index}.jpg`,
+          });
+        });
+      }
+
+      // Log the actual FormData contents
+      const formDataObj = {};
+      for (let [key, value] of formData._parts) {
+        formDataObj[key] = value;
+      }
+      console.log('FormData contents:', formDataObj);
+
+      const response = await axios.post(
+        `/api/reviews/products/${productId}/reviews`,
+        formData,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'multipart/form-data',
+          },
+          transformRequest: (data, headers) => {
+            return data;
+          },
+        }
+      );
+
+      console.log('ReviewAPI - Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Create review error:', error);
+      console.error('ReviewAPI - Error:', error.response?.data || error);
       throw error;
     }
   },

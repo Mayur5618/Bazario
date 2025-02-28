@@ -10,15 +10,17 @@ import { toast } from 'react-hot-toast';
 
 const Wishlist = () => {
   const dispatch = useDispatch();
-  const { userData } = useSelector((state) => state.user);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const [wishlistProducts, setWishlistProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removingItems, setRemovingItems] = useState({});
-  const [addingToCart, setAddingToCart] = useState({});
+  const [cartItems, setCartItems] = useState({});
+  const [addedToCart, setAddedToCart] = useState({});
+  const [isAddingToCart, setIsAddingToCart] = useState({});
 
   useEffect(() => {
     fetchWishlistProducts();
+    fetchCartItems();
   }, []);
 
   const fetchWishlistProducts = async () => {
@@ -51,6 +53,54 @@ const Wishlist = () => {
       toast.error('Failed to fetch wishlist');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCartItems = async () => {
+    try {
+      const response = await axios.get("/api/cart/getCartItems", {
+        withCredentials: true,
+      });
+      
+      if (response.data.success) {
+        const cartItemsMap = {};
+        const addedItemsMap = {};
+        
+        response.data.cart.items.forEach(item => {
+          cartItemsMap[item.product._id] = item;
+          addedItemsMap[item.product._id] = true;
+        });
+        
+        setCartItems(cartItemsMap);
+        setAddedToCart(addedItemsMap);
+      }
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
+  const handleUpdateQuantity = async (productId, currentQuantity, stock, newQuantity) => {
+    if (newQuantity < 1 || newQuantity > stock) return;
+    
+    try {
+      setIsAddingToCart(prev => ({ ...prev, [productId]: true }));
+      
+      const response = await axios.post("/api/cart/update", {
+        productId,
+        quantity: newQuantity
+      }, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        await fetchCartItems();
+        toast.success(newQuantity > currentQuantity ? "Quantity increased" : "Quantity decreased");
+      }
+    } catch (error) {
+      console.error("Cart update error:", error);
+      toast.error(error.response?.data?.message || "Failed to update quantity");
+    } finally {
+      setIsAddingToCart(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -92,10 +142,10 @@ const Wishlist = () => {
       return;
     }
 
-    if (addingToCart[productId]) return;
+    if (isAddingToCart[productId]) return;
 
     try {
-      setAddingToCart(prev => ({ ...prev, [productId]: true }));
+      setIsAddingToCart(prev => ({ ...prev, [productId]: true }));
 
       const response = await axios.post("/api/cart/add", {
         productId,
@@ -108,13 +158,15 @@ const Wishlist = () => {
 
       if (response.data.success) {
         dispatch(cartAdd(response.data.item));
+        setAddedToCart(prev => ({ ...prev, [productId]: true }));
+        await fetchCartItems();
         toast.success("Added to cart");
       }
     } catch (error) {
       console.error("Add to cart error:", error);
       toast.error(error.response?.data?.message || "Failed to add to cart");
     } finally {
-      setAddingToCart(prev => ({ ...prev, [productId]: false }));
+      setIsAddingToCart(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -193,27 +245,52 @@ const Wishlist = () => {
 
                   {/* Add to Cart Button */}
                   {product.stock > 0 ? (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAddToCart(product._id)}
-                      disabled={addingToCart[product._id]}
-                      className={`mt-4 w-full py-2 px-4 rounded-lg bg-blue-600 text-white 
-                        flex items-center justify-center gap-2 
-                        ${addingToCart[product._id] ? 'opacity-75' : 'hover:bg-blue-700'}`}
-                    >
-                      {addingToCart[product._id] ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                        />
-                      ) : (
-                        <>
-                          <FaShoppingCart />
-                          <span>Add to Cart</span>
-                        </>
-                      )}
-                    </motion.button>
+                    <AnimatePresence mode="wait">
+                      <motion.button
+                        key={addedToCart[product._id] ? "added" : "add"}
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.95, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => handleAddToCart(product._id)}
+                        disabled={isAddingToCart[product._id] || addedToCart[product._id]}
+                        className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200
+                          ${addedToCart[product._id] 
+                            ? 'bg-green-600 hover:bg-green-700' 
+                            : 'bg-blue-600 hover:bg-blue-700'} 
+                          text-white`}
+                      >
+                        {isAddingToCart[product._id] ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                          />
+                        ) : addedToCart[product._id] ? (
+                          <>
+                            <svg 
+                              className="w-5 h-5" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth="2" 
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            <span>Added to Cart</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaShoppingCart />
+                            <span>Add to Cart</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </AnimatePresence>
                   ) : (
                     <div className="mt-4 text-center py-2 px-4 rounded-lg bg-red-50 text-red-500">
                       Out of Stock

@@ -109,186 +109,115 @@ const fetchOrders = async () => {
   }
 
   return (
-    // <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">My Orders</h1>
 
-
-    //   <h1 className="text-2xl font-bold mb-8">My Orders</h1>
-
-    //   {orders.length === 0 ? (
-    //     <div className="text-center py-8">
-    //       <p className="text-gray-600 mb-4">You haven't placed any orders yet.</p>
-    //       <Link
-    //         to="/products"
-    //         className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-    //       >
-    //         Start Shopping
-    //       </Link>
-    //     </div>
-    //   ) : (
-    //     <div className="space-y-6">
-    //       {orders.map((order) => (
-    //         <div
-    //           key={order._id}
-    //           className="bg-white rounded-lg shadow-md overflow-hidden"
-    //         >
-    //           <div className="p-6">
-    //             <div className="flex justify-between items-start mb-4">
-    //               <div>
-    //                 <h3 className="text-lg font-semibold">
-    //                   Order #{order._id.slice(-8)}
-    //                 </h3>
-    //                 <p className="text-sm text-gray-600">
-    //                   Placed on {format(new Date(order.createdAt), 'PPP')}
-    //                 </p>
-    //               </div>
-    //               <div
-    //                 className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusColor(
-    //                   order.status
-    //                 )}`}
-    //               >
-    //                 {getStatusIcon(order.status)}
-    //                 <span className="capitalize">{order.status}</span>
-    //               </div>
-    //             </div>
-
-    //             <div className="space-y-4">
-    //               {order.items.map((item) => (
-    //                 <div
-    //                   key={item.productId}
-    //                   className="flex items-center gap-4 border-b pb-4"
-    //                 >
-    //                   <img
-    //                     src={item.image}
-    //                     alt={item.name}
-    //                     className="w-16 h-16 object-cover rounded"
-    //                   />
-    //                   <div className="flex-1">
-    //                     <h4 className="font-medium">{item.name}</h4>
-    //                     <p className="text-sm text-gray-600">
-    //                       Quantity: {item.quantity}
-    //                     </p>
-    //                     <p className="text-sm text-gray-600">
-    //                       Price: ₹{item.price} per {item.unitType}
-    //                     </p>
-    //                   </div>
-    //                   <div className="text-right">
-    //                     <p className="font-medium">
-    //                       ₹{(item.price * item.quantity).toFixed(2)}
-    //                     </p>
-    //                   </div>
-    //                 </div>
-    //               ))}
-    //             </div>
-
-    //             <div className="mt-4 flex justify-between items-center">
-    //               <div>
-    //                 <p className="font-medium">Total Amount</p>
-    //                 <p className="text-2xl font-bold">₹{order.totalAmount.toFixed(2)}</p>
-    //               </div>
-    //               <Link
-    //                 to={`/order/${order._id}`}
-    //                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-    //               >
-    //                 View Details
-    //               </Link>
-    //             </div>
-    //           </div>
-    //         </div>
-    //       ))}
-    //     </div>
-    //   )}
-    // </div>
-//   );
-// };
-
-// export default Orders;
-
-<div className="container mx-auto px-4 py-8">
-<h1 className="text-2xl font-bold mb-6">My Orders</h1>
-
-{loading ? (
-  <div className="flex justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-  </div>
-) : orders.length === 0 ? (
-  <div className="text-center py-8">
-    <p className="text-gray-600 mb-4">No orders found</p>
-    <Link 
-      to="/products" 
-      className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-    >
-      Start Shopping
-    </Link>
-  </div>
-) : (
-  <div className="space-y-6">
-    {orders.map((order) => (
-      <div key={order.orderId} className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Order #{order.orderId}</h3>
-            <p className="text-sm text-gray-600">
-              Placed on {new Date(order.orderDate).toLocaleDateString()}
-            </p>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-sm ${
-            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-            'bg-blue-100 text-blue-800'
-          }`}>
-            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-          </span>
+      {loading ? (
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
         </div>
+      ) : orders.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">No orders found</p>
+          <Link 
+            to="/products" 
+            className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Start Shopping
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {orders.map((order) => (
+            <div
+              key={order._id}
+              className={`bg-white rounded-lg shadow-sm overflow-hidden border
+                ${order.status === 'completed' ? 
+                  'bg-gray-10 border-gray-200 opacity-60' : 
+                  'bg-white border-transparent'}`}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className={`text-lg font-semibold 
+                      ${order.status === 'completed' ? 'text-gray-700' : 'text-gray-900'}`}>
+                      Order #{order.orderId}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Placed on {new Date(order.orderDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium
+                    ${order.status === 'completed' ? 
+                      'bg-green-100 text-green-700' : 
+                      'bg-blue-100 text-blue-800'}`}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </div>
+                </div>
 
-        <div className="space-y-4">
-          {order.items.map((item, index) => (
-            <div key={index} className="flex items-center gap-4">
-              <img 
-                src={item.product.images[0]} 
-                alt={item.product.name}
-                className="w-20 h-20 object-cover rounded"
-              />
-              <div className="flex-1">
-                <h4 className="font-medium">{item.product.name}</h4>
-                <p className="text-sm text-gray-600">
-                  Quantity: {item.quantity} × ₹{item.price}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Seller: {item.seller.name}
-                </p>
+                <div className="space-y-4">
+                  {order.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-4 border-b pb-4
+                        ${order.status === 'completed' ? 
+                          'border-gray-200' : 'border-gray-100'}`}
+                    >
+                      <img
+                        src={item.product.images[0]}
+                        alt={item.product.name}
+                        className={`w-20 h-20 object-cover rounded
+                          ${order.status === 'completed' ? 'opacity-80' : ''}`}
+                      />
+                      <div className="flex-1">
+                        <h4 className={`font-medium
+                          ${order.status === 'completed' ? 'text-gray-600' : 'text-gray-900'}`}>
+                          {item.product.name}
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Quantity: {item.quantity} × ₹{item.price}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Seller: {item.seller.name}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`mt-4 flex justify-between items-center border-t pt-4
+                  ${order.status === 'completed' ? 'border-gray-200' : 'border-gray-100'}`}>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Amount</p>
+                    <p className={`text-xl font-bold
+                      ${order.status === 'completed' ? 'text-gray-600' : 'text-gray-900'}`}>
+                      ₹{order.total}
+                    </p>
+                  </div>
+                  <div className="space-x-4">
+                    <Link
+                      to={`/orders/${order._id}`}
+                      className="px-4 py-2 text-blue-600 border border-blue-600 rounded font-medium hover:bg-blue-50"
+                    >
+                      View Details
+                    </Link>
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelOrder(order._id)}
+                        className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50"
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
         </div>
-
-        <div className="mt-4 flex justify-between items-center border-t pt-4">
-          <div>
-            <p className="text-sm text-gray-600">Total Amount</p>
-            <p className="text-xl font-bold">₹{order.total}</p>
-          </div>
-          <div className="space-x-4">
-          <Link
-    to={`/orders/${order._id}`}  // Changed from /order/${order.orderId}
-    className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
->
-    View Details
-</Link>
-            {order.status === 'pending' && (
-              <button
-                onClick={() => handleCancelOrder(order.orderId)}
-                className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50"
-              >
-                Cancel Order
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-</div>
-);
+      )}
+    </div>
+  );
 };
 
 export default Orders;

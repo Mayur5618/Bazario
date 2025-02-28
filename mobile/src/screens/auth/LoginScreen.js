@@ -179,18 +179,39 @@ const LoginScreen = () => {
             )}
           </TouchableOpacity>
 
-          <View style={styles.orContainer}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>OR</Text>
-            <View style={styles.orLine} />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Business Accounts</Text>
+            <View style={styles.dividerLine} />
           </View>
 
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-              <Ionicons name="logo-google" size={24} color="#DB4437" />
+          <View style={styles.businessButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.businessButton} 
+              onPress={() => router.push('/(auth)/language-selection')}
+            >
+              <View style={styles.businessIconContainer}>
+                <Ionicons name="storefront-outline" size={24} color="#6C63FF" />
+              </View>
+              <View style={styles.businessTextContainer}>
+                <Text style={styles.businessButtonTitle}>Seller Account</Text>
+                <Text style={styles.businessButtonSubtext}>For individual sellers and shops</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-              <Ionicons name="logo-apple" size={24} color="#000" />
+
+            <TouchableOpacity 
+              style={styles.businessButton}
+              onPress={() => router.push('/(auth)/agency/login')}
+            >
+              <View style={styles.businessIconContainer}>
+                <Ionicons name="business-outline" size={24} color="#6C63FF" />
+              </View>
+              <View style={styles.businessTextContainer}>
+                <Text style={styles.businessButtonTitle}>Agency Account</Text>
+                <Text style={styles.businessButtonSubtext}>For agencies and organizations</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
             </TouchableOpacity>
           </View>
 
@@ -299,37 +320,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  orContainer: {
+  divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginVertical: 24,
   },
-  orLine: {
+  dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: '#E8E8E8',
   },
-  orText: {
-    color: '#666',
+  dividerText: {
     paddingHorizontal: 16,
-    fontSize: 14,
+    color: '#666',
+    fontSize: 16,
     fontWeight: '600',
   },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  businessButtonsContainer: {
+    width: '100%',
     gap: 16,
     marginBottom: 24,
   },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#F8F9FA',
-    justifyContent: 'center',
+  businessButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E8E8E8',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  businessIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F0EEFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  businessTextContainer: {
+    flex: 1,
+  },
+  businessButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  businessButtonSubtext: {
+    fontSize: 13,
+    color: '#666',
   },
   registerButton: {
     alignItems: 'center',

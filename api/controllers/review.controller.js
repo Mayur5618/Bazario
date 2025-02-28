@@ -5,21 +5,55 @@ import { uploadToFirebase, deleteFromFirebase } from '../utilities/firebase.js';
 export const createReview = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { rating, comment, images, orderId } = req.body;
+        const { rating, comment, orderId } = req.body;
         const userId = req.user._id;
+
+        console.log('Review creation attempt:', {
+            productId,
+            userId,
+            orderId,
+            rating,
+            hasComment: !!comment,
+            body: req.body
+        });
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID is required'
+            });
+        }
 
         // Check if the order exists and is completed/delivered
         const order = await Order.findOne({
             _id: orderId,
             buyer: userId,
             'items.product': productId,
-            status: { $in: ['delivered', 'completed', 'Delivered', 'Completed'] }
+            status: { 
+                $regex: new RegExp('^(delivered|completed)$', 'i') 
+            }
         });
+
+        console.log('Found order:', order ? {
+            id: order._id,
+            status: order.status,
+            buyer: order.buyer.toString(),
+            userId: userId.toString(),
+            hasProduct: order.items.some(item => item.product.toString() === productId)
+        } : 'No order found');
 
         if (!order) {
             return res.status(400).json({
                 success: false,
                 message: 'You can only review products from completed or delivered orders'
+            });
+        }
+
+        // Verify the order belongs to the user
+        if (order.buyer.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'This order does not belong to you'
             });
         }
 
@@ -39,7 +73,8 @@ export const createReview = async (req, res) => {
 
         // Process and upload images if provided
         let imageUrls = [];
-        if (images && images.length > 0) {
+        if (req.files && req.files.images) {
+            const images = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
             imageUrls = await Promise.all(images.map(image => uploadToFirebase(image)));
         }
 
@@ -48,10 +83,12 @@ export const createReview = async (req, res) => {
             product: productId,
             buyer: userId,
             order: orderId,
-            rating,
+            rating: parseInt(rating),
             comment,
             images: imageUrls
         };
+
+        console.log('Creating review with data:', reviewData);
 
         const newReview = await Review.create(reviewData);
         const populatedReview = await Review.findById(newReview._id)

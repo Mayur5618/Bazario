@@ -63,7 +63,7 @@ const CustomImageViewer = ({ visible, image, onClose }) => {
   );
 };
 
-const ReviewForm = ({ onSubmit, productId }) => {
+const ReviewForm = ({ onSubmit, productId, orderId }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [images, setImages] = useState([]);
@@ -82,11 +82,11 @@ const ReviewForm = ({ onSubmit, productId }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: [4, 3],
-        maxFiles: 5,
+        selectionLimit: 5,
       });
 
       if (!result.canceled) {
@@ -146,57 +146,25 @@ const ReviewForm = ({ onSubmit, productId }) => {
 
     setIsSubmitting(true);
     try {
-      // First check if user can review
-      const eligibilityResponse = await reviewApi.checkUserReview(productId);
-      console.log('Eligibility response:', eligibilityResponse);
-
-      if (!eligibilityResponse.data || !eligibilityResponse.data.orderId) {
-        Toast.show({
-          type: 'error',
-          text1: 'You can only review products from completed orders'
-        });
-        return;
-      }
-
-      // Create review data object
       const reviewData = {
         rating,
         comment: comment.trim(),
         images,
-        orderId: eligibilityResponse.data.orderId
+        orderId: orderId.toString()
       };
 
-      // Submit the review
-      const response = await axios.post(
-        `/api/reviews/products/${productId}/reviews`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      await onSubmit(reviewData);
 
-      if (response.data.success) {
-        Toast.show({
-          type: 'success',
-          text1: 'Review submitted successfully'
-        });
-        
-        // Reset form
-        setRating(0);
-        setComment('');
-        setImages([]);
-        
-        if (onSubmit) {
-          onSubmit(response.data);
-        }
-      }
+      // Reset form
+      setRating(0);
+      setComment('');
+      setImages([]);
+      setUploadProgress(0);
     } catch (error) {
-      console.error('Review submission error:', error.response?.data || error);
+      console.error('Review submission error:', error);
       Toast.show({
         type: 'error',
-        text1: error.response?.data?.message || 'Failed to submit review'
+        text1: error.message || 'Failed to submit review'
       });
     } finally {
       setIsSubmitting(false);
@@ -400,21 +368,34 @@ const ProductDetailScreen = () => {
     if (!isAuthenticated || !id) return;
 
     try {
-      const response = await reviewApi.checkUserReview(id);
-      const { canReview: isEligible, hasReviewed: alreadyReviewed, orderId: completedOrderId } = response;
-      
-      setCanReview(isEligible);
-      setHasReviewed(alreadyReviewed);
-      setOrderId(completedOrderId);
+        const response = await reviewApi.checkUserReview(id);
+        console.log('Review eligibility response:', response);
+        
+        const { canReview: isEligible, hasReviewed: alreadyReviewed, orderId: completedOrderId } = response;
+        
+        setCanReview(isEligible);
+        setHasReviewed(alreadyReviewed);
+        setOrderId(completedOrderId);
 
-      if (!completedOrderId && isEligible) {
-        Toast.show({
-          type: 'error',
-          text1: 'You can only review products from completed orders'
+        console.log('Review eligibility state:', {
+            canReview: isEligible,
+            hasReviewed: alreadyReviewed,
+            orderId: completedOrderId
         });
-      }
+
+        if (!isEligible) {
+            Toast.show({
+                type: 'info',
+                // text1: 'You can only review products from completed orders'
+                text1: 'hjhjhjhjh'
+            });
+        }
     } catch (error) {
-      console.error('Error checking review eligibility:', error);
+        console.error('Error checking review eligibility:', error);
+        Toast.show({
+            type: 'error',
+            text1: 'Error checking review eligibility'
+        });
     }
   };
 
@@ -633,57 +614,42 @@ const ProductDetailScreen = () => {
   // Update handleReviewSubmit to set hasReviewed
   const handleReviewSubmit = async (reviewData) => {
     try {
-      const formData = new FormData();
-      formData.append('rating', reviewData.rating.toString());
-      formData.append('comment', reviewData.comment);
-      formData.append('orderId', reviewData.orderId);
-
-      // Add images if any
-      if (reviewData.images && reviewData.images.length > 0) {
-        reviewData.images.forEach((image, index) => {
-          const imageFile = {
-            uri: image,
-            type: 'image/jpeg',
-            name: `review_image_${index}.jpg`
-          };
-          formData.append('images', imageFile);
-        });
-      }
-
-      console.log('Submitting review with formData:', {
-        productId: id,
-        rating: reviewData.rating,
-        comment: reviewData.comment,
-        orderId: reviewData.orderId,
-        imagesCount: reviewData.images?.length || 0
-      });
-
-      const response = await axios.post(
-        `/api/reviews/products/${id}/reviews`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        console.log('Current orderId in state:', orderId); // Add this log
+        
+        if (!orderId) {
+            Toast.show({
+                type: 'error',
+                text1: 'Order ID is missing'
+            });
+            return;
         }
-      );
 
-      if (response.data.success) {
-        Toast.show({
-          type: 'success',
-          text1: 'Review submitted successfully'
-        });
-        setShowReviewForm(false);
-        setHasReviewed(true);
-        setCanReview(false);
-        fetchReviews();
-      }
+        // Create the review data object with orderId
+        const reviewPayload = {
+            ...reviewData,
+            orderId: orderId // Explicitly set orderId from state
+        };
+
+        console.log('Submitting review with payload:', reviewPayload);
+
+        const response = await reviewApi.createReview(id, reviewPayload);
+
+        if (response.success) {
+            Toast.show({
+                type: 'success',
+                text1: 'Review submitted successfully'
+            });
+            setShowReviewForm(false);
+            setHasReviewed(true);
+            setCanReview(false);
+            fetchReviews();
+        }
     } catch (error) {
-      console.error('Create review error:', error.response?.data || error);
-      Toast.show({
-        type: 'error',
-        text1: error.response?.data?.message || 'Failed to submit review'
-      });
+        console.error('Review submission error:', error);
+        Toast.show({
+            type: 'error',
+            text1: error.response?.data?.message || 'Failed to submit review'
+        });
     }
   };
 
@@ -823,17 +789,29 @@ const ProductDetailScreen = () => {
   // Add this modal to your render method
   const renderReviewFormModal = () => (
     <Modal
-      visible={showReviewForm}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowReviewForm(false)}
+        visible={showReviewForm}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowReviewForm(false)}
     >
-      <View style={styles.modalOverlay}>
-        <ReviewForm
-          productId={id}
-          onSubmit={handleReviewSubmit}
-        />
-      </View>
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <TouchableOpacity 
+                    style={styles.closeModalButton}
+                    onPress={() => setShowReviewForm(false)}
+                >
+                    <Ionicons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+                <ReviewForm
+                    productId={id}
+                    orderId={orderId}
+                    onSubmit={(reviewData) => {
+                        handleReviewSubmit(reviewData);
+                        setShowReviewForm(false);
+                    }}
+                />
+            </View>
+        </View>
     </Modal>
   );
 
@@ -847,7 +825,11 @@ const ProductDetailScreen = () => {
             {canReview && !hasReviewed ? (
               <ReviewForm 
                 productId={id}
-                onSubmit={handleReviewSubmit}
+                orderId={orderId}
+                onSubmit={(reviewData) => {
+                  handleReviewSubmit(reviewData);
+                  setShowReviewForm(false);
+                }}
               />
             ) : hasReviewed ? (
               <View style={styles.messageContainer}>
@@ -1223,83 +1205,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   reviewInput: {
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
-    marginVertical: 16,
-    height: 100,
+    height: 120,
     textAlignVertical: 'top',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#666',
-  },
-  submitButton: {
-    backgroundColor: '#4169E1',
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
     fontSize: 16,
-    fontWeight: '500',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  formContainer: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  ratingSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  starsContainer: {
-    alignItems: 'center',
-  },
-  ratingText: {
-    marginTop: 8,
+  characterCount: {
+    fontSize: 12,
     color: '#666',
-    fontSize: 16,
-  },
-  reviewSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    textAlign: 'right',
+    marginTop: 4,
   },
   imageSection: {
     marginBottom: 24,
@@ -1324,12 +1243,13 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   removeImageButton: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 12,
     padding: 2,
   },
@@ -1365,12 +1285,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+  submitButton: {
+    backgroundColor: '#4169E1',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submitButtonDisabled: {
     backgroundColor: '#B0C4DE',
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   reviewsHeader: {
@@ -1419,6 +1346,55 @@ const styles = StyleSheet.create({
   },
   reviewsList: {
     marginTop: 16,
+  },
+  closeModalButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  formContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  ratingSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  starsContainer: {
+    alignItems: 'center',
+  },
+  ratingText: {
+    marginTop: 8,
+    color: '#666',
+    fontSize: 16,
+  },
+  reviewSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
 });
 

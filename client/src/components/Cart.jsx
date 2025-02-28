@@ -20,7 +20,7 @@ const Cart = () => {
   const cartItems = useSelector(selectCartItems) || [];
   const cartTotal = useSelector(selectCartTotal) || 0;
   const navigate = useNavigate();
-  const [removingItems, setRemovingItems] = useState({}); // Add this state
+  const [removingItems, setRemovingItems] = useState({});
   
 
   // Fetch cart items when component mounts
@@ -163,14 +163,16 @@ const Cart = () => {
 
   const handleRemoveFromCart = async (productId) => {
     try {
-      setRemovingItems((prev) => ({ ...prev, [productId]: true }));
+      setRemovingItems(prev => ({ ...prev, [productId]: true }));
+
+      // Wait for 1 second animation to complete
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       const response = await axios.delete(`/api/cart/remove/${productId}`, {
         withCredentials: true,
       });
 
       if (response.data.success) {
-        // This will decrease cart count by 1 since we're removing a product
         dispatch(cartItemRemove(productId));
         
         const updatedCartResponse = await axios.get("/api/cart/getCartItems", {
@@ -185,8 +187,7 @@ const Cart = () => {
     } catch (error) {
       console.error("Error removing item:", error);
       toast.error("Failed to remove item from cart");
-    } finally {
-      setRemovingItems((prev) => ({ ...prev, [productId]: false }));
+      setRemovingItems(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -224,8 +225,10 @@ const Cart = () => {
           <div
             key={`${item?.product?._id}-${index}`}
             className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0
-              transition-all duration-300 ease-in-out
-              ${removingItems[item?.product?._id] ? 'opacity-0 transform translate-x-full' : 'opacity-100 transform translate-x-0'}`}
+              transition-all duration-[1000ms] ease-in-out
+              ${removingItems[item?.product?._id] ? 
+                'opacity-0 transform translate-x-full' : 
+                'opacity-100 transform translate-x-0'}`}
           >
             {/* Item Details - Left Section */}
             <div className="col-span-6 flex gap-4">
