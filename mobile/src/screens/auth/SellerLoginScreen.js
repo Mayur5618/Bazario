@@ -7,10 +7,13 @@ import {
   StyleSheet,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
+import axios from '../../config/axios';
+import { useAuth } from '../../context/AuthContext';
 
 // Translations for all UI text
 const translations = {
@@ -67,9 +70,12 @@ const translations = {
 const SellerLoginScreen = () => {
   const router = useRouter();
   const { language } = useLanguage();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     mobileno: '',
-    password: ''
+    password: '',
+    userType: 'seller',
+    platformType: ['b2c']
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -95,11 +101,29 @@ const SellerLoginScreen = () => {
 
     setIsLoading(true);
     try {
-      // TODO: Implement seller login API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.replace('/(seller)/dashboard');
+      const response = await axios.post('/api/users/signin', {
+        mobileno: formData.mobileno,
+        password: formData.password,
+        userType: 'seller',
+        platformType: ['b2c']
+      });
+
+      if (response?.data?.success) {
+        const userData = response.data.data;
+        // Check if the user is a seller
+        if (userData.userType !== 'seller') {
+          Alert.alert('Error', 'This account is not a seller account');
+          return;
+        }
+        await login(userData, userData.token);
+        router.replace('/(seller)/dashboard');
+      } else {
+        Alert.alert('Error', response.data.message || 'Login failed');
+      }
     } catch (error) {
       console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

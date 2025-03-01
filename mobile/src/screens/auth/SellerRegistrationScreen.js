@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import * as Location from 'expo-location';
 import { RadioButton } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
+import Voice from '@react-native-voice/voice';
 
 // Translations object
 const translations = {
@@ -27,9 +30,8 @@ const translations = {
       2: 'Business Type Selection',
       3: 'Business Verification',
       4: 'Address Details',
-      5: 'Payment Details',
-      6: 'Product Details',
-      7: 'Agreement',
+      5: 'Product Details',
+      6: 'Agreement',
     },
     fields: {
       fullName: 'Full Name',
@@ -55,6 +57,7 @@ const translations = {
       acceptAgreement: 'I agree to follow all rules and provide good service',
       customCategory: 'Enter your product category',
       voiceRecordingPlaceholder: 'Voice recording captured. Tap to edit.',
+      agreementText: 'Speak or type your agreement response...',
     },
     errors: {
       required: 'This field is required',
@@ -76,6 +79,22 @@ const translations = {
       customCategoryRequired: 'Please enter your product category',
       micPermission: 'Microphone permission is required for voice input',
       recordingError: 'Error recording voice input',
+      voiceInputError: 'Failed to recognize speech. Please try again.',
+      fullName: 'Please enter your full name',
+      mobile: 'Please enter a valid 10-digit mobile number',
+      password: 'Password must be at least 8 characters',
+      passwordMatch: 'Passwords do not match',
+      businessType: 'Please select a business type',
+      customBusinessType: 'Please specify your business type',
+      aadhar: 'Please enter a valid 12-digit Aadhaar number',
+      address: 'Please enter your address',
+      city: 'Please enter your city/village',
+      pincode: 'Please enter a valid 6-digit pincode',
+      state: 'Please enter your state',
+      productCategory: 'Please select at least one product category',
+      productDescription: 'Please describe your product',
+      productImage: 'Please upload at least one product image',
+      agreement: 'Please accept the terms and conditions'
     },
     buttons: {
       next: 'Next',
@@ -91,7 +110,38 @@ const translations = {
       locationFetch: 'Getting your location...',
     },
     progress: 'Step %s of %s',
-    agreement: 'By accepting this agreement, you confirm that:\n\n1. All information provided is correct\n2. You will provide quality products/services\n3. You will maintain fair prices\n4. You will follow all local business rules',
+    agreement: {
+      title: 'Terms and Conditions',
+      content: `1. Terms of Service:\n
+• As a seller on our platform, you agree to provide authentic and quality products/services.
+• You must maintain accurate inventory and pricing information.
+• You are responsible for timely delivery of products to customers.
+
+2. Payment Terms:\n
+• Payments will be processed and disbursed on a monthly basis.
+• Payment cycle: All sales from 1st to last day of month will be processed by 10th of next month.
+• Payment will be made directly to your registered bank account.
+• Platform fee and applicable taxes will be deducted as per current rates.
+
+3. Seller Responsibilities:\n
+• Maintain high quality standards for all products
+• Respond to customer queries within 24 hours
+• Keep your store information and inventory updated
+• Follow all applicable local and national regulations
+
+4. Platform Guidelines:\n
+• Maintain a minimum rating of 3.5 stars
+• Handle returns and refunds as per platform policy
+• Use appropriate packaging for product safety
+• Maintain professional communication with customers
+
+5. Account Suspension:\n
+• The platform reserves the right to suspend accounts for policy violations
+• Multiple violations may result in permanent account termination
+• All pending payments will be processed after resolution of issues
+
+By accepting these terms, you agree to all conditions mentioned above and commit to maintaining the quality standards of our platform.`
+    },
     categories: {
       groceries: 'groceries',
       vegetables: 'vegetables',
@@ -111,9 +161,8 @@ const translations = {
       2: 'व्यवसाय का प्रकार',
       3: 'व्यवसाय सत्यापन',
       4: 'पता विवरण',
-      5: 'भुगतान विवरण',
-      6: 'उत्पाद विवरण',
-      7: 'समझौता',
+      5: 'उत्पाद विवरण',
+      6: 'समझौता',
     },
     fields: {
       fullName: 'अपना पूरा नाम लिखें',
@@ -139,6 +188,7 @@ const translations = {
       acceptAgreement: 'मैं सभी नियमों का पालन करूंगा/करूंगी और अच्छी सेवा दूंगा/दूंगी',
       customCategory: 'अपने उत्पाद की श्रेणी दर्ज करें',
       voiceRecordingPlaceholder: 'आवाज रिकॉर्डिंग की गई है। संपादित करने के लिए टैप करें।',
+      agreementText: 'अपनी सहमति बोलें या टाइप करें...',
     },
     errors: {
       required: 'यह फ़ील्ड आवश्यक है',
@@ -160,6 +210,22 @@ const translations = {
       customCategoryRequired: 'कृपया अपने उत्पाद की श्रेणी दर्ज करें',
       micPermission: 'वॉइस इनपुट के लिए माइक्रोफ़ोन की अनुमति आवश्यक है',
       recordingError: 'वॉइस इनपुट रिकॉर्ड करने में त्रुटि',
+      voiceInputError: 'आवाज को पहचानने में विफल। कृपया पुनः प्रयास करें।',
+      fullName: 'कृपया अपना पूरा नाम दर्ज करें',
+      mobile: 'कृपया 10 अंकों का सही मोबाइल नंबर दर्ज करें',
+      password: 'पासवर्ड कम से कम 8 अक्षर का होना चाहिए',
+      passwordMatch: 'पासवर्ड मेल नहीं खाते',
+      businessType: 'कृपया व्यवसाय का प्रकार चुनें',
+      customBusinessType: 'कृपया अपना व्यवसाय बताएं',
+      aadhar: 'कृपया 12 अंकों का सही आधार नंबर दर्ज करें',
+      address: 'कृपया अपना पता दर्ज करें',
+      city: 'कृपया अपने शहर/गांव का नाम दर्ज करें',
+      pincode: 'कृपया 6 अंकों का सही पिन कोड दर्ज करें',
+      state: 'कृपया अपने राज्य का नाम दर्ज करें',
+      productCategory: 'कृपया कम से कम एक उत्पाद श्रेणी चुनें',
+      productDescription: 'कृपया अपने उत्पाद का विवरण दें',
+      productImage: 'कृपया कम से कम एक उत्पाद फोटो अपलोड करें',
+      agreement: 'कृपया नियम और शर्तें स्वीकार करें'
     },
     buttons: {
       next: 'अगला',
@@ -175,7 +241,38 @@ const translations = {
       locationFetch: 'आपका स्थान प्राप्त किया जा रहा है...',
     },
     progress: 'चरण %s में से %s',
-    agreement: 'इस समझौते को स्वीकार करके, आप पुष्टि करते हैं कि:\n\n1. दी गई सभी जानकारी सही है\n2. आप अच्छी क्वालिटी के प्रोडक्ट/सेवाएं देंगे\n3. आप उचित कीमत रखेंगे\n4. आप सभी स्थानीय व्यापार नियमों का पालन करेंगे',
+    agreement: {
+      title: 'नियम और शर्तें',
+      content: `1. सेवा की शर्तें:\n
+• हमारे प्लेटफॉर्म पर विक्रेता के रूप में, आप प्रामाणिक और गुणवत्तापूर्ण उत्पाद/सेवाएं प्रदान करने के लिए सहमत हैं।
+• आपको सटीक इन्वेंटरी और मूल्य जानकारी बनाए रखनी होगी।
+• ग्राहकों को समय पर डिलीवरी के लिए आप जिम्मेदार हैं।
+
+2. भुगतान की शर्तें:\n
+• भुगतान मासिक आधार पर संसाधित और वितरित किया जाएगा।
+• भुगतान चक्र: महीने की 1 से आखिरी तारीख तक की सभी बिक्री अगले महीने की 10 तारीख तक प्रोसेस की जाएगी।
+• भुगतान सीधे आपके रजिस्टर्ड बैंक खाते में किया जाएगा।
+• प्लेटफॉर्म शुल्क और लागू कर वर्तमान दरों के अनुसार काटे जाएंगे।
+
+3. विक्रेता की जिम्मेदारियां:\n
+• सभी उत्पादों के लिए उच्च गुणवत्ता मानकों को बनाए रखें
+• 24 घंटों के भीतर ग्राहक प्रश्नों का जवाब दें
+• अपनी दुकान की जानकारी और इन्वेंटरी को अपडेट रखें
+• सभी लागू स्थानीय और राष्ट्रीय नियमों का पालन करें
+
+4. प्लेटफॉर्म दिशानिर्देश:\n
+• न्यूनतम 3.5 स्टार रेटिंग बनाए रखें
+• प्लेटफॉर्म नीति के अनुसार रिटर्न और रिफंड को संभालें
+• उत्पाद सुरक्षा के लिए उचित पैकेजिंग का उपयोग करें
+• ग्राहकांशी व्यावसायिक संवाद कायम ठेवा
+
+5. खाता निलंबन:\n
+• नीति उल्लंघनों के लिए प्लेटफॉर्म खातों को निलंबित करने का अधिकार सुरक्षित रखता है
+• कई उल्लंघनों के परिणामस्वरूप स्थायी खाता समाप्ति हो सकती है
+• मुद्दों के समाधान के बाद सभी लंबित भुगतान संसाधित किए जाएंगे
+
+इन नियमों को स्वीकार करके, आप ऊपर बताई गई सभी शर्तों से सहमत हैं और हमारे प्लेटफॉर्म के गुणवत्ता मानकों को बनाए रखने के लिए प्रतिबद्ध हैं।`
+    },
     categories: {
       groceries: 'किराना सामान',
       vegetables: 'सब्जियां',
@@ -195,9 +292,8 @@ const translations = {
       2: "संपर्क तपशील",
       3: "व्यवसाय माहिती",
       4: "स्थान तपशील",
-      5: "बँक तपशील",
-      6: "कागदपत्रे अपलोड",
-      7: "पुनरावलोकन आणि सबमिट"
+      5: "उत्पाद तपशील",
+      6: "करार",
     },
     fields: {
       fullName: 'तुमचे संपूर्ण नाव लिहा',
@@ -212,7 +308,7 @@ const translations = {
       address: 'पूर्ण पत्ता लिहा (घर क्रमांक, रस्ता, भाग)',
       landmark: 'जवळच्या ओळखीचे ठिकाण (उदा: मंदिर, शाळा)',
       city: 'शहर किंवा गावाचा नाव',
-      state: 'राज્યનું नाव',
+      state: 'राज्याचे नाव',
       pincode: '6 अंकी पिन कोड',
       bankName: "बँकेचे नाव",
       accountNumber: "खाते क्रमांक",
@@ -223,15 +319,16 @@ const translations = {
       uploadAadhaar: "आधार कार्ड अपलोड करा",
       uploadShopLicense: "दુકાન લાઇસન્સ अपलोड करा",
       aadharNumber: '12 अंकी आधार कार्ड नंबर टाका',
+      shopName: 'दुकानाचे नाव(ऐच्छिक)',
       customBusinessType: 'तुमच्या व्यवसायाचा प्रकार लिहा',
       businessDescription: 'तुमच्या व्यवसाय वિશે જણાવો (શું વેચો છો?)',
       upiId: 'तुमचा UPI आयडી टाका (उदा: मोબાઇલ@upi)',
       bankAccount: 'बેંક एકાઉન્ટ નંબર લખો (વૈકલ્પિક)',
       acceptsCOD: 'मी कॅश ऑन डિલિવરી स्वીકારીશ',
-      productDescription: 'तुम्ही काय वેચો છો? (उदा: मी ताजી भाजी वેચું છું)',
+      productDescription: 'तुम्ही काय विकता? (उदा: मी ताज्या भाज्या विकतो)',
       selectCategory: 'तुमच्या वस्तूंचा प्रकार निवडा',
-      uploadProductImage: 'तुमच्या वस्तुंचा फोटो मૂકો (ऐच्छिक)',
-      acceptAgreement: 'मी सर्व नियमોનું पालन करेन आणि चांगली सेवा देईन'
+      uploadProductImage: 'तुमच्या वस्तूंचा फोटो पोस्ट करा (पर्यायी)',
+      acceptAgreement: 'मी सर्व नियमांचे पालन करून चांगली सेवा देईन'
     },
     errors: {
       required: "हे क्षेत्र आवश्यक आहे",
@@ -244,6 +341,23 @@ const translations = {
       invalidAadhar: "कृपया वैध 12-अंक आधार कार्ड नंबर दर्ज करें",
       productImageRequired: 'उत्पादनाचा फोटो आवश्यक आहे',
       customCategoryRequired: 'कृपया तुमच्या उत्पादनाची श्रेणी टाका',
+      voiceInputError: 'बोलणे ओळखण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
+      micPermission: 'व्हॉइस इनपुटसाठी मायक्रोफोनची परवानगी आवश्यक आहे.',
+      fullName: 'कृपया आपले पूर्ण नाव प्रविष्ट करा',
+      mobile: 'कृपया 10 अंकी वैध मोबाईल नंबर प्रविष्ट करा',
+      password: 'पासवर्ड किमान 8 अक्षरांचा असावा',
+      passwordMatch: 'पासवर्ड जुळत नाहीत',
+      businessType: 'कृपया व्यवसायाचा प्रकार निवडा',
+      customBusinessType: 'कृपया आपला व्यवसाय नमूद करा',
+      aadhar: 'कृपया 12 अंकी वैध आधार क्रमांक प्रविष्ट करा',
+      address: 'कृपया आपला पत्ता प्रविष्ट करा',
+      city: 'कृपया आपले शहर/गाव प्रविष्ट करा',
+      pincode: 'कृपया 6 अंकी वैध पिनकोड प्रविष्ट करा',
+      state: 'कृपया आपले राज्य प्रविष्ट करा',
+      productCategory: 'कृपया किमान एक उत्पाद श्रेणी निवडा',
+      productDescription: 'कृपया आपल्या उत्पादनाचे वर्णन करा',
+      productImage: 'कृपया किमान एक उत्पाद फोटो अपलोड करा',
+      agreement: 'कृपया नियम आणि अटी स्वीकारा'
     },
     buttons: {
       next: "पुढे",
@@ -252,12 +366,43 @@ const translations = {
       getCurrentLocation: "वर्तमान स्थान मिळवा"
     },
     progress: 'चरण %s पैकी %s',
-    agreement: 'हा करार स्वीकारून, तुम्ही पुष्टी करता की:\n\n1. दिलेली सर्व माहिती सत्य आहे\n2. तुम्ही चांगल्या दर्जाचे प्रॉडक्ट/सेवा द्याल\n3. तुम्ही यોग्य किंमत ठेवाल\n4. तुम्ही सर्व स्थानिक व्यवसाय नियमांचे पालन कराल',
+    agreement: {
+      title: 'अटी आणि शर्ती',
+      content: `1. सेवा अटी:\n
+• आमच्या प्लॅटफॉर्मवर विक्रेता म्हणून, तुम्ही प्रामाणिक आणि दर्जेदार उत्पादने/सेवा देण्यास सहमत आहात.
+• तुम्ही अचूक इन्व्हेंटरी आणि किंमत माहिती राखली पाहिजे.
+• ग्राहकांना वेळेवर वितरणासाठी तुम्ही जबाबदार आहात.
+
+2. पेमेंट अटी:\n
+• देयकांवर प्रक्रिया केली जाईल आणि मासिक आधारावर वितरित केले जाईल.
+• पेमेंट सायकल: महिन्याच्या 1 ला ते शेवटच्या दिवसापर्यंत सर्व विक्री पुढील महिन्याच्या 10 तारखेपर्यंत प्रक्रिया केली जाईल.
+• पेमेंट थेट तुमच्या नोंदणीकृत बँक खात्यात केले जाईल.
+• वर्तमान दरांनुसार प्लॅटफॉर्म फी आणि लागू कर वजा केले जातील.
+
+3. विक्रेत्याच्या जबाबदाऱ्या:\n
+• सर्व उत्पादनांसाठी उच्च दर्जाची मानके राखा
+• 24 तासांच्या आत ग्राहकांच्या प्रश्नांची उत्तरे द्या
+• तुमच्या दुकानाची माहिती आणि इन्व्हेंटरी अपडेट ठेवा
+• सर्व लागू स्थानिक आणि राष्ट्रीय नियमांचे पालन करा
+
+४. प्लॅटफॉर्म मार्गदर्शक तत्त्वे:\n
+• किमान 3.5 स्टार रेटिंग ठेवा
+• प्लॅटफॉर्म धोरणानुसार रिटर्न आणि रिफंड हाताळा
+• उत्पादनाच्या संरक्षणासाठी योग्य पॅकेजिंग वापरा
+• ग्राहकांशी व्यावसायिक संवाद कायम ठेवा
+
+5. खाते निलंबन:\n
+• प्लॅटफॉर्मने धोरणाच्या उल्लंघनासाठी खाती निलंबित करण्याचा अधिकार राखून ठेवला आहे
+• एकाधिक उल्लंघनांमुळे खाते कायमस्वरूपी समाप्त होऊ शकते
+• समस्यांचे निराकरण केल्यानंतर सर्व प्रलंबित पेमेंटवर प्रक्रिया केली जाईल
+
+या अटी स्वीकारून, तुम्ही वर नमूद केलेल्या सर्व अटींशी सहमत आहात आणि आमच्या प्लॅटफॉर्मची गुणवत्ता मानके राखण्यासाठी वचनबद्ध आहात.`
+    },
     categories: {
       groceries: 'किराणा सामान',
       vegetables: 'भाज्या',
       fruits: 'फळे',
-      dairy: 'दूध उत्पादनો',
+      dairy: 'दुधाचे पदार्थ',
       meat: 'मांस',
       bakery: 'बेकरी',
       snacks: 'नाश्ता',
@@ -279,9 +424,8 @@ const translations = {
       2: "સંપર્ક વિગતો",
       3: "વ્યવસાય માહિતી",
       4: "સ્થાન વિગતો",
-      5: "બેંક વિગતો",
-      6: "દસ્તાવેજો અપલોડ",
-      7: "સમીક્ષા અને સબમિટ"
+      5: "ઉત્પાદ વિગતો",
+      6: "કરાર",
     },
     fields: {
       fullName: 'તમારું પૂરું નામ લખો',
@@ -329,6 +473,23 @@ const translations = {
       invalidAadhar: "કૃપા કરી માન્ય 12-અંક આધાર કાર્ડ નંબર દાખલ કરો",
       productImageRequired: 'ઉત્પાદનનો ફોટો જરૂરી છે',
       customCategoryRequired: 'કૃપા કરી તમારા ઉત્પાદનની શ્રેણી દાખલ કરો',
+      voiceInputError: 'બોલી ઓળખવામાં નિષ્ફળ. કૃપા કરી ફરી પ્રયાસ કરો.',
+      micPermission: 'વૉઇસ ઇનપુટ માટે માઇક્રોફોન પરવાનગી જરૂરી છે.',
+      fullName: 'કૃપા કરી તમારું પૂરું નામ દાખલ કરો',
+      mobile: 'કૃપા કરી 10 અંકનો માન્ય મોબાઇલ નંબર દાખલ કરો',
+      password: 'પાસવર્ડ ઓછામાં ઓછો 8 અક્ષરનો હોવો જોઈએ',
+      passwordMatch: 'પાસવર્ડ મેળ ખાતા નથી',
+      businessType: 'કૃપા કરી વ્યવસાયનો પ્રકાર પસંદ કરો',
+      customBusinessType: 'કૃપા કરી તમારો વ્યવસાય જણાવો',
+      aadhar: 'કૃપા કરી 12 અંકનો માન્ય આધાર નંબર દાખલ કરો',
+      address: 'કૃપા કરી તમારું સરનામું દાખલ કરો',
+      city: 'કૃપા કરી તમારું શહેર/ગામ દાખલ કરો',
+      pincode: 'કૃપા કરી 6 અંકનો માન્ય પિનકોડ દાખલ કરો',
+      state: 'કૃપા કરી તમારું રાજ્ય દાખલ કરો',
+      productCategory: 'કૃપા કરી ઓછામાં ઓછી એક ઉત્પાદ શ્રેણી પસંદ કરો',
+      productDescription: 'કૃપા કરી તમારા ઉત્પાદનું વર્ણન કરો',
+      productImage: 'કૃપા કરી ઓછામાં ઓછો એક ઉત્પાદ ફોટો અપલોડ કરો',
+      agreement: 'કૃપા કરી નિયમો અને શરતો સ્વીકારો'
     },
     buttons: {
       next: "આગળ",
@@ -337,7 +498,38 @@ const translations = {
       getCurrentLocation: "વર્તમાન સ્થાન મેળવો"
     },
     progress: 'સ્ટેપ %s માંથી %s',
-    agreement: 'આ કરાર સ્વીકારીને, તમે પુષ્ટિ કરો છો કે:\n\n1. આપેલી બધી માહિતી સાચી છે\n2. તમે સારી ગુણવત્તાની પ્રોડક્ટ/સેવાઓ આપશો\n3. તમે યોગ્ય ભાવ રાખશો\n4. તમે બધા સ્થાનિક વ્યાપાર નિયમોનું પાલન કરશો',
+    agreement: {
+      title: 'નિયમો અને શરતો',
+      content: `1. સેવાની શરતો:\n
+• અમારા પ્લેટફોર્મ પર વિક્રેતા તરીકે, તમે પ્રમાણિક અને ગુણવત્તાયુક્ત ઉત્પાદનો/સેવાઓ પ્રદાન કરવા માટે સંમત થાઓ છો.
+• તમારે ચોક્કસ ઇન્વેન્ટરી અને કિંમતની માહિતી જાળવീ આવશ્યક છે.
+• ગ્રાહકોને સમયસર ડિલિવરી માટે તમે જવાબદાર છો.
+
+2. ચુકવણીની શરતો:\n
+• ચુકવણીની પ્રક્રિયા માસિક ધોરણે કરવામાં આવશે અને તેનું વિતરણ કરવામાં આવશે.
+• ચુકવણી ચક્ર: મહિનાના 1લીથી છેલ્લા દિવસ સુધીના તમામ વેચાણની પ્રક્રિયા નીચેના મહિનાની 10મી તારીખ સુધીમાં કરવામાં આવશે.
+• ચુકવણી સીધી તમારા નોંધાયેલા બેંક ખાતામાં કરવામાં આવશે.
+• પ્લેટફોર્મ ફી અને લાગુ કર વર્તમાન દરો મુજબ કાપવામાં આવશે.
+
+3. વિક્રેતાની જવાબદારીઓ:\n
+• તમામ ઉત્પાદનો માટે ઉચ્ચ ગુણવત્તાના ધોરણો જાળવો
+• ગ્રાહકની પૂછપરછનો 24 કલાકની અંદર જવાબ આપો
+• તમારી દુકાનની માહિતી અને ઇન્વેન્ટરી અપડેટ રાખો
+• તમામ લાગુ સ્થાનિક અને રાષ્ટ્રીય નિયमોનું પાલन કરો
+
+4. પ્લેટફોર્મ માર્ગદર્શિકા:\n
+• ન્યૂનતમ 3.5 સ્ટાર રેટિંગ ધરાવો
+• પ્લેટફોર્મ પોલિસી મુજબ રિટર્ન અને રિફંડ હેન્ડલ કરો
+• ઉત્પાદનને સુરક્ષિત રાખવા માટે યોગ્ય પેકેજિંગનો ઉપયોગ કરો
+• ગ્રાહકો સાથે વ્યાવસાયિક સંચાર જાળવો
+
+5. એકાઉન્ટ સસ્પેન્શન:\n
+• પ્લેટફોર્મ નીતિના ઉલ્લંઘન માટે એકાઉન્ટ્સને સસ્પેન્ડ કરવાનો અધિકાર અનામત રાખે છે
+• બહુવિધ ઉલ્લંઘનોના પરિણામે ખાતું કાયમી સમાપ્ત થઈ શકે છે
+• તમામ બાકી ચૂકવણીઓ મુદ્દાઓના નિરાકરણ પછી પ્રક્રિયા કરવામાં આવશે
+
+આ શરતો સ્વીકારીને, તમે ઉપર દર્શાવેલ તમામ શરતો સાથે સંમત થાઓ છો અને અમારા પ્લેટફોર્મના ગુણવત્તાના ધોરણો જાળવવા માટે પ્રતિબદ્ધ છો.`
+    },
     categories: {
       groceries: 'કિરાણા સામાન',
       vegetables: 'શાકભાજી',
@@ -454,6 +646,10 @@ const SellerRegistrationScreen = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [location, setLocation] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingType, setRecordingType] = useState(null); // 'agreement' or 'other'
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -465,6 +661,7 @@ const SellerRegistrationScreen = () => {
     
     // Step 2: Business Type
     businessType: '',
+    customBusinessType: '', // Added for other business type
     
     // Step 3: Business Verification
     aadharNumber: '',
@@ -477,23 +674,82 @@ const SellerRegistrationScreen = () => {
     state: '',
     landmark: '',
     
-    // Step 5: Payment
-    upiId: '',
-    bankAccount: '',
-    ifscCode: '',
-    acceptsCod: false,
-    
-    // Step 6: Product
+    // Step 5: Product Details
     productDescription: '',
-    categories: [],
+    selectedCategories: [],
+    customCategory: '',
     productImage: null,
     
-    // Step 7: Agreement
-    agreesToTerms: false,
-    gstDocument: null,
-    panDocument: null,
-    shopLicenseDocument: null,
+    // Step 6: Agreement
+    agreementAccepted: false,
   });
+
+  // Initialize voice recognition
+  useEffect(() => {
+    Voice.onSpeechStart = onSpeechStart;
+    Voice.onSpeechEnd = onSpeechEnd;
+    Voice.onSpeechResults = onSpeechResults;
+    Voice.onSpeechError = onSpeechError;
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, []);
+
+  // Voice handlers
+  const onSpeechStart = () => {
+    setIsRecording(true);
+  };
+
+  const onSpeechEnd = () => {
+    setIsRecording(false);
+  };
+
+  const onSpeechResults = (e) => {
+    const text = e.value[0];
+    if (recordingType === 'agreement') {
+      setFormData(prev => ({
+        ...prev,
+        agreementText: text
+      }));
+    } else if (recordingType === 'other') {
+      setFormData(prev => ({
+        ...prev,
+        customCategory: text
+      }));
+    }
+  };
+
+  const onSpeechError = (e) => {
+    console.error('Speech recognition error:', e);
+    Alert.alert(
+      'Voice Input Error',
+      translations[language].errors.voiceInputError
+    );
+    setIsRecording(false);
+  };
+
+  const startVoiceRecording = async (type) => {
+    try {
+      setRecordingType(type);
+      await Voice.start(language === 'en' ? 'en-US' : language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'gu-IN');
+    } catch (error) {
+      console.error('Error starting voice recording:', error);
+      Alert.alert(
+        'Error',
+        translations[language].errors.micPermission
+      );
+    }
+  };
+
+  const stopVoiceRecording = async () => {
+    try {
+      await Voice.stop();
+      setRecordingType(null);
+    } catch (error) {
+      console.error('Error stopping voice recording:', error);
+    }
+  };
 
   // Get user's location
   useEffect(() => {
@@ -525,107 +781,176 @@ const SellerRegistrationScreen = () => {
 
   // Validation functions for each step
   const validateStep1 = () => {
-    const errors = {};
-    if (!formData.fullName) errors.fullName = 'Name is required';
-    if (!/^[0-9]{10}$/.test(formData.mobile)) errors.mobile = 'Invalid mobile number';
-    if (formData.password.length < 8) errors.password = 'Password too short';
-    if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
-    return errors;
+    if (!formData.fullName || formData.fullName.trim() === '') {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.fullName
+      );
+      return false;
+    }
+    
+    if (!formData.mobile || !/^\d{10}$/.test(formData.mobile)) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.mobile
+      );
+      return false;
+    }
+    
+    if (!formData.password || formData.password.length < 8) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.password
+      );
+      return false;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.passwordMatch
+      );
+      return false;
+    }
+    
+    return true;
   };
 
   const validateStep2 = () => {
-    const errors = {};
-    if (!formData.businessType) errors.businessType = 'Please select a business type';
-    return errors;
+    if (!formData.businessType) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.businessType
+      );
+      return false;
+    }
+
+    // If "other" business type is selected, custom business type is required
+    if (formData.businessType === 'other' && (!formData.customBusinessType || formData.customBusinessType.trim() === '')) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.customBusinessType
+      );
+      return false;
+    }
+
+    return true;
   };
 
   const validateStep3 = () => {
-    const errors = {};
     if (!formData.aadharNumber || formData.aadharNumber.length !== 12) {
-      errors.aadharNumber = translations[language].errors.invalidAadhar;
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.aadhar
+      );
+      return false;
     }
-    return errors;
+    return true;
   };
 
   const validateStep4 = () => {
-    const errors = {};
-    if (!formData.address) {
-      errors.address = translations[language].errors.required;
+    if (!formData.address || formData.address.trim() === '') {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.address
+      );
+      return false;
     }
-    if (!formData.city) {
-      errors.city = translations[language].errors.required;
+    
+    if (!formData.city || formData.city.trim() === '') {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.city
+      );
+      return false;
     }
-    if (!formData.pincode || !/^[0-9]{6}$/.test(formData.pincode)) {
-      errors.pincode = translations[language].errors.invalidPincode;
+    
+    if (!formData.pincode || formData.pincode.length !== 6) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.pincode
+      );
+      return false;
     }
-    return errors;
+    
+    if (!formData.state || formData.state.trim() === '') {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.state
+      );
+      return false;
+    }
+    
+    return true;
   };
 
   const validateStep5 = () => {
-    const errors = {};
-    if (!formData.upiId && !formData.acceptsCod) {
-      errors.payment = translations[language].errors.paymentMethodRequired;
+    if (!formData.selectedCategories || formData.selectedCategories.length === 0) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.productCategory
+      );
+      return false;
     }
-    if (formData.upiId && !/^[\w.-]+@[\w.-]+$/.test(formData.upiId)) {
-      errors.upiId = translations[language].errors.invalidUPI;
+    
+    if (!formData.productDescription || formData.productDescription.trim() === '') {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.productDescription
+      );
+      return false;
     }
-    return errors;
+    
+    if (!formData.productImage) {
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.productImage
+      );
+      return false;
+    }
+    
+    return true;
   };
 
   const validateStep6 = () => {
-    const errors = {};
-    if (!formData.productDescription) {
-      errors.productDescription = translations[language].errors.required;
-    }
-    if (!formData.productImage) {
-      errors.productImage = translations[language].errors.productImageRequired;
-    }
-    if (formData.selectedCategories?.includes('other') && !formData.customCategory) {
-      errors.customCategory = translations[language].errors.customCategoryRequired;
-    }
-    return errors;
-  };
-
-  const validateStep7 = () => {
-    const errors = {};
     if (!formData.agreementAccepted) {
-      errors.agreement = translations[language].errors.agreementRequired;
+      Alert.alert(
+        translations[language].errors.required,
+        translations[language].errors.agreement
+      );
+      return false;
     }
-    return errors;
+    return true;
   };
 
   const handleNext = () => {
-    let errors = {};
+    let isValid = false;
+    
     switch (currentStep) {
       case 1:
-        errors = validateStep1();
+        isValid = validateStep1();
         break;
       case 2:
-        errors = validateStep2();
+        isValid = validateStep2();
         break;
       case 3:
-        errors = validateStep3();
+        isValid = validateStep3();
         break;
       case 4:
-        errors = validateStep4();
+        isValid = validateStep4();
         break;
       case 5:
-        errors = validateStep5();
+        isValid = validateStep5();
         break;
       case 6:
-        errors = validateStep6();
+        isValid = validateStep6();
         break;
-      case 7:
-        errors = validateStep7();
-        break;
-      // ... Add validation for other steps
+      default:
+        isValid = true;
     }
-
-    if (Object.keys(errors).length === 0) {
+    
+    if (isValid) {
       setCurrentStep(prev => prev + 1);
-    } else {
-      // Show errors to user
-      Alert.alert('Please fix the following errors', Object.values(errors).join('\n'));
     }
   };
 
@@ -654,10 +979,17 @@ const SellerRegistrationScreen = () => {
 
       if (!result.canceled) {
         const documentUri = result.assets[0].uri;
-        setFormData(prev => ({
-          ...prev,
-          [`${type}Document`]: documentUri
-        }));
+        if (type === 'product') {
+          setFormData(prev => ({
+            ...prev,
+            productImage: documentUri
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            [`${type}Document`]: documentUri
+          }));
+        }
       }
     } catch (error) {
       console.error('Document upload error:', error);
@@ -709,34 +1041,56 @@ const SellerRegistrationScreen = () => {
           placeholder={translations[language].fields.fullName}
           value={formData.fullName}
           onChangeText={(text) => setFormData(prev => ({ ...prev, fullName: text }))}
+          autoCapitalize="words"
         />
         <TextInput
           style={styles.input}
           placeholder={translations[language].fields.mobile}
-          keyboardType="phone-pad"
           value={formData.mobile}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, mobile: text }))}
+          keyboardType="number-pad"
           maxLength={10}
-          onChangeText={(text) => {
-            const numericValue = text.replace(/[^0-9]/g, '');
-            if (numericValue.length <= 10) {
-              setFormData(prev => ({ ...prev, mobile: numericValue }));
-            }
-          }}
         />
-        <TextInput
-          style={styles.input}
-          placeholder={translations[language].fields.password}
-          secureTextEntry
-          value={formData.password}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={translations[language].fields.confirmPassword}
-          secureTextEntry
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, confirmPassword: text }))}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder={translations[language].fields.password}
+            value={formData.password}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={24}
+              color="#666"
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder={translations[language].fields.confirmPassword}
+            value={formData.confirmPassword}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, confirmPassword: text }))}
+            secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            <Ionicons
+              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+              size={24}
+              color="#666"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -752,10 +1106,10 @@ const SellerRegistrationScreen = () => {
               styles.businessTypeCard,
               formData.businessType === type.id && styles.selectedBusinessType
             ]}
-            onPress={() => setFormData(prev => ({ 
-              ...prev, 
+            onPress={() => setFormData(prev => ({
+              ...prev,
               businessType: type.id,
-              categories: type.categories
+              customBusinessType: type.id === 'other' ? prev.customBusinessType : ''
             }))}
           >
             <Text style={styles.businessTypeIcon}>{type.icon}</Text>
@@ -769,7 +1123,7 @@ const SellerRegistrationScreen = () => {
           </TouchableOpacity>
         ))}
       </ScrollView>
-      
+
       {formData.businessType === 'other' && (
         <View style={styles.customBusinessContainer}>
           <TextInput
@@ -831,11 +1185,12 @@ const SellerRegistrationScreen = () => {
       </TouchableOpacity>
       <View style={styles.inputGroup}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.textArea]}
           placeholder={translations[language].fields.address}
           value={formData.address}
           onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
           multiline
+          numberOfLines={3}
         />
         <TextInput
           style={styles.input}
@@ -845,100 +1200,58 @@ const SellerRegistrationScreen = () => {
         />
         <TextInput
           style={styles.input}
-          placeholder={translations[language].fields.city}
-          value={formData.city}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
-        />
-        <TextInput
-          style={styles.input}
           placeholder={translations[language].fields.pincode}
           value={formData.pincode}
           onChangeText={(text) => {
             const numericValue = text.replace(/[^0-9]/g, '');
             if (numericValue.length <= 6) {
               setFormData(prev => ({ ...prev, pincode: numericValue }));
+              if (numericValue.length === 6) {
+                getStateFromPincode(numericValue);
+              }
             }
           }}
           keyboardType="numeric"
           maxLength={6}
         />
+        <TextInput
+          style={styles.input}
+          placeholder={translations[language].fields.city}
+          value={formData.city}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder={translations[language].fields.state}
+          value={formData.state}
+          editable={false}
+        />
       </View>
     </View>
   );
+
+  const getStateFromPincode = async (pincode) => {
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data[0].Status === 'Success') {
+        const stateInfo = data[0].PostOffice[0].State;
+        const cityInfo = data[0].PostOffice[0].District;
+        setFormData(prev => ({
+          ...prev,
+          state: stateInfo,
+          city: cityInfo
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching state from pincode:', error);
+    }
+  };
 
   const renderStep5 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>{translations[language].steps[5]}</Text>
-      <View style={styles.paymentContainer}>
-        <View style={styles.paymentOption}>
-          <View style={styles.paymentHeader}>
-            <Ionicons name="phone-portrait-outline" size={24} color="#4CAF50" />
-            <Text style={styles.paymentTitle}>UPI Payment</Text>
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder={translations[language].fields.upiId}
-            value={formData.upiId}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, upiId: text }))}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
-
-        <View style={styles.paymentOption}>
-          <View style={styles.paymentHeader}>
-            <Ionicons name="cash-outline" size={24} color="#4CAF50" />
-            <Text style={styles.paymentTitle}>Cash on Delivery</Text>
-          </View>
-          <View style={styles.checkboxContainer}>
-            <TouchableOpacity
-              style={[styles.checkbox, formData.acceptsCod && styles.checkboxChecked]}
-              onPress={() => setFormData(prev => ({ ...prev, acceptsCod: !prev.acceptsCod }))}
-            >
-              {formData.acceptsCod && <Text style={styles.checkmark}>✓</Text>}
-            </TouchableOpacity>
-            <Text style={styles.checkboxLabel}>{translations[language].fields.acceptsCOD}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.bankDetailsButton}
-          onPress={() => setFormData(prev => ({ ...prev, showBankDetails: !prev.showBankDetails }))}
-        >
-          <Ionicons name="business-outline" size={24} color="#6C63FF" />
-          <Text style={styles.bankDetailsButtonText}>{translations[language].fields.bankAccount}</Text>
-          <Ionicons 
-            name={formData.showBankDetails ? "chevron-up" : "chevron-down"} 
-            size={24} 
-            color="#6C63FF" 
-          />
-        </TouchableOpacity>
-
-        {formData.showBankDetails && (
-          <View style={styles.bankDetailsContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={translations[language].fields.bankAccount}
-              value={formData.bankAccount}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, bankAccount: text }))}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={translations[language].fields.ifscCode}
-              value={formData.ifscCode}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, ifscCode: text.toUpperCase() }))}
-              autoCapitalize="characters"
-            />
-          </View>
-        )}
-      </View>
-    </View>
-  );
-
-  const renderStep6 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>{translations[language].steps[6]}</Text>
       <View style={styles.inputGroup}>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -949,8 +1262,8 @@ const SellerRegistrationScreen = () => {
           numberOfLines={3}
         />
 
-        <View style={styles.pickerContainer}>
-          <Text style={styles.pickerLabel}>{translations[language].fields.selectCategory}</Text>
+        <View style={styles.categoriesSection}>
+          <Text style={styles.sectionTitle}>{translations[language].fields.selectCategory}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
             {productCategories.map((category) => (
               <TouchableOpacity
@@ -963,7 +1276,7 @@ const SellerRegistrationScreen = () => {
                   const selected = formData.selectedCategories || [];
                   const newSelected = selected.includes(category.value)
                     ? selected.filter(c => c !== category.value)
-                    : [category.value];
+                    : [...selected, category.value];
                   setFormData(prev => ({ ...prev, selectedCategories: newSelected }));
                 }}
               >
@@ -977,12 +1290,24 @@ const SellerRegistrationScreen = () => {
         </View>
 
         {formData.selectedCategories?.includes('other') && (
-          <TextInput
-            style={styles.input}
-            placeholder={translations[language].fields.customCategory}
-            value={formData.customCategory}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, customCategory: text }))}
-          />
+          <View style={styles.voiceInputContainer}>
+            <TextInput
+              style={[styles.input, styles.voiceInput]}
+              placeholder={translations[language].fields.customCategory}
+              value={formData.customCategory}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, customCategory: text }))}
+            />
+            <TouchableOpacity
+              style={[styles.voiceButton, isRecording && recordingType === 'other' && styles.recordingButton]}
+              onPress={() => isRecording ? stopVoiceRecording() : startVoiceRecording('other')}
+            >
+              <Ionicons
+                name={isRecording && recordingType === 'other' ? "mic" : "mic-outline"}
+                size={24}
+                color={isRecording && recordingType === 'other' ? "#FF4444" : "#6C63FF"}
+              />
+            </TouchableOpacity>
+          </View>
         )}
 
         <TouchableOpacity 
@@ -991,7 +1316,7 @@ const SellerRegistrationScreen = () => {
         >
           <Ionicons name="camera-outline" size={24} color="#666" />
           <Text style={styles.uploadButtonText}>
-            {translations[language].fields.uploadProductImage}*
+            {translations[language].fields.uploadProductImage}
           </Text>
         </TouchableOpacity>
 
@@ -1000,6 +1325,7 @@ const SellerRegistrationScreen = () => {
             <Image 
               source={{ uri: formData.productImage }} 
               style={styles.previewImage}
+              resizeMode="cover"
             />
             <TouchableOpacity
               style={styles.removeImageButton}
@@ -1013,13 +1339,16 @@ const SellerRegistrationScreen = () => {
     </View>
   );
 
-  const renderStep7 = () => (
+  const renderStep6 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>{translations[language].steps[7]}</Text>
-      <View style={styles.agreementContainer}>
+      <Text style={styles.stepTitle}>{translations[language].steps[6]}</Text>
+      <ScrollView style={styles.agreementContainer}>
+        <Text style={styles.agreementTitle}>{translations[language].agreement.title}</Text>
         <Text style={styles.agreementText}>
-          {translations[language].agreement}
+          {translations[language].agreement.content}
         </Text>
+      </ScrollView>
+      <View style={styles.inputGroup}>
         <View style={styles.checkboxContainer}>
           <TouchableOpacity
             style={[styles.checkbox, formData.agreementAccepted && styles.checkboxChecked]}
@@ -1047,69 +1376,108 @@ const SellerRegistrationScreen = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => currentStep > 1 ? setCurrentStep(prev => prev - 1) : router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill,
-                { width: `${(currentStep / 7) * 100}%` }
-              ]} 
-            />
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => currentStep > 1 ? setCurrentStep(prev => prev - 1) : router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill,
+                  { width: `${(currentStep / 6) * 100}%` }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {translations[language].progress.replace('%s', currentStep).replace('%s', '6')}
+            </Text>
           </View>
-          <Text style={styles.progressText}>
-            {translations[language].progress.replace('%s', currentStep).replace('%s', '7')}
-          </Text>
         </View>
-      </View>
 
-      <ScrollView style={styles.content}>
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
-        {currentStep === 4 && renderStep4()}
-        {currentStep === 5 && renderStep5()}
-        {currentStep === 6 && renderStep6()}
-        {currentStep === 7 && renderStep7()}
-      </ScrollView>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+        >
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+          {currentStep === 4 && renderStep4()}
+          {currentStep === 5 && renderStep5()}
+          {currentStep === 6 && renderStep6()}
+          {/* Add padding at bottom to prevent content from being hidden behind footer */}
+          <View style={styles.bottomPadding} />
+        </ScrollView>
 
-      <View style={styles.footer}>
-        {currentStep < 7 ? (
-          <TouchableOpacity 
-            style={styles.nextButton}
-            onPress={handleNext}
-          >
-            <Text style={styles.nextButtonText}>{translations[language].buttons.next}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+        <View style={styles.footerContainer}>
+          <View style={styles.footer}>
+            {currentStep < 6 ? (
+              <TouchableOpacity 
+                style={styles.nextButton}
+                onPress={handleNext}
+              >
+                <Text style={styles.nextButtonText}>{translations[language].buttons.next}</Text>
+              </TouchableOpacity>
             ) : (
-              <Text style={styles.submitButtonText}>{translations[language].buttons.submit}</Text>
+              <TouchableOpacity 
+                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>{translations[language].buttons.submit}</Text>
+                )}
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-        )}
-      </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 120, // Increased padding to account for footer height
+  },
+  bottomPadding: {
+    height: 100, // Increased height to ensure content is not hidden
+  },
+  footerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    position: 'relative', // Changed from absolute to relative
+  },
+  footer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    width: '100%',
   },
   header: {
     padding: 16,
@@ -1168,19 +1536,19 @@ const styles = StyleSheet.create({
   businessTypeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
     padding: 16,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   selectedBusinessType: {
     borderColor: '#6C63FF',
-    backgroundColor: '#F8F9FF',
+    backgroundColor: '#F5F5FF',
   },
   businessTypeIcon: {
-    fontSize: 32,
+    fontSize: 24,
     marginRight: 16,
   },
   businessTypeContent: {
@@ -1194,12 +1562,7 @@ const styles = StyleSheet.create({
   },
   businessTypeSubtitle: {
     fontSize: 14,
-    color: '#666',
-  },
-  footer: {
-    padding: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    color: '#666666',
   },
   nextButton: {
     backgroundColor: '#6C63FF',
@@ -1275,8 +1638,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 16,
-    marginTop: 8,
+    backgroundColor: '#F8F9FA',
   },
   checkbox: {
     width: 20,
@@ -1311,6 +1673,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
+  agreementTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#1A1A1A',
+  },
   agreementText: {
     fontSize: 14,
     color: '#666666',
@@ -1319,10 +1687,9 @@ const styles = StyleSheet.create({
   },
   customBusinessContainer: {
     marginTop: 16,
-    gap: 16,
   },
   customBusinessInput: {
-    backgroundColor: '#F8F9FA',
+    marginBottom: 12,
   },
   paymentContainer: {
     gap: 20,
@@ -1395,6 +1762,11 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     position: 'relative',
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   removeImageButton: {
     position: 'absolute',
@@ -1402,6 +1774,54 @@ const styles = StyleSheet.create({
     right: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    padding: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 50,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    zIndex: 1,
+  },
+  voiceInputContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  voiceInput: {
+    paddingRight: 50,
+  },
+  voiceButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    backgroundColor: '#F0EEFF',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordingButton: {
+    backgroundColor: '#FFEEEE',
+  },
+  categoriesSection: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#1A1A1A',
   },
 });
 

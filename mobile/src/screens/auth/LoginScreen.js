@@ -1,6 +1,6 @@
 // Use the LoginScreen code we created earlier
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import axios from '../../config/axios';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,126 +105,132 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.headerContainer}>
-          <View style={styles.logoBox}>
-            <Ionicons name="shield-checkmark" size={40} color="#6C63FF" />
-          </View>
-          <Text style={styles.headerTitle}>Welcome to MyApp</Text>
-          <Text style={styles.headerSubtitle}>Your trusted service partner</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <View style={styles.inputBox}>
-              <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Mobile Number"
-                keyboardType="phone-pad"
-                placeholderTextColor="#666"
-                autoCapitalize="none"
-                value={formData.mobileno}
-                onChangeText={handlePhoneChange}
-                maxLength={10}
-              />
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.content}>
+          <View style={styles.headerContainer}>
+            <View style={styles.logoBox}>
+              <Ionicons name="shield-checkmark" size={40} color="#6C63FF" />
             </View>
-            {isSubmitted && errors.mobileno && (
-              <Text style={styles.errorText}>{errors.mobileno}</Text>
-            )}
+            <Text style={styles.headerTitle}>Welcome to MyApp</Text>
+            <Text style={styles.headerSubtitle}>Your trusted service partner</Text>
+          </View>
 
-            <View style={styles.inputBox}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry={!showPassword}
-                placeholderTextColor="#666"
-                autoCapitalize="none"
-                value={formData.password}
-                onChangeText={(text) => {
-                  setFormData(prev => ({ ...prev, password: text }));
-                  setErrors(prev => ({ ...prev, password: validateField('password', text) }));
-                }}
-              />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons 
-                  name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color="#666" 
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputBox}>
+                <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mobile Number"
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#666"
+                  autoCapitalize="none"
+                  value={formData.mobileno}
+                  onChangeText={handlePhoneChange}
+                  maxLength={10}
                 />
+              </View>
+              {isSubmitted && errors.mobileno && (
+                <Text style={styles.errorText}>{errors.mobileno}</Text>
+              )}
+
+              <View style={styles.inputBox}>
+                <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#666"
+                  autoCapitalize="none"
+                  value={formData.password}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, password: text }));
+                    setErrors(prev => ({ ...prev, password: validateField('password', text) }));
+                  }}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                    size={20} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+              </View>
+              {isSubmitted && errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
+            </View>
+
+            {serverError ? (
+              <Text style={styles.serverError}>{serverError}</Text>
+            ) : null}
+
+            <TouchableOpacity 
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Business Accounts</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <View style={styles.businessButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.businessButton} 
+                onPress={() => router.push('/(auth)/language-selection')}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="storefront-outline" size={24} color="#6C63FF" />
+                </View>
+                <View style={styles.businessTextContainer}>
+                  <Text style={styles.businessButtonTitle}>Seller Account</Text>
+                  <Text style={styles.businessButtonSubtext}>For individual sellers and shops</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.businessButton}
+                onPress={() => router.push('/(auth)/agency/login')}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="business-outline" size={24} color="#6C63FF" />
+                </View>
+                <View style={styles.businessTextContainer}>
+                  <Text style={styles.businessButtonTitle}>Agency Account</Text>
+                  <Text style={styles.businessButtonSubtext}>For agencies and organizations</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
               </TouchableOpacity>
             </View>
-            {isSubmitted && errors.password && (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            )}
-          </View>
-
-          {serverError ? (
-            <Text style={styles.serverError}>{serverError}</Text>
-          ) : null}
-
-          <TouchableOpacity 
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Business Accounts</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.businessButtonsContainer}>
-            <TouchableOpacity 
-              style={styles.businessButton} 
-              onPress={() => router.push('/(auth)/language-selection')}
-            >
-              <View style={styles.businessIconContainer}>
-                <Ionicons name="storefront-outline" size={24} color="#6C63FF" />
-              </View>
-              <View style={styles.businessTextContainer}>
-                <Text style={styles.businessButtonTitle}>Seller Account</Text>
-                <Text style={styles.businessButtonSubtext}>For individual sellers and shops</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
-            </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.businessButton}
-              onPress={() => router.push('/(auth)/agency/login')}
+              style={styles.registerButton} 
+              onPress={() => router.push('/(auth)/register')}
             >
-              <View style={styles.businessIconContainer}>
-                <Ionicons name="business-outline" size={24} color="#6C63FF" />
-              </View>
-              <View style={styles.businessTextContainer}>
-                <Text style={styles.businessButtonTitle}>Agency Account</Text>
-                <Text style={styles.businessButtonSubtext}>For agencies and organizations</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#6C63FF" />
+              <Text style={styles.registerText}>
+                Don't have an account? <Text style={styles.registerLink}>Sign Up</Text>
+              </Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity 
-            style={styles.registerButton} 
-            onPress={() => router.push('/(auth)/register')}
-          >
-            <Text style={styles.registerText}>
-              Don't have an account? <Text style={styles.registerLink}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -233,6 +239,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
