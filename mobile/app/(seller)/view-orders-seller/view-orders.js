@@ -110,129 +110,85 @@ const ViewOrders = () => {
                 </Text>
             </View>
 
-            {/* Order Basic Info */}
-            <View style={styles.basicInfo}>
-                <Text style={styles.orderIdText}>ऑर्डर नंबर: {item.orderId}</Text>
-                <Text style={styles.dateText}>
-                    <Ionicons name="calendar-outline" size={16} color="#718096" />
-                    {" "}ऑर्डर की तारीख: {formatDate(item.createdAt)}
-                </Text>
-            </View>
-
-            {/* Customer Info Section */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Ionicons name="person" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>ग्राहक की जानकारी</Text>
-                </View>
-                <View style={styles.customerInfo}>
-                    <Text style={styles.customerName}>
-                        नाम: {item.buyer?.firstname} {item.buyer?.lastname}
-                    </Text>
-                    {item.buyer?.phone && (
-                        <TouchableOpacity style={styles.phoneButton}>
-                            <Ionicons name="call" size={16} color="#48BB78" />
-                            <Text style={styles.phoneText}>{item.buyer.phone}</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-                {item.shippingAddress && (
-                    <View style={styles.addressBox}>
-                        <Ionicons name="location" size={16} color="#4A5568" />
-                        <Text style={styles.addressText}>
-                            पता: {[
-                                item.shippingAddress.street,
-                                item.shippingAddress.city,
-                                item.shippingAddress.state,
-                                item.shippingAddress.pincode
-                            ].filter(Boolean).join(', ')}
-                        </Text>
+            {/* Product Image and Info Row */}
+            <View style={styles.productRow}>
+                {/* Product Image */}
+                {item.items && item.items[0]?.product?.images && item.items[0].product.images.length > 0 ? (
+                    <Image 
+                        source={{ uri: item.items[0].product.images[0] }}
+                        style={styles.productImage}
+                        resizeMode="contain"
+                    />
+                ) : (
+                    <View style={[styles.productImage, styles.noImage]}>
+                        <Ionicons name="image-outline" size={30} color="#CBD5E0" />
                     </View>
                 )}
-            </View>
 
-            {/* Products Section */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Ionicons name="cart" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>ऑर्डर किए गए प्रोडक्ट</Text>
-                </View>
-                {item.items && item.items.map((orderItem, index) => (
-                    <View key={index} style={styles.productItem}>
-                        <View style={styles.productInfo}>
-                            {orderItem.image && (
-                                <Image 
-                                    source={{ uri: orderItem.image }} 
-                                    style={styles.productImage}
-                                />
-                            )}
-                            <View style={styles.productDetails}>
-                                <Text style={styles.productName}>
-                                    {orderItem.productName || 'प्रोडक्ट का नाम'}
-                                </Text>
-                                <Text style={styles.productQuantity}>
-                                    मात्रा: {orderItem.quantity || 1} पीस
-                                </Text>
-                            </View>
-                        </View>
-                        <Text style={styles.productPrice}>₹{orderItem.price || 0}</Text>
-                    </View>
-                ))}
-            </View>
-
-            {/* Payment Info */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Ionicons name="wallet" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>पेमेंट की जानकारी</Text>
-                </View>
-                <View style={styles.paymentDetails}>
-                    <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>प्रोडक्ट का मूल्य:</Text>
-                        <Text style={styles.paymentValue}>₹{item.subtotal}</Text>
-                    </View>
-                    <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>डिलीवरी चार्ज:</Text>
-                        <Text style={styles.paymentValue}>₹{item.shippingCost}</Text>
-                    </View>
-                    <View style={[styles.paymentRow, styles.totalRow]}>
-                        <Text style={styles.totalLabel}>कुल राशि:</Text>
-                        <Text style={styles.totalValue}>₹{item.total}</Text>
-                    </View>
+                {/* Product Name and Quantity */}
+                <View style={styles.productInfo}>
+                    <Text style={styles.productName}>
+                        {item.items[0]?.product?.name || 'प्रोडक्ट का नाम'}
+                    </Text>
+                    <Text style={styles.quantityText}>
+                        मात्रा: {item.items[0]?.quantity || 0} पीस
+                    </Text>
+                    <Text style={styles.priceText}>
+                        ₹{item.items[0]?.price || 0} प्रति पीस
+                    </Text>
                 </View>
             </View>
 
-            {/* Review Section */}
-            {item.review && (
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <FontAwesome name="star" size={20} color="#F6E05E" />
-                        <Text style={styles.sectionTitle}>ग्राहक की राय</Text>
-                    </View>
-                    <View style={styles.reviewBox}>
-                        <View style={styles.ratingContainer}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <FontAwesome
-                                    key={star}
-                                    name={star <= (item.review.rating || 0) ? "star" : "star-o"}
-                                    size={16}
-                                    color="#F6E05E"
-                                    style={styles.starIcon}
-                                />
-                            ))}
-                        </View>
-                        <Text style={styles.reviewText}>{item.review.comment || 'कोई टिप्पणी नहीं'}</Text>
-                    </View>
+            {/* Order Info */}
+            <View style={styles.orderInfo}>
+                <View style={styles.orderRow}>
+                    <Ionicons name="receipt-outline" size={20} color="#4A5568" />
+                    <Text style={styles.orderLabel}>ऑर्डर नंबर:</Text>
+                    <Text style={styles.orderValue}>{item.orderId}</Text>
                 </View>
-            )}
 
-            {/* Action Button */}
+                <View style={styles.orderRow}>
+                    <Ionicons name="calendar-outline" size={20} color="#4A5568" />
+                    <Text style={styles.orderLabel}>दिनांक:</Text>
+                    <Text style={styles.orderValue}>{formatDate(item.createdAt)}</Text>
+                </View>
+
+                <View style={styles.orderRow}>
+                    <Ionicons name="person-outline" size={20} color="#4A5568" />
+                    <Text style={styles.orderLabel}>ग्राहक:</Text>
+                    <Text style={styles.orderValue}>{item.buyer?.firstname} {item.buyer?.lastname}</Text>
+                </View>
+
+                <View style={styles.orderRow}>
+                    <Ionicons name="wallet-outline" size={20} color="#4A5568" />
+                    <Text style={styles.orderLabel}>कुल राशि:</Text>
+                    <Text style={styles.totalValue}>₹{item.total}</Text>
+                </View>
+
+                {/* Payment Status */}
+                <View style={[styles.paymentBadge, { 
+                    backgroundColor: item.payment?.status === 'paid' ? '#48BB7820' : '#FFA50020' 
+                }]}>
+                    <Ionicons 
+                        name={item.payment?.status === 'paid' ? "checkmark-circle" : "time"} 
+                        size={20} 
+                        color={item.payment?.status === 'paid' ? '#48BB78' : '#FFA500'} 
+                    />
+                    <Text style={[styles.paymentText, { 
+                        color: item.payment?.status === 'paid' ? '#48BB78' : '#FFA500' 
+                    }]}>
+                        {item.payment?.status === 'paid' ? 'भुगतान प्राप्त' : 'भुगतान बाकी'}
+                    </Text>
+                </View>
+            </View>
+
+            {/* View Details Button */}
             <TouchableOpacity 
-                style={styles.actionButton}
+                style={styles.viewDetailsButton}
                 onPress={() => router.push(`/(seller)/order-details/${item._id}`)}
             >
-                <Text style={styles.actionButtonText}>पूरी जानकारी देखें</Text>
-                <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Text style={styles.viewDetailsText}>पूरी जानकारी देखें</Text>
+                <MaterialIcons name="arrow-forward" size={24} color="#FFFFFF" />
             </TouchableOpacity>
         </View>
     );
@@ -251,6 +207,7 @@ const ViewOrders = () => {
             <Text style={styles.header}>मेरे ऑर्डर</Text>
             {orders.length === 0 ? (
                 <View style={styles.noOrders}>
+                    <Ionicons name="cart-outline" size={64} color="#A0AEC0" />
                     <Text style={styles.noOrdersText}>कोई ऑर्डर नहीं मिला</Text>
                 </View>
             ) : (
@@ -284,16 +241,17 @@ const styles = StyleSheet.create({
         color: '#2D3748',
         marginBottom: 16,
         textAlign: 'center',
+        paddingVertical: 8,
     },
     listContainer: {
         paddingBottom: 16,
     },
     orderCard: {
         backgroundColor: 'white',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
-        marginBottom: 12,
-        elevation: 2,
+        marginBottom: 16,
+        elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -315,178 +273,67 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     statusText: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
     },
-    section: {
-        marginTop: 16,
-        padding: 12,
+    orderInfo: {
         backgroundColor: '#F7FAFC',
-        borderRadius: 8,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        borderRadius: 12,
+        padding: 12,
         marginBottom: 12,
     },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2D3748',
-        marginLeft: 8,
-    },
-    customerInfo: {
+    orderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 8,
+        paddingVertical: 4,
     },
-    customerName: {
+    orderLabel: {
         fontSize: 16,
-        color: '#2D3748',
-        marginBottom: 4,
-    },
-    phoneButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#48BB7820',
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
-    },
-    phoneText: {
-        color: '#48BB78',
-        marginLeft: 4,
-        fontSize: 14,
-    },
-    addressBox: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        backgroundColor: '#EDF2F7',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 8,
-    },
-    addressText: {
-        flex: 1,
-        marginLeft: 8,
         color: '#4A5568',
-        fontSize: 14,
+        marginLeft: 8,
+        marginRight: 8,
+        minWidth: 100,
     },
-    productItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-    },
-    productInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    productImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 8,
-        marginRight: 12,
-    },
-    productDetails: {
-        flex: 1,
-    },
-    productName: {
-        fontSize: 14,
+    orderValue: {
+        fontSize: 16,
         color: '#2D3748',
         fontWeight: '500',
-    },
-    productQuantity: {
-        fontSize: 12,
-        color: '#718096',
-        marginTop: 4,
-    },
-    productPrice: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2D3748',
-    },
-    paymentDetails: {
-        backgroundColor: '#EDF2F7',
-        padding: 12,
-        borderRadius: 8,
-    },
-    paymentRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    paymentLabel: {
-        fontSize: 14,
-        color: '#718096',
-    },
-    paymentValue: {
-        fontSize: 14,
-        color: '#2D3748',
-    },
-    totalRow: {
-        borderTopWidth: 1,
-        borderTopColor: '#CBD5E0',
-        paddingTop: 8,
-        marginTop: 8,
-    },
-    totalLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2D3748',
+        flex: 1,
     },
     totalValue: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2D3748',
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#48BB78',
     },
-    reviewBox: {
-        backgroundColor: '#FFFFF0',
-        padding: 12,
-        borderRadius: 8,
-    },
-    ratingContainer: {
+    paymentBadge: {
         flexDirection: 'row',
-        marginBottom: 8,
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginTop: 8,
     },
-    starIcon: {
-        marginRight: 4,
+    paymentText: {
+        fontSize: 16,
+        marginLeft: 8,
+        fontWeight: '500',
     },
-    reviewText: {
-        fontSize: 14,
-        color: '#4A5568',
-        fontStyle: 'italic',
-    },
-    actionButton: {
+    viewDetailsButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#6B46C1',
         paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
-        marginTop: 16,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        marginTop: 8,
     },
-    actionButtonText: {
+    viewDetailsText: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
         marginRight: 8,
-    },
-    basicInfo: {
-        marginBottom: 16,
-    },
-    orderIdText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2D3748',
-        marginBottom: 4,
-    },
-    dateText: {
-        fontSize: 14,
-        color: '#718096',
     },
     centered: {
         flex: 1,
@@ -502,10 +349,50 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingVertical: 32,
     },
     noOrdersText: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#718096',
+        marginTop: 16,
+    },
+    productRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        backgroundColor: '#F7FAFC',
+        padding: 12,
+        borderRadius: 12,
+    },
+    productImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        backgroundColor: '#fff',
+    },
+    noImage: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F7FAFC',
+    },
+    productInfo: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    productName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2D3748',
+        marginBottom: 4,
+    },
+    quantityText: {
+        fontSize: 14,
+        color: '#4A5568',
+        marginBottom: 2,
+    },
+    priceText: {
+        fontSize: 14,
+        color: '#4A5568',
     },
 });
 

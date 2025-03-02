@@ -7,7 +7,8 @@ import {
     cancelOrder,
     getSellerOrders,
     updateOrderStatus,
-    getBuyerOrdersWithDetails
+    getBuyerOrdersWithDetails,
+    getCustomerOrderHistory
 } from '../controllers/order.controller.js';
 import Order from '../models/order.model.js';
 import Review from '../models/review.model.js';
@@ -24,6 +25,9 @@ router.get('/my-orders-details', getBuyerOrdersWithDetails);
 // Seller routes - Move this BEFORE the :id route
 router.get('/seller-orders', getSellerOrders);
 router.put('/update-status/:id', updateOrderStatus);
+
+// Customer history route
+router.get('/customer/:id/history', getCustomerOrderHistory);
 
 // Generic routes with :id parameter - Keep these AFTER specific routes
 router.get('/:id', getOrderDetails);

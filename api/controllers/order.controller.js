@@ -344,8 +344,8 @@ export const getMyOrders = async (req, res) => {
 export const getOrderDetails = async (req, res) => {
     try {
         const order = await Order.findOne({ 
-            _id: req.params.id,
-            buyer: req.user._id 
+            _id: req.params.id
+            // buyer: req.user._id 
         })
         .populate('items.product', 'name images price')
         .populate('items.seller', 'firstname lastname');
@@ -672,6 +672,87 @@ export const getBuyerOrdersWithDetails = async (req, res) => {
         res.status(400).json({
             success: false,
             message: error.message
+        });
+    }
+};
+
+// Get customer order history
+export const getCustomerOrderHistory = async (req, res) => {
+    try {
+        const customerId = req.params.id;
+
+        // Get all orders for this customer with product details
+        const orders = await Order.find({ buyer: customerId })
+            .populate('items.product', 'name images price')
+            .sort({ createdAt: -1 });
+
+        // Calculate statistics
+        const totalOrders = orders.length;
+        const successfulDeliveries = orders.filter(order => 
+            order.status.toLowerCase() === 'delivered' || 
+            order.status.toLowerCase() === 'completed'
+        ).length;
+        const totalSpent = orders.reduce((total, order) => total + order.total, 0);
+        const firstOrderDate = orders.length > 0 ? orders[orders.length - 1].createdAt : null;
+
+        // Get repeated products
+        const productPurchaseCount = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                const productId = item.product._id.toString();
+                if (!productPurchaseCount[productId]) {
+                    productPurchaseCount[productId] = {
+                        count: 0,
+                        name: item.product.name,
+                        image: item.product.images[0],
+                        lastPurchased: null
+                    };
+                }
+                productPurchaseCount[productId].count += item.quantity;
+                productPurchaseCount[productId].lastPurchased = order.createdAt;
+            });
+        });
+
+        // Filter products purchased more than once
+        const repeatedProducts = Object.entries(productPurchaseCount)
+            .filter(([_, data]) => data.count > 1)
+            .map(([productId, data]) => ({
+                productId,
+                name: data.name,
+                image: data.image,
+                totalPurchased: data.count,
+                lastPurchased: data.lastPurchased
+            }));
+
+        res.json({
+            success: true,
+            customerSummary: {
+                totalOrders,
+                successfulDeliveries,
+                totalSpent,
+                firstOrderDate,
+                loyaltyStatus: totalOrders > 5 ? 'नियमित ग्राहक' : 'नया ग्राहक'
+            },
+            repeatedProducts,
+            recentOrders: orders.slice(0, 5).map(order => ({
+                orderId: order._id,
+                date: order.createdAt,
+                status: order.status,
+                total: order.total,
+                items: order.items.map(item => ({
+                    name: item.product.name,
+                    image: item.product.images[0],
+                    quantity: item.quantity,
+                    price: item.price
+                }))
+            }))
+        });
+
+    } catch (error) {
+        console.error('Error fetching customer history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch customer history'
         });
     }
 };
