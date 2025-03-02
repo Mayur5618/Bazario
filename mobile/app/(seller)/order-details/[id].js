@@ -135,8 +135,20 @@ const OrderDetails = () => {
 
                 <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>ऑर्डर की तारीख:</Text>
-                    <Text style={styles.infoValue}>{formatDate(order.orderDate)}</Text>
+                    <Text style={styles.infoValue}>{formatDate(order.createdAt || order.orderDate)}</Text>
                 </View>
+
+                {(order.status.toLowerCase() === 'completed' || 
+                  order.status.toLowerCase() === 'delivered' || 
+                  order.status === 'Completed' || 
+                  order.status === 'Delivered') && (
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>पूरा होने की तारीख:</Text>
+                        <Text style={[styles.infoValue, { color: '#48BB78' }]}>
+                            {formatDate(order.deliveryDate || order.updatedAt)}
+                        </Text>
+                    </View>
+                )}
             </View>
 
             {/* Products Section */}
@@ -389,9 +401,41 @@ const OrderDetails = () => {
                                         />
                                         <View style={styles.repeatedInfo}>
                                             <Text style={styles.repeatedName}>{product.name}</Text>
-                                            <Text style={styles.repeatedCount}>
-                                                कुल खरीदे: {product.totalPurchased} बार
-                                            </Text>
+                                            <View style={styles.repeatedStatusRow}>
+                                                <Text style={styles.repeatedCount}>
+                                                    कुल खरीदे: {product.totalPurchased} बार
+                                                </Text>
+                                                <View style={[
+                                                    styles.statusIndicator,
+                                                    { backgroundColor: product.status?.toLowerCase() === 'completed' || 
+                                                                      product.status?.toLowerCase() === 'delivered' 
+                                                                      ? '#48BB7820' : '#FFA50020' }
+                                                ]}>
+                                                    <Ionicons 
+                                                        name={product.status?.toLowerCase() === 'completed' || 
+                                                              product.status?.toLowerCase() === 'delivered'
+                                                              ? "checkmark-circle" 
+                                                              : "time"} 
+                                                        size={16} 
+                                                        color={product.status?.toLowerCase() === 'completed' || 
+                                                               product.status?.toLowerCase() === 'delivered'
+                                                               ? '#48BB78' 
+                                                               : '#FFA500'} 
+                                                    />
+                                                    <Text style={[
+                                                        styles.statusText,
+                                                        { color: product.status?.toLowerCase() === 'completed' || 
+                                                                 product.status?.toLowerCase() === 'delivered'
+                                                                 ? '#48BB78' 
+                                                                 : '#FFA500' }
+                                                    ]}>
+                                                        {product.status?.toLowerCase() === 'completed' || 
+                                                         product.status?.toLowerCase() === 'delivered'
+                                                         ? 'पूरा हो गया' 
+                                                         : 'चल रहा है'}
+                                                    </Text>
+                                                </View>
+                                            </View>
                                             <Text style={styles.repeatedDate}>
                                                 आखिरी खरीद: {formatDate(product.lastPurchased)}
                                             </Text>
@@ -781,6 +825,24 @@ const styles = StyleSheet.create({
     customerBadgeText: {
         fontSize: 14,
         color: '#48BB78',
+        fontWeight: '500',
+    },
+    repeatedStatusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginVertical: 4,
+    },
+    statusIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    statusText: {
+        fontSize: 12,
+        marginLeft: 4,
         fontWeight: '500',
     },
     centered: {

@@ -680,13 +680,17 @@ export const getBuyerOrdersWithDetails = async (req, res) => {
 export const getCustomerOrderHistory = async (req, res) => {
     try {
         const customerId = req.params.id;
+        const sellerId = req.user._id; // Get current seller's ID
 
-        // Get all orders for this customer with product details
-        const orders = await Order.find({ buyer: customerId })
-            .populate('items.product', 'name images price')
-            .sort({ createdAt: -1 });
+        // Get all orders for this customer from current seller only
+        const orders = await Order.find({ 
+            buyer: customerId,
+            'items.seller': sellerId // Filter by seller ID in items array
+        })
+        .populate('items.product')
+        .sort({ createdAt: -1 });
 
-        // Calculate statistics
+        // Calculate statistics for orders from this seller only
         const totalOrders = orders.length;
         const successfulDeliveries = orders.filter(order => 
             order.status.toLowerCase() === 'delivered' || 
@@ -695,34 +699,36 @@ export const getCustomerOrderHistory = async (req, res) => {
         const totalSpent = orders.reduce((total, order) => total + order.total, 0);
         const firstOrderDate = orders.length > 0 ? orders[orders.length - 1].createdAt : null;
 
-        // Get repeated products
-        const productPurchaseCount = {};
+        // Get repeated products (only for current seller's products)
+        const productPurchases = new Map();
         orders.forEach(order => {
             order.items.forEach(item => {
-                const productId = item.product._id.toString();
-                if (!productPurchaseCount[productId]) {
-                    productPurchaseCount[productId] = {
-                        count: 0,
-                        name: item.product.name,
-                        image: item.product.images[0],
-                        lastPurchased: null
-                    };
+                if (item.seller.toString() === sellerId.toString()) {
+                    const productId = item.product._id.toString();
+                    if (!productPurchases.has(productId)) {
+                        productPurchases.set(productId, {
+                            productId,
+                            name: item.product.name,
+                            image: item.product.images[0],
+                            totalPurchased: 0,
+                            lastPurchased: null,
+                            status: order.status
+                        });
+                    }
+                    const product = productPurchases.get(productId);
+                    product.totalPurchased += item.quantity;
+                    if (!product.lastPurchased || new Date(order.createdAt) > new Date(product.lastPurchased)) {
+                        product.lastPurchased = order.createdAt;
+                        product.status = order.status;
+                    }
                 }
-                productPurchaseCount[productId].count += item.quantity;
-                productPurchaseCount[productId].lastPurchased = order.createdAt;
             });
         });
 
-        // Filter products purchased more than once
-        const repeatedProducts = Object.entries(productPurchaseCount)
-            .filter(([_, data]) => data.count > 1)
-            .map(([productId, data]) => ({
-                productId,
-                name: data.name,
-                image: data.image,
-                totalPurchased: data.count,
-                lastPurchased: data.lastPurchased
-            }));
+        // Convert to array and filter products purchased more than once
+        const repeatedProducts = Array.from(productPurchases.values())
+            .filter(product => product.totalPurchased > 1)
+            .sort((a, b) => new Date(b.lastPurchased) - new Date(a.lastPurchased));
 
         res.json({
             success: true,
@@ -739,12 +745,7 @@ export const getCustomerOrderHistory = async (req, res) => {
                 date: order.createdAt,
                 status: order.status,
                 total: order.total,
-                items: order.items.map(item => ({
-                    name: item.product.name,
-                    image: item.product.images[0],
-                    quantity: item.quantity,
-                    price: item.price
-                }))
+                items: order.items.filter(item => item.seller.toString() === sellerId.toString())
             }))
         });
 
