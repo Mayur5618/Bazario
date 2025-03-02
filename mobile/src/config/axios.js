@@ -1,17 +1,18 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Get the development server URL
 const getDevelopmentUrl = () => {
   if (__DEV__) {
     // For Android Emulator
     if (Platform.OS === 'android') {
-      return 'http://192.168.119.193:5000';  // Corrected IP address for development
+      return 'http://192.168.20.193:5000';  // Corrected IP address for development
     }
     
     // For iOS Simulator or Physical Device
-    return 'http://192.168.119.193:5000';  // Corrected IP address for development // Update yaha karo
+    return 'http://192.168.20.193:5000';  // Corrected IP address for development // Update yaha karo
 //  Corrected IP address for development
  // Updated local IP address
     // above make change
@@ -29,15 +30,25 @@ const instance = axios.create({
   withCredentials: true
 });
 
-// Add request interceptor to log requests during development
+// Add request interceptor for authentication
 instance.interceptors.request.use(
-  config => {
-    if (__DEV__) {
-      console.log('Request:', {
-        url: config.url,
-        method: config.method,
-        data: config.data
-      });
+  async config => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      
+      if (__DEV__) {
+        console.log('Request:', {
+          url: config.url,
+          method: config.method,
+          headers: config.headers,
+          data: config.data
+        });
+      }
+    } catch (error) {
+      console.error('Error adding token to request:', error);
     }
     return config;
   },
@@ -55,11 +66,14 @@ instance.interceptors.response.use(
     return response;
   },
   error => {
-    console.log('Error details:', {
-      message: error.message,
-      code: error.code,
-      url: error.config?.url
-    });
+    if (__DEV__) {
+      console.log('Error details:', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        response: error.response?.data
+      });
+    }
     
     if (error.code === 'ERR_NETWORK') {
       // Network error handling

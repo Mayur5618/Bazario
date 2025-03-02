@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const SellerDashboard = () => {
   const router = useRouter();
@@ -107,25 +108,30 @@ const SellerDashboard = () => {
       </View>
 
       <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.quickActionsContainer}>
-        <QuickAction 
-          title="Add Product"
-          icon="add-circle-outline"
-          color="#6C63FF"
+      <View style={styles.quickActions}>
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.addProductButton]}
           onPress={() => router.push('/(seller)/add-product')}
-        />
-        <QuickAction 
-          title="View Orders"
-          icon="list-outline"
-          color="#00C853"
-          onPress={() => {/* TODO: Navigate to orders */}}
-        />
-        <QuickAction 
-          title="Profile"
-          icon="person-outline"
-          color="#2196F3"
-          onPress={() => {/* TODO: Navigate to profile */}}
-        />
+        >
+          <MaterialIcons name="add-circle-outline" size={24} color="#6B46C1" />
+          <Text style={styles.actionButtonText}>Add Product</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.viewOrdersButton]}
+          onPress={() => router.push('/(seller)/view-orders-seller')}
+        >
+          <MaterialIcons name="list-alt" size={24} color="#48BB78" />
+          <Text style={styles.actionButtonText}>View Orders</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.quickActionButton}
+          onPress={() => router.push('/(seller)/profile')}
+        >
+          <Ionicons name="person" size={24} color="#6C63FF" />
+          <Text style={styles.quickActionText}>Profile</Text>
+        </TouchableOpacity>
         <QuickAction 
           title="Settings"
           icon="settings-outline"
@@ -207,10 +213,37 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 12,
   },
-  quickActionsContainer: {
+  quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 12,
+  },
+  actionButton: {
+    width: '46%',
+    margin: '2%',
+    height: 100,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addProductButton: {
+    backgroundColor: '#6B46C110',
+  },
+  viewOrdersButton: {
+    backgroundColor: '#48BB7810',
+  },
+  actionButtonText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  quickActionButton: {
+    width: '46%',
+    margin: '2%',
+    height: 100,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quickAction: {
     width: '46%',

@@ -22,7 +22,39 @@ export default function SellerLayout() {
       <Stack.Screen 
         name="add-product"
         options={{
-          title: 'नया प्रोडक्ट जोड़ें',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="profile"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="view-orders"
+        options={{
+          title: "ऑर्डर्स",
+          headerStyle: {
+            backgroundColor: '#6B46C1',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+        }}
+      />
+      <Stack.Screen 
+        name="order-details/[id]"
+        options={{
+          title: "ऑर्डर विवरण",
+          headerStyle: {
+            backgroundColor: '#6B46C1',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
         }}
       />
     </Stack>
