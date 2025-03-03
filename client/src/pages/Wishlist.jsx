@@ -137,11 +137,6 @@ const Wishlist = () => {
   };
 
   const handleAddToCart = async (productId) => {
-    if (!userData) {
-      toast.error("Please login to add items to cart");
-      return;
-    }
-
     if (isAddingToCart[productId]) return;
 
     try {
@@ -151,9 +146,7 @@ const Wishlist = () => {
         productId,
         quantity: 1
       }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        withCredentials: true
       });
 
       if (response.data.success) {

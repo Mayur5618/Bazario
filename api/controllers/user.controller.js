@@ -753,3 +753,34 @@ export const uploadProfileImage = async (req, res) => {
         });
     }
 };
+
+// Function to get user profile
+export const getProfile = async (req, res) => {
+    try {
+        const user = await Buyer.findById(req.user._id).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            user: {
+                firstName: user.firstname,
+                lastName: user.lastname,
+                email: user.email,
+                phone: user.mobileno
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching profile',
+            error: error.message
+        });
+    }
+};

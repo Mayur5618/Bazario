@@ -5,7 +5,7 @@ import { uploadToFirebase, deleteFromFirebase } from '../utilities/firebase.js';
 export const createReview = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { rating, comment, orderId } = req.body;
+        const { rating, comment, orderId, images } = req.body;
         const userId = req.user._id;
 
         console.log('Review creation attempt:', {
@@ -14,7 +14,8 @@ export const createReview = async (req, res) => {
             orderId,
             rating,
             hasComment: !!comment,
-            body: req.body
+            hasImages: !!images,
+            imagesCount: images?.length
         });
 
         if (!orderId) {
@@ -73,9 +74,25 @@ export const createReview = async (req, res) => {
 
         // Process and upload images if provided
         let imageUrls = [];
-        if (req.files && req.files.images) {
-            const images = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-            imageUrls = await Promise.all(images.map(image => uploadToFirebase(image)));
+        if (images && Array.isArray(images)) {
+            try {
+                const uploadPromises = images.map(async (base64String) => {
+                    if (base64String && typeof base64String === 'string' && base64String.startsWith('data:')) {
+                        return await uploadToFirebase(base64String);
+                    }
+                    return null;
+                });
+
+                imageUrls = (await Promise.all(uploadPromises)).filter(url => url !== null);
+                console.log('Uploaded image URLs:', imageUrls);
+            } catch (uploadError) {
+                console.error('Image upload error:', uploadError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to upload images',
+                    error: uploadError.message
+                });
+            }
         }
 
         // Create the review
@@ -88,7 +105,10 @@ export const createReview = async (req, res) => {
             images: imageUrls
         };
 
-        console.log('Creating review with data:', reviewData);
+        console.log('Creating review with data:', {
+            ...reviewData,
+            imagesCount: imageUrls.length
+        });
 
         const newReview = await Review.create(reviewData);
         const populatedReview = await Review.findById(newReview._id)

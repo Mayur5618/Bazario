@@ -117,7 +117,7 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
 
                         return {
                             url: compressedBase64,
-                            file: file
+                            file: file.name
                         };
                     } catch (error) {
                         toast.error(`Error processing ${file.name}: ${error.message}`);
@@ -135,6 +135,9 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
                 return;
             }
 
+            // Log the processed images
+            console.log('Processed images:', validImages);
+
             setImages(prev => [...prev, ...validImages]);
             toast.success(`Successfully added ${validImages.length} image${validImages.length > 1 ? 's' : ''}`);
         } catch (error) {
@@ -142,6 +145,8 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
             toast.error('Error processing images. Please try smaller images.');
         } finally {
             setIsSubmitting(false);
+            // Reset the file input
+            e.target.value = '';
         }
     };
 
@@ -170,10 +175,13 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
 
         setIsSubmitting(true);
         try {
+            // Log the images being sent
+            console.log('Images before submission:', images);
+            
             const reviewData = {
                 rating,
-                comment,
-                images: images.map(img => img.url),
+                comment: comment.trim(),
+                images: images, // Send the entire images array with url property
                 orderId
             };
 
@@ -183,6 +191,12 @@ const ProductReviewSection = ({ productId, userId, orderId, onReviewSubmit }) =>
             setRating(0);
             setComment('');
             setImages([]);
+            
+            // Scroll to the reviews section
+            const reviewsSection = document.querySelector('#reviews-section');
+            if (reviewsSection) {
+                reviewsSection.scrollIntoView({ behavior: 'smooth' });
+            }
         } catch (error) {
             // Extract meaningful error message
             let errorMessage = 'Failed to submit review';

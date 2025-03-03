@@ -1,5 +1,5 @@
 import express from 'express';
-import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile, getSellerData, uploadProfileImage } from'../controllers/user.controller.js';
+import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile, getSellerData, uploadProfileImage, getProfile } from'../controllers/user.controller.js';
 import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
@@ -15,6 +15,7 @@ router.post('/sign-out', signOut);
 router.post('/check-mobile', checkMobileExists);
 router.put('/profile', protect, updateProfile);
 router.post('/upload-profile-image', protect, uploadProfileImage); // New route for uploading profile image
+router.get('/profile', protect, getProfile); // New route to get user profile
 
 router.get('/sellers/:id', getSellerData);
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,12 +9,14 @@ import "../styles/catelog.css";
 import "../styles/recentlyViewed.css";
 import { addToWishlist, removeFromWishlist, setWishlistItems } from '../store/wishlistSlice';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import ProductCard from './ProductCard';
 
 const ProductCatalog = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
   const [cartItemsMap, setCartItemsMap] = useState({});
@@ -241,28 +242,40 @@ const ProductCatalog = () => {
     }
   };
 
-  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `/api/products${
-            selectedCategory !== "all" ? `?category=${selectedCategory}` : ""
-          }`
-        );
-        setProducts(response.data.products);
-        setError(null);
-      } catch (err) {
-        setError("Failed to fetch products");
-        toast.error("Failed to load products");
+        const searchParams = new URLSearchParams(location.search);
+        const category = searchParams.get('category');
+        
+        console.log('Fetching products with category:', category);
+        
+        const response = await axios.get('/api/products/filtered', {
+          params: {
+            category: category || '',
+            platformType: 'b2c',
+            limit: 20
+          }
+        });
+
+        console.log('API Response:', response.data);
+
+        if (response.data.success) {
+          setProducts(response.data.products);
+        } else {
+          setError('Failed to fetch products');
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError(error.response?.data?.message || 'Failed to fetch products');
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [selectedCategory]);
+  }, [location.search]);
 
   const handleImageLoad = (productId) => {
     setImageLoading(prev => ({
@@ -273,15 +286,23 @@ const ProductCatalog = () => {
 
   const categories = [
     { id: "all", name: "All Products" },
-    { id: "vegetable", name: "Vegetables" },
-    { id: "Home-Cooked Food", name: "Home Cooked Food" },
-    { id: "Traditional-Pickles", name: "Traditional Pickles" },
-    { id: "Seasonal Foods", name: "Seasonal Foods" },
+    { id: "vegetables", name: "Vegetables" },
+    { id: "home-cooked", name: "Home Cooked Food" },
+    { id: "pickles", name: "Traditional Pickles" },
+    { id: "seasonal", name: "Seasonal Foods" },
   ];
+
+  const handleCategoryClick = (categoryId) => {
+    if (categoryId === 'all') {
+      navigate('/products');
+    } else {
+      navigate(`/products?category=${categoryId}`);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-[300px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
@@ -308,11 +329,11 @@ const ProductCatalog = () => {
         {categories.map((category) => (
           <button
             key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            className={`px-6 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
-              selectedCategory === category.id
-                ? 'bg-blue-500 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            onClick={() => handleCategoryClick(category.id)}
+            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+              new URLSearchParams(location.search).get('category') === category.id
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {category.name}
@@ -323,7 +344,7 @@ const ProductCatalog = () => {
       {/* Products Grid */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={selectedCategory}
+          key={location.search}
           variants={containerVariants}
           initial="hidden"
           animate="show"
@@ -378,13 +399,15 @@ const ProductCatalog = () => {
               </div>
 
               <div className="p-4">
-                <h3 className="text-lg font-medium text-gray-900 truncate">
-                  {product.name}
-                </h3>
+                <Link to={`/product/${product._id}`}>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                    {product.name}
+                  </h3>
+                </Link>
                 
                 <div className="mt-2 flex items-center justify-between">
                   <div>
-                    <p className="text-gray-900 font-medium">₹{product.price}</p>
+                    <p className="text-purple-600 font-bold">₹{product.price}</p>
                     <p className="text-sm text-gray-500">per {product.unitSize} {product.unitType}</p>
                   </div>
                   <div className="flex flex-col items-end">
@@ -406,6 +429,12 @@ const ProductCatalog = () => {
           ))}
         </motion.div>
       </AnimatePresence>
+      {products.length === 0 && (
+        <div className="col-span-full text-center py-12">
+          <h3 className="text-lg font-medium text-gray-900">No products found</h3>
+          <p className="mt-1 text-gray-500">Try adjusting your search or filter criteria</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -281,11 +281,6 @@ const Home = () => {
           </p>
         </div>
       </div>
-
-      {/* Recently Viewed Section with updated styling */}
-     
-
-     
     </div>
   );
 };

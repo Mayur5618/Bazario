@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FaStar, FaHeart, FaEdit, FaTrash, FaRegHeart, FaTimes } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 const ImagePreviewModal = ({ isOpen, onClose, imageUrl }) => {
     if (!isOpen) return null;
@@ -32,7 +31,7 @@ const ImageWithSkeleton = ({ src, alt, onClick }) => {
 
     return (
         <div 
-            className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 cursor-pointer"
+            className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:scale-105 transition-transform"
             onClick={onClick}
         >
             <AnimatePresence>
@@ -51,7 +50,7 @@ const ImageWithSkeleton = ({ src, alt, onClick }) => {
                 alt={alt}
                 className={`w-full h-full object-cover transition-all duration-300 ${
                     isLoading ? 'opacity-0' : 'opacity-100'
-                } hover:scale-110`}
+                }`}
                 onLoad={() => setIsLoading(false)}
                 onError={() => {
                     setIsLoading(false);
@@ -68,6 +67,36 @@ const ImageWithSkeleton = ({ src, alt, onClick }) => {
     );
 };
 
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                <h3 className="text-lg font-semibold mb-4">Delete Review</h3>
+                <p className="text-gray-600 mb-6">Are you sure you want to delete this review? This action cannot be undone.</p>
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => {
+                            onConfirm();
+                            onClose();
+                        }}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ReviewItem = ({ review, currentUserId, onDelete, onLike, refreshReviews }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedRating, setEditedRating] = useState(review.rating);
@@ -78,6 +107,25 @@ const ReviewItem = ({ review, currentUserId, onDelete, onLike, refreshReviews })
 
     const isOwner = currentUserId === review.buyer._id;
     const isLiked = review.likes?.includes(currentUserId);
+
+    const handleDelete = async () => {
+        try {
+            setIsSubmitting(true);
+            const success = await onDelete(review._id);
+            
+            if (success) {
+                toast.success('Review deleted successfully');
+            } else {
+                toast.error('Failed to delete review');
+            }
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            toast.error(error.message || 'Failed to delete review');
+        } finally {
+            setIsSubmitting(false);
+            setShowDeleteModal(false);
+        }
+    };
 
     return (
         <motion.div
@@ -150,12 +198,12 @@ const ReviewItem = ({ review, currentUserId, onDelete, onLike, refreshReviews })
                 <p className="text-gray-700 text-sm">{review.comment}</p>
                 
                 {review.images?.length > 0 && (
-                    <div className="flex space-x-2 mt-3">
+                    <div className="flex flex-wrap gap-3 mt-4">
                         {review.images.map((image, index) => (
                             <ImageWithSkeleton
                                 key={index}
                                 src={image}
-                                alt={`Review ${index + 1}`}
+                                alt={`Review image ${index + 1}`}
                                 onClick={() => setSelectedImage(image)}
                             />
                         ))}
@@ -163,16 +211,16 @@ const ReviewItem = ({ review, currentUserId, onDelete, onLike, refreshReviews })
                 )}
             </div>
 
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => !isSubmitting && setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+            />
+
             <ImagePreviewModal
                 isOpen={!!selectedImage}
                 onClose={() => setSelectedImage(null)}
                 imageUrl={selectedImage}
-            />
-
-            <DeleteConfirmationModal
-                isOpen={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
-                onConfirm={() => onDelete(review._id)}
             />
         </motion.div>
     );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart } from "react-icons/fa";
 import axios from "axios";
@@ -51,6 +51,7 @@ const ProductDetail = () => {
   const [cartItems, setCartItems] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartItem, setCartItem] = useState(null);
+  const [relatedProductsCart, setRelatedProductsCart] = useState({});
 
   // Add loading state for wishlist actions
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
@@ -169,6 +170,13 @@ const ProductDetail = () => {
       }
 
       setCartItems(data.cart?.items || []);
+      
+      // Create a map of related products in cart
+      const cartMap = {};
+      data.cart?.items.forEach(item => {
+        cartMap[item.product._id] = item;
+      });
+      setRelatedProductsCart(cartMap);
     } catch (error) {
       console.error("Error fetching cart:", error);
       toast.error("Failed to load cart items");
@@ -277,43 +285,35 @@ const ProductDetail = () => {
 
   const handleReviewSubmit = async (formData) => {
     try {
-        const response = await fetch(`/api/reviews/products/${id}/reviews`, {
-            method: 'POST',
+        console.log('Submitting review with images:', formData.images);
+        
+        // Extract base64 strings from image objects
+        const imageUrls = formData.images.map(img => img.url);
+        console.log('Image URLs being sent:', imageUrls);
+
+        const response = await axios.post(`/api/reviews/products/${id}/reviews`, {
+            rating: formData.rating,
+            comment: formData.comment,
+            images: imageUrls,
+            orderId: formData.orderId
+        }, {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                rating: formData.rating,
-                comment: formData.comment,
-                images: formData.images,
-                orderId: formData.orderId
-            })
+            }
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            let errorMessage = data.message || 'Failed to submit review';
-            
-            // Handle specific validation errors
-            if (data.error?.includes('validation failed')) {
-                if (data.error.includes('comment')) {
-                    errorMessage = 'Review must be at least 5 characters long';
-                } else if (data.error.includes('rating')) {
-                    errorMessage = 'Please select a valid rating (1-5)';
-                }
-            }
-            
-            throw new Error(errorMessage);
-        }
+        const data = response.data;
 
         if (data.success) {
             toast.success('Review submitted successfully!');
-            fetchReviews();
+            await fetchReviews(); // Wait for reviews to be fetched
             setHasReviewed(true);
+        } else {
+            throw new Error(data.message || 'Failed to submit review');
         }
     } catch (error) {
+        console.error('Review submission error:', error);
         throw error; // Let ProductReviewSection handle the error
     }
   };
@@ -332,32 +332,46 @@ const ProductDetail = () => {
 
   const handleReviewDelete = async (reviewId) => {
     try {
-        // First find the review that's being deleted
-        const deletedReview = reviews.find(review => review._id === reviewId);
-        
-        // Remove review from UI immediately
-        const updatedReviews = reviews.filter(review => review._id !== reviewId);
-        setReviews(updatedReviews);
-        
-        // Update stats
-        setProductStats(calculateProductStats(updatedReviews));
-        
-        // Reset review status to allow writing a new review
-        setHasReviewed(false);
-        setCanReview(true);
-        
-        // Optionally refresh reviews from server
-        await fetchReviews();
-        
-        // Refresh the user's review status
-        await checkUserReview();
+        // Find the review before deleting
+        const reviewToDelete = reviews.find(review => review._id === reviewId);
+        if (!reviewToDelete) {
+            throw new Error('Review not found');
+        }
+
+        const response = await axios.delete(`/api/reviews/${reviewId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.data.success) {
+            // Update reviews state
+            setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+            
+            // Update stats
+            setProductStats(prev => ({
+                ...prev,
+                totalReviews: prev.totalReviews - 1,
+                ratingCounts: {
+                    ...prev.ratingCounts,
+                    [reviewToDelete.rating]: prev.ratingCounts[reviewToDelete.rating] - 1
+                }
+            }));
+            
+            // Reset review status
+            setHasReviewed(false);
+            setCanReview(true);
+            
+            // Refresh data
+            await fetchReviews();
+            await checkUserReview();
+
+            return true; // Return success
+        }
+        return false; // Return failure
     } catch (error) {
-        console.error('Error handling review deletion:', error);
-        toast.error('Error updating review statistics');
-        
-        // Refresh everything in case of error
-        await fetchReviews();
-        await checkUserReview();
+        console.error('Error deleting review:', error);
+        throw new Error(error.response?.data?.message || 'Failed to delete review');
     }
   };
 
@@ -520,6 +534,119 @@ const ProductDetail = () => {
     }
   };
 
+  const handleRelatedProductAddToCart = async (relatedProduct) => {
+    if (!userData) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
+
+    try {
+      const response = await axios.post("/api/cart/add", {
+        productId: relatedProduct._id,
+        quantity: 1
+      }, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        dispatch(cartAdd({
+          product: relatedProduct,
+          quantity: 1
+        }));
+        
+        const updatedCart = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true
+        });
+        
+        // Update related products cart map
+        const cartMap = {};
+        updatedCart.data.cart.items.forEach(item => {
+          cartMap[item.product._id] = item;
+        });
+        setRelatedProductsCart(cartMap);
+        
+        toast.success("Added to cart!");
+      }
+    } catch (error) {
+      console.error("Cart error:", error);
+      toast.error(error.response?.data?.message || "Failed to add to cart");
+    }
+  };
+
+  const handleRelatedProductQuantity = async (productId, newQuantity) => {
+    if (!userData) {
+      toast.error("Please login to update cart");
+      return;
+    }
+
+    try {
+      if (newQuantity < 1) {
+        const response = await axios.delete(`/api/cart/remove/${productId}`);
+        if (response.data.success) {
+          dispatch(cartRemove(productId));
+          setRelatedProductsCart(prev => {
+            const updated = { ...prev };
+            delete updated[productId];
+            return updated;
+          });
+          toast.success("Item removed from cart");
+        }
+        return;
+      }
+
+      // Find the related product
+      const relatedProduct = product?.relatedProducts?.find(p => p._id === productId);
+      if (!relatedProduct) {
+        toast.error("Product not found");
+        return;
+      }
+
+      // Check stock
+      if (newQuantity > relatedProduct.stock) {
+        toast.error("Cannot exceed available stock");
+        return;
+      }
+
+      const response = await axios.put(`/api/cart/update/${productId}`, {
+        quantity: newQuantity
+      }, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        // Update local state first
+        const updatedCart = await axios.get("/api/cart/getCartItems", {
+          withCredentials: true
+        });
+        
+        const cartMap = {};
+        updatedCart.data.cart.items.forEach(item => {
+          cartMap[item.product._id] = item;
+        });
+        setRelatedProductsCart(cartMap);
+
+        // Update Redux state without incrementing cart count
+        dispatch({
+          type: 'cart/updateQuantity',
+          payload: {
+            productId,
+            quantity: newQuantity
+          }
+        });
+        
+        toast.success(`Quantity updated to ${newQuantity}`);
+      }
+    } catch (error) {
+      console.error("Update quantity error:", error);
+      toast.error(error.response?.data?.message || "Failed to update quantity");
+    }
+  };
+
+  const handleCategoryClick = (slug) => {
+    console.log('Navigating to:', `/products?category=${slug}`);
+    navigate(`/products?category=${slug}`);
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>;
@@ -527,7 +654,7 @@ const ProductDetail = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Product Section */}
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-8 mb-16">
         {/* Media Gallery */}
         <div className="lg:w-1/2">
           {/* Main Image Container */}
@@ -789,46 +916,44 @@ const ProductDetail = () => {
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-16">
+      <div className="mt-8 max-w-4xl mx-auto">
         <h2 className="text-3xl font-bold mb-8">Customer Reviews</h2>
         
         {/* Review Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center mb-4">
-              <span className="text-4xl font-bold">{productStats.averageRating}</span>
-              <div className="ml-4">
-                <div className="flex text-yellow-400">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <FaStar
-                      key={star}
-                      className={star <= productStats.averageRating ? "text-yellow-400" : "text-gray-300"}
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-600 mt-1">{productStats.totalReviews} reviews</p>
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex items-center mb-4">
+            <span className="text-4xl font-bold">{productStats.averageRating}</span>
+            <div className="ml-4">
+              <div className="flex text-yellow-400">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    className={star <= productStats.averageRating ? "text-yellow-400" : "text-gray-300"}
+                  />
+                ))}
               </div>
+              <p className="text-gray-600 mt-1">{productStats.totalReviews} reviews</p>
             </div>
-            
-            {/* Rating Breakdown */}
-            <div className="space-y-2">
-              {[5, 4, 3, 2, 1].map((rating) => (
-                <div key={rating} className="flex items-center">
-                  <span className="w-12">{rating} star</span>
-                  <div className="flex-1 mx-4 h-2 bg-gray-200 rounded">
-                    <div
-                      className="h-2 bg-yellow-400 rounded"
-                      style={{
-                        width: `${(productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0}%`
-                      }}
-                    />
-                  </div>
-                  <span className="w-12 text-right">
-                    {Math.round((productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0)}%
-                  </span>
+          </div>
+          
+          {/* Rating Breakdown */}
+          <div className="space-y-2">
+            {[5, 4, 3, 2, 1].map((rating) => (
+              <div key={rating} className="flex items-center">
+                <span className="w-12">{rating} star</span>
+                <div className="flex-1 mx-4 h-2 bg-gray-200 rounded">
+                  <div
+                    className="h-2 bg-yellow-400 rounded"
+                    style={{
+                      width: `${(productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0}%`
+                    }}
+                  />
                 </div>
-              ))}
-            </div>
+                <span className="w-12 text-right">
+                  {Math.round((productStats.ratingCounts[rating] / productStats.totalReviews) * 100 || 0)}%
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -863,6 +988,167 @@ const ProductDetail = () => {
             />
           ))}
         </div>
+      </div>
+
+      {/* Related Products Section */}
+      <div className="mt-16 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold">Related Products</h2>
+          <Link 
+            to={`/products/${product.category}`}
+            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
+          >
+            View All
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {product?.relatedProducts?.map((relatedProduct) => (
+            <motion.div
+              key={relatedProduct._id}
+              whileHover={{ y: -5 }}
+              className="group bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-xl"
+            >
+              <Link to={`/product/${relatedProduct._id}`} className="block">
+                {/* Image Container */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                  <img
+                    src={relatedProduct.images[0]}
+                    alt={relatedProduct.name}
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                  />
+                  {relatedProduct.stock <= 0 && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <span className="text-white font-medium px-4 py-2 bg-red-500 rounded-full">
+                        Out of Stock
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Content Container */}
+                <div className="p-4">
+                  {/* Category */}
+                  <div className="text-sm text-gray-500 mb-2">
+                    {relatedProduct.category}
+                  </div>
+
+                  {/* Product Name */}
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[3.5rem]">
+                    {relatedProduct.name}
+                  </h3>
+
+                  {/* Rating */}
+                  <div className="flex items-center mb-3">
+                    <div className="flex text-yellow-400">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <FaStar
+                          key={star}
+                          className={`w-4 h-4 ${
+                            star <= relatedProduct.rating ? "text-yellow-400" : "text-gray-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="ml-2 text-sm text-gray-600">
+                      ({relatedProduct.reviews?.length || 0})
+                    </span>
+                  </div>
+
+                  {/* Price and Stock Status */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-2xl font-bold text-gray-900">
+                        ₹{relatedProduct.price}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        per {relatedProduct.unitType || 'piece'}
+                      </span>
+                    </div>
+                    {relatedProduct.stock > 0 ? (
+                      <span className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded-full">
+                        In Stock
+                      </span>
+                    ) : (
+                      <span className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded-full">
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+
+              {/* Quick Actions */}
+              <div className="p-4 pt-0">
+                {relatedProductsCart[relatedProduct._id] ? (
+                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRelatedProductQuantity(
+                          relatedProduct._id,
+                          relatedProductsCart[relatedProduct._id].quantity - 1
+                        );
+                      }}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    >
+                      <FaMinus className="w-4 h-4" />
+                    </button>
+                    <span className="text-lg font-medium">
+                      {relatedProductsCart[relatedProduct._id].quantity}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRelatedProductQuantity(
+                          relatedProduct._id,
+                          relatedProductsCart[relatedProduct._id].quantity + 1
+                        );
+                      }}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    >
+                      <FaPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className={`w-full py-2 px-4 rounded-xl text-white font-medium transition-colors ${
+                      relatedProduct.stock > 0
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={relatedProduct.stock <= 0}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleRelatedProductAddToCart(relatedProduct);
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <FaShoppingCart className="text-lg" />
+                      <span>Add to Cart</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {(!product?.relatedProducts || product.relatedProducts.length === 0) && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">No Related Products</h3>
+            <p className="mt-1 text-gray-500">We couldn't find any related products at this time.</p>
+          </div>
+        )}
       </div>
     </div>
   );

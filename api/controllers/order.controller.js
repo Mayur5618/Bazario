@@ -322,8 +322,8 @@ export const getMyOrders = async (req, res) => {
             .populate('items.product', 'name images price')
             .populate('items.seller', 'firstname lastname')
             .sort({ 
-                status: -1,  // This will sort pending first
-                createdAt: -1 // Then by date, newest first
+                status: 1, // 1 means completed will be last
+                createdAt: 1 // oldest first within same status
             });
 
         res.json({

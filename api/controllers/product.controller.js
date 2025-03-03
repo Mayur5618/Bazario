@@ -337,15 +337,10 @@ export const getProducts = async (req, res) => {
 // GET /api/products/:id
 export const getProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id)
+        const { id } = req.params;
+        const product = await Product.findById(id)
             .populate('seller', 'firstname lastname')
-            .populate({
-                path: 'reviews',
-                populate: {
-                    path: 'user',
-                    select: 'firstname lastname'
-                }
-            });
+            .populate('reviews');
 
         if (!product) {
             return res.status(404).json({
@@ -354,23 +349,27 @@ export const getProduct = async (req, res) => {
             });
         }
 
-        res.json({
-            success: true,
-            product
-        });
-    } catch (error) {
-        console.error('Get product error:', error);
-        
-        if (error.name === 'CastError') {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid product ID format'
-            });
-        }
+        // Fetch related products from same category
+        const relatedProducts = await Product.find({
+            category: product.category,
+            _id: { $ne: product._id } // Exclude current product
+        })
+        .limit(4) // Limit to 4 related products
+        .select('name images price stock rating reviews'); // Select only needed fields
 
+        res.status(200).json({
+            success: true,
+            product: {
+                ...product.toObject(),
+                relatedProducts
+            }
+        });
+
+    } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error fetching product',
+            error: error.message
         });
     }
 };
@@ -551,9 +550,10 @@ export const getFilteredProducts = async (req, res) => {
         const {
             minPrice,
             maxPrice,
-            maxRating,
+            minRating,
             sortBy,
             search,
+            category,
             page = 1,
             limit = 12,
             platformType = 'b2c'
@@ -566,6 +566,11 @@ export const getFilteredProducts = async (req, res) => {
             platformType: { $in: [platformType] },
             stock: { $gt: 0 }
         };
+
+        // Category filter
+        if (category) {
+            filter.category = { $regex: new RegExp(category, 'i') };
+        }
 
         // Search filter
         if (search) {
@@ -583,9 +588,9 @@ export const getFilteredProducts = async (req, res) => {
         }
 
         // Rating filter
-        if (maxRating && !isNaN(Number(maxRating))) {
+        if (minRating && !isNaN(Number(minRating))) {
             filter.rating = { 
-                $lte: Number(maxRating),
+                $gte: Number(minRating),
                 $gt: 0
             };
         }
@@ -593,7 +598,7 @@ export const getFilteredProducts = async (req, res) => {
         // Determine sort options with focus on price sorting
         let sortOption = {};
         
-        if (maxRating && !isNaN(Number(maxRating))) {
+        if (minRating && !isNaN(Number(minRating))) {
             sortOption = { rating: -1 };
         } else {
             switch(sortBy) {
@@ -692,9 +697,10 @@ export const getFilteredProducts = async (req, res) => {
             filters: {
                 minPrice,
                 maxPrice,
-                maxRating,
+                minRating,
                 sortBy,
                 search,
+                category,
                 platformType
             }
         });

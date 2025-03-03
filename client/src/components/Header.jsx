@@ -8,6 +8,7 @@ import axios from "axios";
 // import './styles/header.css';
 import '../styles/header.css';
 import { addToRecentSearches } from '../store/searchSlice';
+import { AnimatePresence, motion } from "framer-motion";
 
 const Header = () => {
   const { userData } = useSelector((state) => state.user);
@@ -207,218 +208,314 @@ const Header = () => {
 
   return (
     <header className="bg-[#3861fb] shadow-md">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="text-white text-xl font-bold">
-          Bazario
-        </Link>
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+        {/* Mobile Header */}
+        <div className="flex flex-col sm:hidden w-full space-y-2">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="text-white text-lg font-bold">
+              Bazario
+            </Link>
 
-        {/* Search Bar - Only show if user is logged in */}
-        {userData ? (
-          <div className="flex-1 max-w-2xl mx-4 relative" ref={searchRef}>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (e.target.value) {
-                    setShowRecentSearches(false);
-                  } else {
-                    setShowRecentSearches(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (!searchTerm) {
-                    setShowRecentSearches(true);
-                  }
-                }}
-                placeholder={currentPlaceholder}
-                className="w-full px-4 py-2 rounded-full bg-white"
-              />
-              <button 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                onClick={handleSearch}
-              >
-                <FaSearch className="h-5 w-5 text-gray-400" />
-              </button>
+            {/* Cart & Profile for Mobile */}
+            <div className="flex items-center space-x-3">
+              {userData && (
+                <Link to="/cart" className="text-white hover:text-blue-200 relative">
+                  <FaShoppingCart className="w-5 h-5" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              {/* Profile Button */}
+              <div className="relative">
+                <button
+                  ref={buttonRef}
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="relative focus:outline-none profile-button"
+                >
+                  {userData ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
+                      {userData?.profileImage ? (
+                        <img
+                          src={userData.profileImage}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '';
+                            const fallback = e.target.parentNode.querySelector('.fallback-icon');
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center fallback-icon">
+                          <FaUser className="text-gray-400 text-sm" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <FaUser className="text-white w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
+          </div>
 
-            {/* Recent Searches Dropdown */}
-            {showRecentSearches && recentSearches.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                <div className="p-2">
-                  <div className="text-sm text-gray-500 mb-2">Recent Searches</div>
-                  {recentSearches.map((term, index) => (
+          {/* Search Bar for Mobile */}
+          {userData && (
+            <div className="w-full relative" ref={searchRef}>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (e.target.value) {
+                      setShowRecentSearches(false);
+                    } else {
+                      setShowRecentSearches(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!searchTerm) {
+                      setShowRecentSearches(true);
+                    }
+                  }}
+                  placeholder={currentPlaceholder}
+                  className="w-full px-3 py-1.5 rounded-full bg-white text-sm"
+                />
+                <button 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  onClick={handleSearch}
+                >
+                  <FaSearch className="h-4 w-4 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Search Results for Mobile */}
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
+                  {searchResults.map((product) => (
                     <div
-                      key={index}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
-                      onClick={() => handleRecentSearchClick(term)}
+                      key={product._id}
+                      className="flex items-center px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleSuggestionClick(product)}
                     >
-                      <span className="text-gray-400 mr-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </span>
-                      {term}
+                      {product.images[0] && (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-8 h-8 object-cover rounded-md mr-2"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-sm text-gray-800">{product.name}</div>
+                        <div className="text-xs text-gray-500">₹{product.price}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Search Results Dropdown */}
-            {searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
-                {searchResults.map((product) => (
-                  <div
-                    key={product._id}
-                    className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => handleSuggestionClick(product)}
-                  >
-                    {product.images[0] && (
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-10 h-10 object-cover rounded-md mr-3"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium text-gray-800">{product.name}</div>
-                      <div className="text-sm text-gray-500">₹{product.price}</div>
-                    </div>
-                  </div>
-                ))}
-                <Link
-                  to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
-                  className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
-                  onClick={() => {
-                    dispatch(addToRecentSearches(searchTerm)); // Add to recent searches
-                    setSearchTerm("");
-                    setSearchResults([]);
-                  }}
-                >
-                  See all results
-                </Link>
-              </div>
-            )}
-
-            {/* Loading State */}
-            {isSearching && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-              </div>
-            )}
-          </div>
-        ) : (
-          // Empty div to maintain spacing when search bar is hidden
-          <div className="flex-1"></div>
-        )}
-
-        {/* Cart & Profile */}
-        <div className="flex items-center space-x-4">
-          {/* Only show cart if user is logged in */}
-          {userData && (
-            <Link to="/cart" className="text-white hover:text-blue-200 relative">
-              <FaShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartCount}
-                </span>
               )}
-            </Link>
+            </div>
           )}
+        </div>
 
-          {/* Profile Section */}
-          <div className="relative">
-            <button
-              ref={buttonRef}
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative focus:outline-none profile-button"
-            >
-              {userData ? (
-                // Show profile image/icon for logged-in users
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
-                  {userData?.profileImage ? (
-                    <img
-                      src={userData.profileImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '';
-                        const fallback = e.target.parentNode.querySelector('.fallback-icon');
-                        if (fallback) fallback.classList.remove('hidden');
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center fallback-icon">
-                      <FaUser className="text-gray-400 text-xl" />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Show sign in/up buttons for non-logged-in users
-                <div className="flex items-center space-x-4">
-                  <Link 
-                    to="/login" 
-                    className="text-white hover:text-blue-200 text-sm font-medium"
-                  >
-                    Sign In
-                  </Link>
-                  <Link 
-                    to="/register" 
-                    className="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50"
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
-            </button>
+        {/* Desktop Header */}
+        <div className="hidden sm:flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="text-white text-xl font-bold">
+            Bazario
+          </Link>
 
-            {/* Dropdown Menu - Only show for logged-in users */}
-            {isMenuOpen && userData && (
-              <div 
-                ref={menuRef}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50"
-              >
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm text-gray-600">Signed in as</p>
-                  <p className="text-sm font-medium text-gray-800 truncate">
-                    {userData.firstname} {userData.lastname}
-                  </p>
-                </div>
-
-                <Link 
-                  to="/profile" 
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                  onClick={() => handleMenuClick(() => navigate('/profile'))}
-                >
-                  <FaUserEdit className="text-gray-500" />
-                  <span>Profile</span>
-                </Link>
-
-                <Link 
-                  to="/wishlist" 
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                  onClick={() => handleMenuClick(() => navigate('/wishlist'))}
-                >
-                  <FaHeart className="text-gray-500" />
-                  <span>Wishlist</span>
-                </Link>
-
+          {/* Search Bar - Only show if user is logged in */}
+          {userData && (
+            <div className="flex-1 max-w-2xl mx-4 relative" ref={searchRef}>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (e.target.value) {
+                      setShowRecentSearches(false);
+                    } else {
+                      setShowRecentSearches(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!searchTerm) {
+                      setShowRecentSearches(true);
+                    }
+                  }}
+                  placeholder={currentPlaceholder}
+                  className="w-full px-4 py-2 rounded-full bg-white"
+                />
                 <button 
-                  onClick={() => handleMenuClick(handleLogout)}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-gray-50"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  onClick={handleSearch}
                 >
-                  <FaSignOutAlt className="text-red-500" />
-                  <span>Sign Out</span>
+                  <FaSearch className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
+
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
+                  {searchResults.map((product) => (
+                    <div
+                      key={product._id}
+                      className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleSuggestionClick(product)}
+                    >
+                      {product.images[0] && (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-10 h-10 object-cover rounded-md mr-3"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-800">{product.name}</div>
+                        <div className="text-sm text-gray-500">₹{product.price}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <Link
+                    to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
+                    className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
+                    onClick={() => {
+                      dispatch(addToRecentSearches(searchTerm)); // Add to recent searches
+                      setSearchTerm("");
+                      setSearchResults([]);
+                    }}
+                  >
+                    See all results
+                  </Link>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {isSearching && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4 text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cart & Profile */}
+          <div className="flex items-center space-x-4">
+            {/* Only show cart if user is logged in */}
+            {userData && (
+              <Link to="/cart" className="text-white hover:text-blue-200 relative">
+                <FaShoppingCart className="w-6 h-6" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
             )}
+
+            {/* Profile Section */}
+            <div className="relative">
+              <button
+                ref={buttonRef}
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="relative focus:outline-none profile-button"
+              >
+                {userData ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                    {userData?.profileImage ? (
+                      <img
+                        src={userData.profileImage}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '';
+                          const fallback = e.target.parentNode.querySelector('.fallback-icon');
+                          if (fallback) fallback.classList.remove('hidden');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center fallback-icon">
+                        <FaUser className="text-gray-400 text-xl" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <Link 
+                      to="/login" 
+                      className="text-white hover:text-blue-200 text-sm font-medium"
+                    >
+                      Sign In
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      className="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Profile Dropdown Menu */}
+      <AnimatePresence>
+        {isMenuOpen && userData && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            ref={menuRef}
+            className="absolute right-2 sm:right-4 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50"
+          >
+            <div className="px-4 py-3 border-b border-gray-100">
+              <p className="text-sm text-gray-600">Signed in as</p>
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {userData.firstname} {userData.lastname}
+              </p>
+            </div>
+
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
+              onClick={() => handleMenuClick(() => navigate('/profile'))}
+            >
+              <FaUserEdit className="text-gray-500" />
+              <span>Profile</span>
+            </Link>
+
+            <Link 
+              to="/wishlist" 
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
+              onClick={() => handleMenuClick(() => navigate('/wishlist'))}
+            >
+              <FaHeart className="text-gray-500" />
+              <span>Wishlist</span>
+            </Link>
+
+            <button 
+              onClick={() => handleMenuClick(handleLogout)}
+              className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-gray-50"
+            >
+              <FaSignOutAlt className="text-red-500" />
+              <span>Sign Out</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

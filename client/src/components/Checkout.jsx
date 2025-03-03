@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
 import axios from 'axios';
-import { FaArrowLeft, FaShoppingBag, FaTruck } from 'react-icons/fa';
+import { FaArrowLeft, FaShoppingBag, FaTruck, FaMapMarkerAlt, FaUser } from 'react-icons/fa';
 import { getStates, getCities } from '../services/locationService';
 
 const Checkout = () => {
@@ -13,7 +13,7 @@ const Checkout = () => {
   const cart = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);Cabbage
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
@@ -34,6 +34,12 @@ const Checkout = () => {
     },
     paymentMethod: 'COD'
   });
+
+  // Add new state for location loading
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+
+  // Add new state for profile loading
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
     // Load states on component mount
@@ -224,6 +230,146 @@ const Checkout = () => {
     }
   };
 
+  // Function to get location from browser
+  const getBrowserLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const response = await axios.get(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            
+            resolve({
+              city: response.data.city,
+              state: response.data.principalSubdivision,
+              country: response.data.countryName,
+              pincode: response.data.postcode
+            });
+          } catch (error) {
+            reject(error);
+          }
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
+  };
+
+  // Function to fetch location from IP
+  const fetchLocationFromIP = async () => {
+    try {
+      setIsLocationLoading(true);
+      
+      // First try browser geolocation
+      try {
+        const browserLocation = await getBrowserLocation();
+        setFormData(prev => ({
+          ...prev,
+          shippingAddress: {
+            ...prev.shippingAddress,
+            city: browserLocation.city || '',
+            state: browserLocation.state || '',
+            pincode: browserLocation.pincode || '',
+            country: browserLocation.country || 'India'
+          }
+        }));
+        setCitySearchTerm(browserLocation.city || '');
+        toast.success('Location detected successfully!');
+        return;
+      } catch (error) {
+        console.log('Browser geolocation failed, trying IP geolocation');
+      }
+
+      // Fallback to IP geolocation
+      const response = await axios.get('https://ipapi.co/json/');
+      
+      if (response.data) {
+        const { city, region, postal, country_name } = response.data;
+        
+        setFormData(prev => ({
+          ...prev,
+          shippingAddress: {
+            ...prev.shippingAddress,
+            city: city || '',
+            state: region || '',
+            pincode: postal || '',
+            country: country_name || 'India'
+          }
+        }));
+        setCitySearchTerm(city || '');
+        toast.success('Location detected from IP address');
+      }
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      toast.error('Could not detect your location automatically');
+    } finally {
+      setIsLocationLoading(false);
+    }
+  };
+
+  // Function to fetch user profile
+  const fetchUserProfile = async () => {
+    try {
+      setIsProfileLoading(true);
+      const response = await axios.get('/api/users/profile', {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        const { firstName, lastName, email, phone } = response.data.user;
+        setFormData(prev => ({
+          ...prev,
+          shippingAddress: {
+            ...prev.shippingAddress,
+            firstName: firstName || '',
+            lastName: lastName || '',
+            email: email || '',
+            phone: phone || ''
+          }
+        }));
+        toast.success('Profile details loaded successfully!');
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast.error('Could not load profile details');
+    } finally {
+      setIsProfileLoading(false);
+    }
+  };
+
+  // Update AutoLocateButton to include profile loading state
+  const AutoLocateButton = () => (
+    <div className="flex gap-4 mb-6">
+      <button
+        type="button"
+        onClick={fetchLocationFromIP}
+        disabled={isLocationLoading}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+      >
+        <FaMapMarkerAlt className={isLocationLoading ? 'animate-pulse' : ''} />
+        {isLocationLoading ? 'Detecting location...' : 'Auto-detect my location'}
+      </button>
+
+      <button
+        type="button"
+        onClick={fetchUserProfile}
+        disabled={isProfileLoading}
+        className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+      >
+        <FaUser className={isProfileLoading ? 'animate-pulse' : ''} />
+        {isProfileLoading ? 'Loading profile...' : 'Auto-fill my details'}
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -241,6 +387,9 @@ const Checkout = () => {
               <h2 className="text-2xl font-semibold mb-6 flex items-center">
                 <FaTruck className="mr-3 text-blue-600" /> Shipping Details
               </h2>
+              
+              {/* Add Auto-locate button here */}
+              <AutoLocateButton />
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

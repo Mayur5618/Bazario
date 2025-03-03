@@ -248,7 +248,24 @@ const Login = () => {
   }
 
   return (
-    <div className="mt-[-20px] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="mt-[-20px] flex flex-col items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Bazario Logo - Moved outside the form */}
+      <div className="mb-12">
+        <Link to="/" className="block text-center">
+          <div className="flex items-center justify-center gap-3">
+            <div className="relative w-16 h-16 transform hover:scale-110 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-2xl transform rotate-6 transition-transform hover:rotate-12 animate-gradient"></div>
+              <div className="absolute inset-0 bg-white rounded-2xl transform -rotate-3 transition-transform hover:rotate-0 flex items-center justify-center shadow-lg">
+                <span className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">B</span>
+              </div>
+            </div>
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent hover:scale-105 transition-transform">
+              Bazario
+            </h1>
+          </div>
+        </Link>
+      </div>
+
       {/* Saved Login Details Popup */}
       {showSavedCredentials && (
         <div 
@@ -297,11 +314,14 @@ const Login = () => {
         </div>
       )}
 
-      <div className="border-[1px] border-gray-300 max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
+      <div className="border-[1px] border-gray-300 max-w-md w-full space-y-6 bg-white p-10 rounded-xl shadow-lg">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in
+          <h2 className="text-center text-2xl font-bold text-gray-900">
+            Welcome Back
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Sign in to your account
+          </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -435,11 +455,11 @@ const Login = () => {
           </div>
         </form>
 
-        {/* Register Link */}
-        <div className="text-center">
+        {/* Register Link - Moved up and styled better */}
+        <div className="text-center pt-4 border-t border-gray-200">
           <p className="text-sm text-gray-600">
             Don't have an account?{' '}
-            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
               Register now
             </Link>
           </p>
@@ -448,5 +468,20 @@ const Login = () => {
     </div>
   );
 };
+
+// Add this CSS at the top of the file after imports
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+`;
+document.head.appendChild(style);
 
 export default Login;

@@ -129,7 +129,14 @@ const Register = () => {
 
     // If there are any validation errors, don't proceed
     if (Object.keys(stepErrors).length > 0) {
-      toast.error('Please fix the errors before proceeding');
+      toast('Please fill in all required fields', {
+        icon: '📝',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
       return;
     }
 
@@ -142,16 +149,36 @@ const Register = () => {
           ...prev,
           mobile: 'This phone number is already registered'
         }));
-        toast.error('This phone number is already registered');
+        toast('This mobile number is already registered', {
+          icon: '📱',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
         return;
       }
 
       // If everything is valid and phone is not registered, proceed to next step
       setStep(2);
-      toast.success('Step 1 completed successfully');
+      toast.success('Great! Now let\'s add your address details', {
+        icon: '🏠',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
     }
   };
 
@@ -161,24 +188,75 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(2)) return;
+    
+    // Validate step 2 fields
+    const stepErrors = {};
+    
+    if (!formData.address?.trim()) {
+      stepErrors.address = 'Address is required';
+    }
+    if (!formData.city?.trim()) {
+      stepErrors.city = 'City is required';
+    }
+    if (!formData.state?.trim()) {
+      stepErrors.state = 'State is required';
+    }
+    if (!formData.country?.trim()) {
+      stepErrors.country = 'Country is required';
+    }
+    if (!formData.pincode?.trim()) {
+      stepErrors.pincode = 'Pincode is required';
+    }
+
+    setErrors(stepErrors);
+
+    if (Object.keys(stepErrors).length > 0) {
+      toast('Please fill in all address details', {
+        icon: '📍',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/api/users/register', {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        mobile: formData.mobile,
-        password: formData.password
+      const response = await axios.post('/api/users/signup', {
+        firstname: formData.firstName,
+        lastname: formData.lastName,
+        mobileno: formData.mobile,
+        password: formData.password,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        pincode: formData.pincode,
+        userType: "buyer",
+        platformType: ["b2c"]
       });
 
       if (response.data.success) {
-        toast.success('Registration successful!');
+        toast.success('Welcome to Bazario! 🎉', {
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
         navigate('/login');
       }
     } catch (error) {
       setServerError(error.response?.data?.message || 'Registration failed');
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.response?.data?.message || 'Registration failed', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -189,38 +267,109 @@ const Register = () => {
     try {
       if ("geolocation" in navigator) {
         const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          });
         });
 
         const { latitude, longitude } = position.coords;
+        console.log('📍 Location coordinates:', { latitude, longitude });
 
-        // Get address from coordinates using reverse geocoding
-        const response = await axios.get(
-          `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`
-        );
+        try {
+          // Using OpenStreetMap's Nominatim API (free, no API key needed)
+          const response = await axios.get(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&zoom=18`,
+            {
+              headers: {
+                'Accept-Language': 'en-US,en;q=0.9',
+                'User-Agent': 'Bazario-App'
+              }
+            }
+          );
 
-        if (response.data.results.length > 0) {
-          const location = response.data.results[0].components;
+          console.log('📫 Location data:', response.data);
+          const address = response.data.address;
+          
+          // Fixed city detection logic for Indian cities
+          let cityName = '';
+          if (address.city) {
+            cityName = address.city;
+          } else if (address.town) {
+            cityName = address.town;
+          } else if (address.state_district) {
+            cityName = address.state_district;
+          }
+
+          // Create street address including suburb/area name
+          const streetAddress = [
+            address.suburb,
+            address.road,
+            address.house_number,
+            address.neighbourhood
+          ].filter(Boolean).join(', ');
+          
+          const locationData = {
+            address: streetAddress || '',
+            city: cityName || '',
+            state: address.state || '',
+            country: address.country || '',
+            pincode: address.postcode || ''
+          };
+
+          console.log('📝 Setting form data:', locationData);
           
           setFormData(prev => ({
             ...prev,
-            address: location.road || location.neighbourhood || '',
-            city: location.city || location.town || '',
-            state: location.state || '',
-            country: location.country || '',
-            pincode: location.postcode || ''
+            ...locationData
           }));
 
-          toast.success('Location fetched successfully!');
-        } else {
-          toast.error('Could not fetch address details');
+          toast.success('Location fetched successfully! 📍', {
+            style: {
+              borderRadius: '10px',
+              background: '#333',
+              color: '#fff',
+            },
+          });
+        } catch (error) {
+          console.error('❌ Error fetching address:', error);
+          toast.error('Could not fetch address details. Please enter manually.', {
+            style: {
+              borderRadius: '10px',
+              background: '#333',
+              color: '#fff',
+            },
+          });
         }
       } else {
-        toast.error('Geolocation is not supported by your browser');
+        toast.error('Your browser does not support location services', {
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
       }
     } catch (error) {
-      console.error('Error getting location:', error);
-      toast.error('Failed to get location. Please enter manually.');
+      console.error('❌ Location Error:', error);
+      let errorMessage = 'Failed to get location. Please enter manually.';
+      
+      if (error.code === 1) {
+        errorMessage = 'Location access denied. Please allow location access or enter details manually.';
+      } else if (error.code === 2) {
+        errorMessage = 'Location unavailable. Please check your GPS settings or enter manually.';
+      } else if (error.code === 3) {
+        errorMessage = 'Location request timed out. Please try again or enter manually.';
+      }
+      
+      toast.error(errorMessage, {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
     } finally {
       setIsLocationLoading(false);
     }

@@ -101,7 +101,7 @@ const App = () => {
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <Footer />
+            <ConditionalFooter />
           </div>
         {/* </CartProvider> */}
     {/* </AuthProvider> */}
@@ -119,6 +119,18 @@ const ConditionalHeader = () => {
   }
 
   return <Header />;
+};
+
+// Conditional Footer Component
+const ConditionalFooter = () => {
+  const location = useLocation();
+  const publicPaths = ['/register', '/login'];
+  
+  if (publicPaths.includes(location.pathname)) {
+    return null;
+  }
+
+  return <Footer />;
 };
 
 export default App;
