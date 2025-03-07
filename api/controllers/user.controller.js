@@ -11,6 +11,8 @@ import fs from 'fs'; // Import fs for file system operations
 // import User from '../models/.model.js'; // Ensure you import your User model
 import User from '../models/buyer.model.js';
 import { uploadToFirebase } from '../utilities/firebase.js';
+import Order from '../models/order.model.js';
+import Review from '../models/review.model.js';
 // Twilio configuration
 const twilioClient = twilio("AC7e47441a2fde99bca427d17971d3036b", "7ae83cc4d9f5d8e445eff220b5340b0d");
 const TWILIO_PHONE_NUMBER = "+918140023599";
@@ -189,199 +191,123 @@ export const signup = async (req, res) => {
     }
 };
 
-// export const signin = async (req, res) => {
-//     try {
-//         const { mobileno, password } = req.body;
+export const sellerSignup = async (req, res) => {
+    try {
+        const { 
+            firstname, 
+            lastname, 
+            mobileno, 
+            address, 
+            country, 
+            state, 
+            city, 
+            pincode, 
+            password,
+            shopName,
+            businessType,
+            customBusinessType,
+            businessDescription,
+            aadharNumber,
+            termsAccepted,
+            platformType = ['b2c']
+        } = req.body;
 
-//         // Find user with profile image
-//         const buyer = await Buyer.findOne({ mobileno }).select('+profileImage');
-        
-//         if (!buyer) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'User not found'
-//             });
-//         }
+        // Convert mobileno to string
+        const mobilenoString = mobileno.toString();
 
-//         const isPasswordValid = await buyer.comparePassword(password);
-//         if (!isPasswordValid) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Invalid credentials'
-//             });
-//         }
+        // Basic validation
+        if (!firstname || !lastname || !mobileno || !address || !country || 
+            !state || !city || !pincode || !password || !shopName || 
+            !businessType || !aadharNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please fill all required fields' 
+            });
+        }
 
-//         const token = jwt.sign(
-//             { id: buyer._id },
-//             process.env.JWT_SECRET,
-//             { expiresIn: '1d' }
-//         );
+        // Validate password
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
 
-//         res.cookie('access_token', token, {
-//             httpOnly: true,
-//             secure: process.env.NODE_ENV === 'production',
-//             maxAge: 24 * 60 * 60 * 1000
-//         });
+        // Validate Aadhar number
+        if (!/^\d{12}$/.test(aadharNumber)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid Aadhar number'
+            });
+        }
 
-//         // Send response with profile image
-//         const { password: pass, ...buyerData } = buyer._doc;
-        
-//         console.log('User data with profile image:', buyerData);
+        // Validate business type
+        if (businessType === 'other' && !customBusinessType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please specify your business type'
+            });
+        }
 
-//         res.status(200).json({
-//             success: true,
-//             message: 'Logged in successfully',
-//             user: buyerData
-//         });
+        // Validate terms acceptance
+        if (!termsAccepted) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please accept the terms and conditions'
+            });
+        }
 
-//     } catch (error) {
-//         console.error('Signin error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error signing in',
-//             error: error.message
-//         });
-//     }
-// };
+        // Check if user already exists
+        const existingUser = await Promise.any([
+            Seller.findOne({ mobileno: mobilenoString }),
+            Buyer.findOne({ mobileno: mobilenoString }),
+            Agency.findOne({ mobileno: mobilenoString })
+        ]).catch(() => null);
 
-// export const signin = async (req, res) => {
-//     try {
-//         const { mobileno, password } = req.body;
+        if (existingUser) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'User already exists with this mobile number' 
+            });
+        }
 
-//         // Find buyer by mobile number
-//         const buyer = await Buyer.findOne({ mobileno });
-        
-//         if (!buyer) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'User not found'
-//             });
-//         }
+        // Create seller object
+        const seller = new Seller({
+            firstname,
+            lastname,
+            mobileno: mobilenoString,
+            address,
+            country,
+            state,
+            city,
+            pincode,
+            password,
+            shopName,
+            businessType,
+            customBusinessType,
+            businessDescription,
+            aadharNumber,
+            termsAccepted,
+            platformType,
+            userType: 'seller',
+            status: 'pending'
+        });
 
-//         // Check password
-//         const isPasswordMatch = await buyer.comparePassword(password);
-        
-//         if (!isPasswordMatch) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Invalid credentials'
-//             });
-//         }
+        await seller.save();
 
-//         // Generate token
-//         const token = jwt.sign(
-//             { userId: buyer._id, userType: 'buyer' },
-//             "your-temporary-secret-key",
-//             { expiresIn: '30d' }
-//         );
-
-//         // Set cookie
-//         res.cookie('token', token, {
-//             httpOnly: true,
-
-//             // secure: process.env.NODE_ENV === 'production',
-//             sameSite: 'strict',
-//             maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-//         });
-
-//         // Send response
-//         res.status(200).json({
-//             success: true,
-//             message: 'Login successful',
-//             user: {
-//                 _id: buyer._id,
-//                 firstname: buyer.firstname,
-//                 lastname: buyer.lastname,
-//                 mobileno: buyer.mobileno,
-//                 userType: buyer.userType,
-//                 profilePhoto: buyer.profileImage
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error('Signin error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Internal server error',
-//             error: error.message
-//         });
-//     }
-// };
-
-// export const signin = async (req, res) => {
-//     try {
-//         const { mobileno, password } = req.body;
-
-//         if (!mobileno || !password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: 'Please provide mobile number and password'
-//             });
-//         }
-
-//         const mobilenoString = mobileno.toString();
-
-//         let user = null;
-        
-//         const seller = await Seller.findOne({ mobileno: mobilenoString });
-//         const buyer = await Buyer.findOne({ mobileno: mobilenoString });
-//         const agency = await Agency.findOne({ mobileno: mobilenoString });
-
-//         user = seller || buyer || agency;
-
-//         if (!user) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Invalid mobile number or password'
-//             });
-//         }
-
-//         const isPasswordValid = await user.matchPassword(password);
-//         if (!isPasswordValid) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Invalid mobile number or password'
-//             });
-//         }
-
-//         const token = jwt.sign(
-//             { 
-//                 id: user._id, 
-//                 userType: user.userType 
-//             },
-//             'your-temporary-secret-key',
-//             { expiresIn: '24h' }
-//         );
-
-//         res.status(200)
-//            .cookie('access_token', token, {
-//             httpOnly: true,
-//             secure: process.env.NODE_ENV === 'production',
-//             sameSite: 'lax',
-//             maxAge: 24 * 60 * 60 * 1000,
-//            })
-//            .json({
-//             success: true,
-//             data: {
-//                 _id: user._id,
-//                 firstname: user.firstname,
-//                 lastname: user.lastname,
-//                 mobileno: user.mobileno,
-//                 userType: user.userType,
-//                 platformType: user.platformType,
-                          
-//               }
-//         });
-
-//     } catch (error) {
-//         console.error('Signin error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error during signin',
-//             error: error.message
-//         });
-//     }
-// };
+        return res.status(201).json({
+            success: true,
+            message: "Seller registration successful. Your account is pending approval."
+        });
+    } catch (error) {
+        console.error('Error in seller signup:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error creating seller account',
+            error: error.message
+        });
+    }
+};
 
 export const signin = async (req, res) => {
     try {
@@ -757,7 +683,16 @@ export const uploadProfileImage = async (req, res) => {
 // Function to get user profile
 export const getProfile = async (req, res) => {
     try {
-        const user = await Buyer.findById(req.user._id).select('-password');
+        // Check all user types
+        let user = null;
+        const userId = req.user._id;
+        
+        // Try to find user in all models
+        user = await Promise.any([
+            Buyer.findById(userId).select('-password'),
+            Seller.findById(userId).select('-password'),
+            Agency.findById(userId).select('-password')
+        ]).catch(() => null);
         
         if (!user) {
             return res.status(404).json({
@@ -766,13 +701,18 @@ export const getProfile = async (req, res) => {
             });
         }
 
+        // Return fields matching frontend names
         res.status(200).json({
             success: true,
             user: {
-                firstName: user.firstname,
-                lastName: user.lastname,
+                firstname: user.firstname,
+                lastname: user.lastname,
                 email: user.email,
-                phone: user.mobileno
+                phone: user.mobileno,
+                address: user.address,
+                city: user.city,
+                state: user.state,
+                pincode: user.pincode
             }
         });
     } catch (error) {
@@ -783,4 +723,82 @@ export const getProfile = async (req, res) => {
             error: error.message
         });
     }
+};
+
+// Get seller profile with products and stats
+export const getSellerProfile = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    // Get seller details
+    const seller = await Seller.findById(sellerId)
+      .select('firstname lastname email phone profileImage bio description location businessHours');
+    
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seller not found'
+      });
+    }
+
+    // Get seller's products
+    const products = await Product.find({ seller: sellerId })
+      .sort({ createdAt: -1 })
+      .select('name images price stock rating numReviews');
+
+    // Get seller's stats
+    const stats = {
+      totalProducts: products.length,
+      totalSales: 0,
+      averageRating: 0,
+      totalCustomers: 0
+    };
+
+    // Calculate total sales and average rating
+    const orders = await Order.find({ 'items.seller': sellerId });
+    const uniqueCustomers = new Set();
+    let totalRating = 0;
+    let numRatings = 0;
+
+    orders.forEach(order => {
+      // Count unique customers
+      uniqueCustomers.add(order.buyer.toString());
+      
+      // Calculate total sales
+      const sellerItems = order.items.filter(item => 
+        item.seller.toString() === sellerId.toString()
+      );
+      stats.totalSales += sellerItems.reduce((sum, item) => 
+        sum + (item.price * item.quantity), 0
+      );
+    });
+
+    // Get average rating from reviews
+    const reviews = await Review.find({ 
+      product: { $in: products.map(p => p._id) }
+    });
+    
+    if (reviews.length > 0) {
+      totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      numRatings = reviews.length;
+      stats.averageRating = totalRating / numRatings;
+    }
+
+    stats.totalCustomers = uniqueCustomers.size;
+
+    res.status(200).json({
+      success: true,
+      seller,
+      products,
+      stats
+    });
+
+  } catch (error) {
+    console.error('Error fetching seller profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching seller profile',
+      error: error.message
+    });
+  }
 };

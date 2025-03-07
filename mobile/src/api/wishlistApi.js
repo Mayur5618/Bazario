@@ -4,7 +4,10 @@ export const wishlistApi = {
   // Get wishlist items
   getWishlist: async () => {
     try {
-      const response = await axios.get('/api/user/wishlist');
+      const response = await axios.get('/api/wishlist');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to fetch wishlist');
+      }
       return response.data;
     } catch (error) {
       console.error('Error fetching wishlist:', error);
@@ -15,7 +18,10 @@ export const wishlistApi = {
   // Add to wishlist
   addToWishlist: async (productId) => {
     try {
-      const response = await axios.post('/api/user/wishlist/add', { productId });
+      const response = await axios.post('/api/wishlist/add', { productId });
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to add to wishlist');
+      }
       return response.data;
     } catch (error) {
       console.error('Error adding to wishlist:', error);
@@ -26,7 +32,10 @@ export const wishlistApi = {
   // Remove from wishlist
   removeFromWishlist: async (productId) => {
     try {
-      const response = await axios.post('/api/user/wishlist/remove', { productId });
+      const response = await axios.delete(`/api/wishlist/remove/${productId}`);
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to remove from wishlist');
+      }
       return response.data;
     } catch (error) {
       console.error('Error removing from wishlist:', error);
@@ -45,8 +54,17 @@ export const wishlistApi = {
     }
   },
 
+  // Clear wishlist
   clearWishlist: async () => {
-    const response = await axios.delete('/api/wishlist/clear');
-    return response.data;
+    try {
+      const response = await axios.delete('/api/wishlist/clear');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to clear wishlist');
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error clearing wishlist:', error);
+      throw error;
+    }
   }
 }; 

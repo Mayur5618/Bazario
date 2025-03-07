@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  protect,
+  verifyToken,
   seller,
   sellerOrAgency,
 } from "../middleware/authMiddleware.js";
@@ -14,8 +14,16 @@ import {
   getBulkProducts,
   getFilteredProducts,
   getCategories,
+  uploadProductImages
 } from "../controllers/product.controller.js";
-import { createReview } from "../controllers/review.controller.js";
+import { 
+  createReview, 
+  getProductReviews,
+  updateReview,
+  deleteReview,
+  toggleLike,
+  checkUserReview
+} from "../controllers/review.controller.js";
 import Product from "../models/product.model.js";
 
 const router = express.Router();
@@ -26,43 +34,44 @@ router.get("/filtered", getFilteredProducts);
 router.get("/categories", getCategories);
 router.get("/:id", getProduct);
 
+// Review routes
+router.get('/:productId/reviews', getProductReviews);
+router.post('/:productId/reviews', verifyToken, createReview);
+router.put('/:productId/reviews/:reviewId', verifyToken, updateReview);
+router.delete('/:productId/reviews/:reviewId', verifyToken, deleteReview);
+router.post('/:productId/reviews/:reviewId/like', verifyToken, toggleLike);
+router.get('/:productId/user-review', verifyToken, checkUserReview);
+
 // Protected routes with platform access check
 router.post(
   "/create",
-  protect,
-  sellerOrAgency, // Allow both sellers and agencies
-  checkPlatformAccess((req) => req.body.platformType), // Check based on request body
+  verifyToken,
+  sellerOrAgency,
   createProduct
 );
 
 router.put(
   "/:id",
-  protect,
+  verifyToken,
   sellerOrAgency,
   checkPlatformAccess((req) => req.body.platformType),
   updateProduct
 );
 
-router.delete("/:id", protect, sellerOrAgency, deleteProduct);
+router.delete("/:id", verifyToken, sellerOrAgency, deleteProduct);
 
-// Platform specific routes (optional)
-router.get("/b2b/products", protect, checkPlatformAccess("b2b"), getProducts);
-
-router.get("/b2c/products", protect, checkPlatformAccess("b2c"), getProducts);
-
-router.post('/:productId/reviews', protect, createReview);
+// Platform specific routes
+router.get("/b2b/products", verifyToken, checkPlatformAccess("b2b"), getProducts);
+router.get("/b2c/products", verifyToken, checkPlatformAccess("b2c"), getProducts);
 
 router.post('/bulk', getBulkProducts);
 
+// Categories routes
 router.get('/categories', async (req, res) => {
   try {
     const { platformType } = req.query;
-    
-    // Add platformType to the query if provided
     const query = platformType ? { platformType: { $in: [platformType] } } : {};
-    
     const categories = await Product.distinct('category', query);
-    
     res.status(200).json({
       success: true,
       categories
@@ -80,7 +89,7 @@ router.get('/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
     const products = await Product.find({ 
-      category: { $regex: new RegExp(category, 'i') } // Case-insensitive search
+      category: { $regex: new RegExp(category, 'i') }
     }).populate('seller', 'name email');
 
     res.status(200).json({
@@ -95,5 +104,11 @@ router.get('/category/:category', async (req, res) => {
     });
   }
 });
+
+router.post(
+  "/upload",
+  verifyToken,
+  uploadProductImages
+);
 
 export default router;

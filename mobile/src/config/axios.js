@@ -6,16 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Get the development server URL
 const getDevelopmentUrl = () => {
   if (__DEV__) {
-    // For Android Emulator
-    if (Platform.OS === 'android') {
-      return 'http://192.168.119.193:5000';  // Corrected IP address for development
-    }
-    
-    // For iOS Simulator or Physical Device
-    return 'http://192.168.119.193:5000';  // Corrected IP address for development // Update yaha karo
-//  Corrected IP address for development
- // Updated local IP address
-    // above make change
+    // For both Android and iOS
+    return 'http://192.168.20.193:5000';  // Verify this IP is correct
   }
   return 'https://your-production-api.com'; // For production
 };

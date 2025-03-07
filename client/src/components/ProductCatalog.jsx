@@ -86,34 +86,50 @@ const ProductCatalog = () => {
 
   // Fetch initial wishlist data
   useEffect(() => {
-    if (userData) {
-      fetchWishlistData();
-    }
-  }, [userData]);
-
-  const fetchWishlistData = async () => {
-    try {
-      const response = await axios.get('/api/user/wishlist', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+    const fetchWishlistIfAuthenticated = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          // If no token, don't try to fetch wishlist
+          return;
         }
-      });
 
-      if (response.data.success) {
-        // Get full product details for wishlist items
-        const productsResponse = await axios.post('/api/products/bulk', {
-          productIds: response.data.wishlist
+        const response = await axios.get('/api/wishlist', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
-        if (productsResponse.data.success) {
-          dispatch(setWishlistItems(productsResponse.data.products));
+        if (response.data.success) {
+          // Get full product details for wishlist items
+          if (response.data.wishlist && response.data.wishlist.length > 0) {
+            const productsResponse = await axios.post('/api/products/bulk', {
+              productIds: response.data.wishlist
+            });
+
+            if (productsResponse.data.success) {
+              dispatch(setWishlistItems(productsResponse.data.products));
+            }
+          } else {
+            dispatch(setWishlistItems([]));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
+        // Only show error if it's not an auth error
+        if (error.response?.status !== 401) {
+          toast.error("Unable to fetch wishlist");
         }
       }
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-      toast.error("Failed to fetch wishlist");
+    };
+
+    if (userData) {
+      fetchWishlistIfAuthenticated();
+    } else {
+      // Clear wishlist if user is not logged in
+      dispatch(setWishlistItems([]));
     }
-  };
+  }, [userData, dispatch]);
 
   const handleAddToCart = async (productId) => {
     if (!userData) {
@@ -215,7 +231,7 @@ const ProductCatalog = () => {
 
       if (!isInWishlist) {
         // Add to wishlist
-        const response = await axios.post('/api/user/wishlist/add', {
+        const response = await axios.post('/api/wishlist/add', {
           productId: product._id
         }, config);
 
@@ -225,9 +241,7 @@ const ProductCatalog = () => {
         }
       } else {
         // Remove from wishlist
-        const response = await axios.post('/api/user/wishlist/remove', {
-          productId: product._id
-        }, config);
+        const response = await axios.delete(`/api/wishlist/remove/${product._id}`, config);
 
         if (response.data.success) {
           dispatch(removeFromWishlist(product._id));
@@ -242,39 +256,56 @@ const ProductCatalog = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const searchParams = new URLSearchParams(location.search);
-        const category = searchParams.get('category');
-        
-        console.log('Fetching products with category:', category);
-        
-        const response = await axios.get('/api/products/filtered', {
-          params: {
-            category: category || '',
-            platformType: 'b2c',
-            limit: 20
-          }
-        });
+  const handleCategoryClick = (categoryId) => {
+    setLoading(true);
+    const searchParams = new URLSearchParams(location.search);
+    
+    if (categoryId === 'all') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', categoryId);
+    }
 
-        console.log('API Response:', response.data);
+    // Update URL without page reload
+    window.history.pushState(
+      {},
+      '',
+      `${location.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    );
 
-        if (response.data.success) {
-          setProducts(response.data.products);
-        } else {
-          setError('Failed to fetch products');
+    // Trigger products fetch with new category
+    fetchProducts(categoryId);
+  };
+
+  const fetchProducts = async (categoryId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/products/filtered', {
+        params: {
+          category: categoryId === 'all' ? '' : categoryId,
+          platformType: 'b2c',
+          limit: 20
         }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError(error.response?.data?.message || 'Failed to fetch products');
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
 
-    fetchProducts();
+      if (response.data.success) {
+        setProducts(response.data.products);
+      } else {
+        setError('Failed to fetch products');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError(error.response?.data?.message || 'Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update useEffect to use the new fetchProducts function
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const category = searchParams.get('category') || 'all';
+    fetchProducts(category);
   }, [location.search]);
 
   const handleImageLoad = (productId) => {
@@ -286,24 +317,38 @@ const ProductCatalog = () => {
 
   const categories = [
     { id: "all", name: "All Products" },
-    { id: "vegetables", name: "Vegetables" },
+    { id: "vegetable", name: "Vegetables" },
     { id: "home-cooked", name: "Home Cooked Food" },
     { id: "pickles", name: "Traditional Pickles" },
     { id: "seasonal", name: "Seasonal Foods" },
   ];
 
-  const handleCategoryClick = (categoryId) => {
-    if (categoryId === 'all') {
-      navigate('/products');
-    } else {
-      navigate(`/products?category=${categoryId}`);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[300px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Keep showing category tabs while loading */}
+        <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className={`px-4 py-2 rounded-full whitespace-nowrap transition-all `}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Skeleton loader for products */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
+            <div key={item} className="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+              <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

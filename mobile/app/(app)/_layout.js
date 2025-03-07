@@ -1,8 +1,12 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import BottomTabs from '../../src/components/BottomTabs';
 import { View } from 'react-native';
 
 export default function AppLayout() {
+  const pathname = usePathname();
+  const hideTabsOn = ['/checkout', '/product/[id]'];
+  const shouldShowTabs = !hideTabsOn.some(path => pathname.includes(path));
+
   return (
     <View style={{ flex: 1 }}>
       <Stack
@@ -19,7 +23,8 @@ export default function AppLayout() {
         />
         <Stack.Screen name="home" />
         <Stack.Screen name="cart" />
-        <Stack.Screen name="checkout" />
+        <Stack.Screen name="checkout" 
+        />
         <Stack.Screen name="categories" />
         <Stack.Screen name="account" />
         <Stack.Screen 
@@ -60,7 +65,7 @@ export default function AppLayout() {
           }}
         />
       </Stack>
-      <BottomTabs />
+      {shouldShowTabs && <BottomTabs />}
     </View>
   );
 } 

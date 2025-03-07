@@ -199,14 +199,26 @@ export const createOrder = async (req, res) => {
     try {
         const { shippingAddress, paymentMethod } = req.body;
         const buyer = req.user._id;
-        console.log('Creating order for buyer:', buyer);
-        console.log('Shipping address:', shippingAddress);
-        console.log('Payment method:', paymentMethod);
+        
+        console.log('Creating order with data:', {
+            buyer,
+            shippingAddress,
+            paymentMethod
+        });
+
+        // Validate required fields
+        if (!shippingAddress || !paymentMethod) {
+            return res.status(400).json({
+                success: false,
+                message: 'Shipping address and payment method are required'
+            });
+        }
+
         // Get cart with populated items
         const cart = await Cart.findOne({ buyer })
             .populate('items.product')
             .populate('items.seller');
-            console.log('Found cart:', cart);
+
         if (!cart || cart.items.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -217,6 +229,9 @@ export const createOrder = async (req, res) => {
         // Group items by seller
         const itemsBySeller = {};
         cart.items.forEach(item => {
+            if (!item.seller || !item.seller._id) {
+                throw new Error('Invalid seller information in cart');
+            }
             const sellerId = item.seller._id.toString();
             if (!itemsBySeller[sellerId]) {
                 itemsBySeller[sellerId] = [];
@@ -238,23 +253,28 @@ export const createOrder = async (req, res) => {
             const shippingCost = 0; // Fixed shipping cost
 
             try {
+                // Format shipping address based on platform
+                const formattedAddress = {
+                    fullName: shippingAddress.firstName 
+                        ? `${shippingAddress.firstName} ${shippingAddress.lastName}`
+                        : shippingAddress.fullName,
+                    email: shippingAddress.email,
+                    phone: shippingAddress.phone,
+                    street: shippingAddress.street,
+                    city: shippingAddress.city,
+                    state: shippingAddress.state,
+                    pincode: shippingAddress.pincode,
+                    country: shippingAddress.country || 'India'
+                };
+
                 // Create order
                 const order = new Order({
                     buyer,
                     items: sellerItems,
-                    shippingAddress: {
-                        fullName: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-                        email: shippingAddress.email,
-                        phone: shippingAddress.phone,
-                        street: shippingAddress.street,
-                        city: shippingAddress.city,
-                        state: shippingAddress.state,
-                        pincode: shippingAddress.pincode,
-                        country: shippingAddress.country
-                    },
+                    shippingAddress: formattedAddress,
                     payment: {
-                        method: paymentMethod,
-                        status: paymentMethod === 'COD' ? 'pending' : 'processing'
+                        method: paymentMethod.toUpperCase(),
+                        status: paymentMethod.toUpperCase() === 'COD' ? 'pending' : 'processing'
                     },
                     subtotal,
                     shippingCost,
@@ -293,7 +313,7 @@ export const createOrder = async (req, res) => {
                         );
                     }
                 }
-                throw new Error('Failed to create order');
+                throw new Error('Failed to create order: ' + error.message);
             }
         }
 

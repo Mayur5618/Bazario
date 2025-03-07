@@ -312,23 +312,86 @@ const AddProductScreen = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/products/create', {
-        ...formData,
+      console.log('Starting product submission...');
+      // Upload images first
+      const imageUrls = await Promise.all(
+        selectedImages.map(async (image, index) => {
+          console.log(`Processing image ${index + 1}...`);
+          // Convert image to base64
+          const response = await fetch(image.uri);
+          const blob = await response.blob();
+          const base64Data = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+
+          console.log(`Uploading image ${index + 1} to server...`);
+          // Upload to server
+          const uploadResponse = await axios.post('/api/products/upload', {
+            image: base64Data
+          });
+          
+          console.log(`Image ${index + 1} upload response:`, uploadResponse.data);
+          
+          if (!uploadResponse.data.success) {
+            throw new Error(uploadResponse.data.message || 'Image upload failed');
+          }
+          
+          return uploadResponse.data.url;
+        })
+      );
+
+      console.log('All images uploaded successfully:', imageUrls);
+
+      // Prepare product data
+      const productData = {
+        name: formData.name,
+        description: formData.description || '',
         price: Number(formData.price),
+        category: formData.category,
         stock: Number(formData.stock),
-        unitSize: Number(formData.unitSize)
-      });
+        images: imageUrls,
+        tags: formData.tags,
+        youtubeLink: formData.youtubeLink || '',
+        platformType: ['b2c'], // Since this is a B2C product
+        unitSize: Number(formData.unitSize) || 1,
+        unitType: formData.unitType,
+        subUnitPrices: formData.subUnitPrices || {}
+      };
+
+      console.log('Sending product data to server:', productData);
+
+      const response = await axios.post('/api/products/create', productData);
+      console.log('Product creation response:', response.data);
 
       if (response.data.success) {
-        Alert.alert('सफल', 'प्रोडक्ट सफलतापूर्वक जोड़ा गया', [
-          {
-            text: 'ठीक है',
-            onPress: () => router.back()
-          }
-        ]);
+        Alert.alert(
+          'सफल', 
+          'प्रोडक्ट सफलतापूर्वक जोड़ा गया', 
+          [
+            {
+              text: 'ठीक है',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        throw new Error(response.data.message || 'कुछ गलत हो गया');
       }
     } catch (error) {
-      Alert.alert('एरर', error.response?.data?.message || 'प्रोडक्ट जोड़ने में समस्या हुई');
+      console.error('Error creating product:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      Alert.alert(
+        'एरर',
+        error.response?.data?.message || 
+        error.message || 
+        'प्रोडक्ट जोड़ने में समस्या हुई'
+      );
     } finally {
       setLoading(false);
       setShowConfirmation(false);

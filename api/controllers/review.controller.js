@@ -1,6 +1,7 @@
 import Review from '../models/review.model.js';
 import Order from '../models/order.model.js';
 import { uploadToFirebase, deleteFromFirebase } from '../utilities/firebase.js';
+import Product from '../models/product.model.js';
 
 export const createReview = async (req, res) => {
     try {
@@ -216,7 +217,7 @@ export const voteReview = async (req, res) => {
 export const toggleLike = async (req, res) => {
     try {
         const { reviewId } = req.params;
-        const userId = req.user._id;  // Current user's ID
+        const userId = req.user._id;
 
         // Find the review
         const review = await Review.findById(reviewId);
@@ -263,7 +264,6 @@ export const toggleLike = async (req, res) => {
                 likes: review.likes
             });
         }
-
     } catch (error) {
         console.error('Toggle like error:', error);
         res.status(500).json({
@@ -586,6 +586,95 @@ export const checkUserReview = async (req, res) => {
             success: false,
             message: 'Error checking review eligibility',
             error: error.message
+        });
+    }
+};
+
+// Get all reviews for seller's products with search and filters
+export const getSellerReviews = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+        const { 
+            search,         // Search by product name
+            rating,         // Filter by rating (1-5)
+            hasImages,      // Filter reviews with images
+            page = 1,
+            limit = 10 
+        } = req.query;
+
+        // Get seller's products
+        const products = await Product.find({ seller: sellerId });
+        const productIds = products.map(p => p._id);
+
+        // Build query
+        let query = { product: { $in: productIds } };
+
+        // Add rating filter if provided and valid
+        if (rating && !isNaN(parseInt(rating)) && parseInt(rating) >= 1 && parseInt(rating) <= 5) {
+            query.rating = parseInt(rating);
+        }
+
+        // Add image filter if provided
+        if (hasImages === 'true') {
+            query.images = { $exists: true, $ne: [] };
+        }
+
+        // If search term provided, find products matching the name
+        if (search) {
+            const matchingProducts = await Product.find({
+                seller: sellerId,
+                name: { $regex: search, $options: 'i' }
+            });
+            query.product = { $in: matchingProducts.map(p => p._id) };
+        }
+
+        // Get total count for pagination
+        const total = await Review.countDocuments(query);
+
+        // Get reviews with pagination
+        const reviews = await Review.find(query)
+            .populate('product', 'name images')
+            .populate('buyer', 'firstname lastname')
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        // Calculate rating statistics
+        const stats = await Review.aggregate([
+            { $match: { product: { $in: productIds } } },
+            { 
+                $group: {
+                    _id: '$rating',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Format stats
+        const ratingStats = {
+            1: 0, 2: 0, 3: 0, 4: 0, 5: 0
+        };
+        stats.forEach(stat => {
+            ratingStats[stat._id] = stat.count;
+        });
+
+        res.status(200).json({
+            success: true,
+            reviews,
+            pagination: {
+                total,
+                pages: Math.ceil(total / limit),
+                page: parseInt(page),
+                limit: parseInt(limit)
+            },
+            stats: ratingStats
+        });
+
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching reviews'
         });
     }
 };

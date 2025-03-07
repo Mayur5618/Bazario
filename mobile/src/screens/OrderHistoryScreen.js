@@ -25,7 +25,8 @@ const OrderHistoryScreen = () => {
     try {
       setLoading(true);
       const response = await orderApi.getMyOrders();
-      if (response.success) {
+      console.log('Orders response:', response);
+      if (response && response.success && response.orders) {
         // Sort orders - pending first, then completed
         const sortedOrders = [...response.orders].sort((a, b) => {
           if (a.status.toLowerCase() === 'pending' && b.status.toLowerCase() !== 'pending') return -1;
@@ -33,15 +34,26 @@ const OrderHistoryScreen = () => {
           // If both are pending or both are completed, sort by date (newest first)
           return new Date(b.orderDate) - new Date(a.orderDate);
         });
+        console.log('Sorted orders:', sortedOrders);
         setOrders(sortedOrders);
+      } else {
+        setOrders([]);
+        Toast.show('No orders found', {
+          duration: Toast.durations.LONG,
+          position: Toast.positions.BOTTOM,
+          shadow: true,
+          animation: true,
+        });
       }
     } catch (error) {
+      console.error('Error in fetchOrders:', error);
       Toast.show(error.message || 'Failed to fetch orders', {
         duration: Toast.durations.LONG,
         position: Toast.positions.BOTTOM,
         shadow: true,
         animation: true,
       });
+      setOrders([]);
     } finally {
       setLoading(false);
       setRefreshing(false);

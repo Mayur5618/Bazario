@@ -323,17 +323,17 @@ export const verifyToken = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, 'your-temporary-secret-key');
   
-      // Find user based on token data
+      // Find user based on token data with platformType field
       let user;
       switch (decoded.userType) {
         case 'buyer':
           user = await Buyer.findById(decoded.id);
           break;
         case 'seller':
-          user = await Seller.findById(decoded.id);
+          user = await Seller.findById(decoded.id).select('+platformType');
           break;
         case 'agency':
-          user = await Agency.findById(decoded.id);
+          user = await Agency.findById(decoded.id).select('+platformType');
           break;
         default:
           throw new Error('Invalid user type');
@@ -344,6 +344,11 @@ export const verifyToken = async (req, res, next) => {
           success: false,
           message: 'User not found'
         });
+      }
+
+      // Ensure platformType is always an array for sellers and agencies
+      if (['seller', 'agency'].includes(decoded.userType) && user.platformType) {
+        user.platformType = Array.isArray(user.platformType) ? user.platformType : [user.platformType];
       }
   
       // Attach user to request

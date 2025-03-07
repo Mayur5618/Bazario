@@ -14,6 +14,7 @@ export default function ViewOrdersLayout() {
                     headerTitleStyle: {
                         fontWeight: 'bold',
                     },
+                    headerShown: false,
                 }}
             />
         </Stack>

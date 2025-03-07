@@ -25,32 +25,24 @@ const Wishlist = () => {
 
   const fetchWishlistProducts = async () => {
     try {
-      const wishlistResponse = await axios.get('/api/user/wishlist', {
+      const response = await axios.get('/api/wishlist', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      if (wishlistResponse.data.success) {
-        dispatch(setWishlistItems(wishlistResponse.data.wishlist));
-        
-        if (!wishlistResponse.data.wishlist.length) {
-          setWishlistProducts([]);
-          setLoading(false);
-          return;
-        }
-
-        const productsResponse = await axios.post('/api/products/bulk', {
-          productIds: wishlistResponse.data.wishlist
-        });
-
-        if (productsResponse.data.success) {
-          setWishlistProducts(productsResponse.data.products);
-        }
+      if (response.data.success) {
+        const products = response.data.wishlist || [];
+        setWishlistProducts(products);
+        dispatch(setWishlistItems(products));
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch wishlist');
       }
     } catch (error) {
       console.error('Error fetching wishlist:', error);
-      toast.error('Failed to fetch wishlist');
+      toast.error(error.message || 'Failed to fetch wishlist');
+      setWishlistProducts([]);
+      dispatch(setWishlistItems([]));
     } finally {
       setLoading(false);
     }
@@ -113,9 +105,7 @@ const Wishlist = () => {
     try {
       setRemovingItems(prev => ({ ...prev, [productId]: true }));
       
-      const response = await axios.post('/api/user/wishlist/remove', {
-        productId
-      }, {
+      const response = await axios.delete(`/api/wishlist/remove/${productId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+import { sellerApi } from '../../src/api/sellerApi';
 
 const SellerDashboard = () => {
   const router = useRouter();
@@ -24,6 +25,10 @@ const SellerDashboard = () => {
     revenue: 0
   });
 
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -33,16 +38,30 @@ const SellerDashboard = () => {
     }
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // TODO: Fetch updated data here
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    await fetchDashboardStats();
+    setRefreshing(false);
   }, []);
 
-  const DashboardCard = ({ title, value, icon, color }) => (
-    <View style={[styles.card, { borderLeftColor: color }]}>
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await sellerApi.getDashboardStats();
+      if (response.success) {
+        setStats(response.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      Alert.alert('Error', 'Failed to fetch dashboard statistics');
+    }
+  };
+
+  const DashboardCard = ({ title, value, icon, color, onPress }) => (
+    <TouchableOpacity 
+      style={[styles.card, { borderLeftColor: color }]}
+      onPress={onPress}
+      disabled={!onPress}
+    >
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardValue}>{value}</Text>
@@ -50,7 +69,7 @@ const SellerDashboard = () => {
       <View style={[styles.cardIcon, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon} size={24} color={color} />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const QuickAction = ({ title, icon, onPress, color }) => (
@@ -86,6 +105,7 @@ const SellerDashboard = () => {
           value={stats.totalProducts}
           icon="cube-outline"
           color="#6C63FF"
+          onPress={() => router.push('/(seller)/products')}
         />
         <DashboardCard 
           title="Total Orders"
@@ -98,6 +118,7 @@ const SellerDashboard = () => {
           value={stats.pendingOrders}
           icon="time-outline"
           color="#FF9800"
+          onPress={() => router.push('/pending-orders')}
         />
         <DashboardCard 
           title="Revenue"
@@ -132,6 +153,15 @@ const SellerDashboard = () => {
           <Ionicons name="person" size={24} color="#6C63FF" />
           <Text style={styles.quickActionText}>Profile</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.quickActionButton}
+          onPress={() => router.push('/reviews')}
+        >
+          <Ionicons name="star" size={24} color="#FFD700" />
+          <Text style={styles.quickActionText}>Reviews</Text>
+        </TouchableOpacity>
+
         <QuickAction 
           title="Settings"
           icon="settings-outline"

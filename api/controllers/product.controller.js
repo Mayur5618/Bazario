@@ -1,63 +1,65 @@
 import express from 'express';
 import Product from '../models/product.model.js';
 import Review from '../models/review.model.js';
+import { uploadToFirebase } from '../utilities/firebase.js';
 
 const router = express.Router();
 
 //POST /api/products
 export const createProduct = async (req, res) => {
     try {
-        const { 
-            name, 
-            description, 
-            price, 
-            category, 
-            stock, 
+        console.log('Create Product Request Body:', req.body);
+        console.log('Authenticated User:', req.user);
+
+        const {
+            name,
+            description,
+            price,
+            category,
+            stock,
             images,
+            tags,
+            youtubeLink,
             platformType,
-            minOrderQuantity,
-            maxOrderQuantity,
             unitSize,
-            unitType
+            unitType,
+            subUnitPrices
         } = req.body;
 
-        if (!name || !description || !price || !category || !stock) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide all required fields: name, description, price, category, stock'
-            });
+        // Validate required fields
+        if (!name || !price || !category || !stock || !unitType) {
+            console.log('Missing required fields:', { name, price, category, stock, unitType });
+            return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
-        if (!platformType || !Array.isArray(platformType) || platformType.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Platform type must be provided as an array ["b2b"], ["b2c"], or ["b2b", "b2c"]'
-            });
-        }
+        // Set default platform type to b2c if not provided
+        const productPlatformType = platformType || ['b2c'];
+        console.log('Platform Type:', productPlatformType);
 
         const validPlatformTypes = ['b2b', 'b2c'];
-        if (!platformType.every(type => validPlatformTypes.includes(type))) {
+        if (!productPlatformType.every(type => validPlatformTypes.includes(type))) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid platform type. Must be "b2b" or "b2c"'
             });
         }
 
-        if (!req.user || !req.user.platformType) {
+        // Check if user exists
+        if (!req.user) {
+            console.log('No authenticated user found');
             return res.status(401).json({
                 success: false,
-                message: 'User platform type not found. Please update your profile.'
+                message: 'User not authenticated'
             });
         }
 
-        if (!platformType.every(type => req.user.platformType.includes(type))) {
-            return res.status(400).json({
-                success: false,
-                message: `Platform type must match your registered platform types. Your platforms: ${req.user.platformType.join(', ')}`
-            });
+        // If user's platformType is not set, default to b2c
+        if (!req.user.platformType) {
+            console.log('Setting default platform type for user');
+            req.user.platformType = ['b2c'];
         }
 
-        if (platformType.includes('b2b')) {
+        if (productPlatformType.includes('b2b')) {
             if (!minOrderQuantity || minOrderQuantity < 1) {
                 return res.status(400).json({
                     success: false,
@@ -72,7 +74,7 @@ export const createProduct = async (req, res) => {
             }
         }
 
-        if (platformType.includes('b2c')) {
+        if (productPlatformType.includes('b2c')) {
             if (!unitSize || unitSize <= 0) {
                 return res.status(400).json({
                     success: false,
@@ -90,7 +92,7 @@ export const createProduct = async (req, res) => {
         const existingProduct = await Product.findOne({
             name: { $regex: new RegExp(`^${name}$`, 'i') },
             seller: req.user._id,
-            platformType: { $all: platformType }
+            platformType: { $all: productPlatformType }
         });
 
         if (existingProduct) {
@@ -109,26 +111,33 @@ export const createProduct = async (req, res) => {
 
         const productData = {
             name,
-            description,
-            price,
+            description: description || '',
+            price: Number(price),
             category,
-            stock,
+            stock: Number(stock),
             images: images || [],
-            platformType,
+            tags: tags || [],
+            youtubeLink: youtubeLink || '',
+            platformType: productPlatformType,
             seller: req.user._id,
-            ...(platformType.includes('b2b') && {
+            ...(productPlatformType.includes('b2b') && {
                 minOrderQuantity,
                 maxOrderQuantity: maxOrderQuantity || null
             }),
-            ...(platformType.includes('b2c') && {
-                unitSize,
+            ...(productPlatformType.includes('b2c') && {
+                unitSize: Number(unitSize) || 1,
                 unitType
-            })
+            }),
+            subUnitPrices: subUnitPrices || {}
         };
+
+        console.log('Final Product Data:', productData);
 
         const product = new Product(productData);
         const createdProduct = await product.save();
         
+        console.log('Product created successfully:', createdProduct);
+
         res.status(201).json({
             success: true,
             message: 'Product created successfully',
@@ -136,7 +145,12 @@ export const createProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create product error:', error);
+        console.error('Create product detailed error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: error.message || 'Internal server error'
@@ -318,7 +332,7 @@ export const getProducts = async (req, res) => {
 
         const products = await Product.find(filter)
             .sort(sort)
-            .populate('seller', 'firstname lastname');
+            .lean();
 
         res.json({
             success: true,
@@ -335,12 +349,69 @@ export const getProducts = async (req, res) => {
 };
 
 // GET /api/products/:id
+// export const getProduct = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+        
+//         // Find the product without populating seller initially
+//         const product = await Product.findById(id);
+
+//         if (!product) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Product not found'
+//             });
+//         }
+
+//         // Fetch reviews separately with correct population
+//         const reviews = await Review.find({ product: id })
+//             .populate({
+//                 path: 'customer',
+//                 select: 'firstname lastname profileImage'
+//             })
+//             .sort({ createdAt: -1 })
+//             .lean();
+
+//         // Fetch related products from same category
+//         const relatedProducts = await Product.find({
+//             category: product.category,
+//             _id: { $ne: product._id },
+//             platformType: { $in: product.platformType }
+//         })
+//         .limit(4)
+//         .select('name images price stock rating numReviews')
+//         .lean();
+
+//         // Calculate average rating
+//         const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+//         const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+//         res.status(200).json({
+//             success: true,
+//             product: {
+//                 ...product.toObject(),
+//                 reviews,
+//                 averageRating,
+//                 numReviews: reviews.length,
+//                 relatedProducts
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error('Error fetching product:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error fetching product',
+//             error: error.message
+//         });
+//     }
+// };
 export const getProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const product = await Product.findById(id)
-            .populate('seller', 'firstname lastname')
-            .populate('reviews');
+        const product = await Product.findById(id);
+            // .populate('seller', 'firstname lastname')
+            // .populate('reviews');
 
         if (!product) {
             return res.status(404).json({
@@ -762,6 +833,35 @@ export const getCategories = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching categories'
+        });
+    }
+};
+
+// Add this new function for handling product image uploads
+export const uploadProductImages = async (req, res) => {
+    try {
+        if (!req.body.image) {
+            return res.status(400).json({
+                success: false,
+                message: 'No image data provided'
+            });
+        }
+
+        // Get base64 image data
+        const base64Image = req.body.image;
+        
+        // Upload to Firebase
+        const imageUrl = await uploadToFirebase(base64Image);
+        
+        return res.status(200).json({
+            success: true,
+            url: imageUrl
+        });
+    } catch (error) {
+        console.error('Error uploading product image:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to upload image'
         });
     }
 };

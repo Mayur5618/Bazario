@@ -144,6 +144,14 @@ const ReviewForm = ({ onSubmit, productId, orderId }) => {
       return;
     }
 
+    if (!orderId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Order ID is missing'
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const reviewData = {
@@ -152,6 +160,8 @@ const ReviewForm = ({ onSubmit, productId, orderId }) => {
         images,
         orderId: orderId.toString()
       };
+
+      console.log('ReviewForm - Submitting review with data:', reviewData);
 
       await onSubmit(reviewData);
 
@@ -383,13 +393,7 @@ const ProductDetailScreen = () => {
             orderId: completedOrderId
         });
 
-        if (!isEligible) {
-            Toast.show({
-                type: 'info',
-                // text1: 'You can only review products from completed orders'
-                text1: 'hjhjhjhjh'
-            });
-        }
+        
     } catch (error) {
         console.error('Error checking review eligibility:', error);
         Toast.show({
@@ -614,7 +618,7 @@ const ProductDetailScreen = () => {
   // Update handleReviewSubmit to set hasReviewed
   const handleReviewSubmit = async (reviewData) => {
     try {
-        console.log('Current orderId in state:', orderId); // Add this log
+        console.log('Current orderId in state:', orderId);
         
         if (!orderId) {
             Toast.show({
@@ -627,7 +631,7 @@ const ProductDetailScreen = () => {
         // Create the review data object with orderId
         const reviewPayload = {
             ...reviewData,
-            orderId: orderId // Explicitly set orderId from state
+            orderId: orderId.toString() // Convert orderId to string
         };
 
         console.log('Submitting review with payload:', reviewPayload);

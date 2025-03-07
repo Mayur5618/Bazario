@@ -21,6 +21,7 @@ import { RadioButton } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import Voice from '@react-native-voice/voice';
+import { sellerApi } from '../../api/sellerApi';
 
 // Translations object
 const translations = {
@@ -244,21 +245,21 @@ By accepting these terms, you agree to all conditions mentioned above and commit
     agreement: {
       title: 'नियम और शर्तें',
       content: `1. सेवा की शर्तें:\n
-• हमारे प्लेटफॉर्म पर विक्रेता के रूप में, आप प्रामाणिक और गुणवत्तापूर्ण उत्पाद/सेवाएं प्रदान करने के लिए सहमत हैं।
-• आपको सटीक इन्वेंटरी और मूल्य जानकारी बनाए रखनी होगी।
-• ग्राहकों को समय पर डिलीवरी के लिए आप जिम्मेदार हैं।
+• हमारे प्लेटफॉर्म पर विक्रेता के रूप में, आप प्रामाणिक अनે गુણવત્તાયુક્ત उत्पादने/सેવा देણ्यास सहमत आहात.
+• आपको सटीक इन्व्हेंटरी आणि किंमत माहिती राखली पाहिजे.
+• ग्राहकांना समयसर डिलिवरी माटે आप जवाबदार छો.
 
-2. भुगतान की शर्तें:\n
-• भुगतान मासिक आधार पर संसाधित और वितरित किया जाएगा।
-• भुगतान चक्र: महीने की 1 से आखिरी तारीख तक की सभी बिक्री अगले महीने की 10 तारीख तक प्रोसेस की जाएगी।
-• भुगतान सीधे आपके रजिस्टर्ड बैंक खाते में किया जाएगा।
-• प्लेटफॉर्म शुल्क और लागू कर वर्तमान दरों के अनुसार काटे जाएंगे।
+2. चુकवणીની शर्तો:\n
+• चુकवणીની प્रक્रિયા मાસિક धોરણે करवામાં आવશે अनે तેનું वितरण करवામાં आવશે.
+• चુकवणી चक्र: महीनાના 1લીથી छેલ્લા दिवस सुधીના तमામ वेचाणની प્रक્रિયા नીचેના महीनાની 10મી तारીખ सुधીमાં करवામાં आવશે.
+• चુकवणી सीधી आपके नोंधायેલા बેंक खातામાं करवામાં आવશે.
+• प्लेटफોर્म फी अनે लागु कर वर्तमान दरों के अनुसार कापवામાં आવશે.
 
 3. विक्रेता की जिम्मेदारियां:\n
-• सभी उत्पादों के लिए उच्च गुणवत्ता मानकों को बनाए रखें
+• सभी उत्पादों के लिए उच्च गુणवत्ता मानकों को बनाए रखें
 • 24 घंटों के भीतर ग्राहक प्रश्नों का जवाब दें
-• अपनी दुकान की जानकारी और इन्वेंटरी को अपडेट रखें
-• सभी लागू स्थानीय और राष्ट्रीय नियमों का पालन करें
+• अपनी दुकान की जानकारी और इन्व्हेंटरी को अपडेट रखें
+• सभी लागू स्थानीय और राष्ट्रीय नियमांचे पालन करें
 
 4. प्लेटफॉर्म दिशानिर्देश:\n
 • न्यूनतम 3.5 स्टार रेटिंग बनाए रखें
@@ -266,12 +267,12 @@ By accepting these terms, you agree to all conditions mentioned above and commit
 • उत्पाद सुरक्षा के लिए उचित पैकेजिंग का उपयोग करें
 • ग्राहकांशी व्यावसायिक संवाद कायम ठेवा
 
-5. खाता निलंबन:\n
-• नीति उल्लंघनों के लिए प्लेटफॉर्म खातों को निलंबित करने का अधिकार सुरक्षित रखता है
-• कई उल्लंघनों के परिणामस्वरूप स्थायी खाता समाप्ति हो सकती है
-• मुद्दों के समाधान के बाद सभी लंबित भुगतान संसाधित किए जाएंगे
+5. एकाउन્ट सस્पેન્શન:\n
+• प्लेटफोर્म नीतिના उल्लंघन माटે एकाउन્ट્सને सस્पેન્ड करवानો अधिकार अनामत राखे छે
+• बहुविध उल्लंघनों के परिणामस्वरूप खातુं कायमी समाप्त थी शकે छે
+• आपके बाकी चૂकवणીओ मुद્दाओं के निराकरण पछि प्रक્रिया करवामां आवशે
 
-इन नियमों को स्वीकार करके, आप ऊपर बताई गई सभी शर्तों से सहमत हैं और हमारे प्लेटफॉर्म के गुणवत्ता मानकों को बनाए रखने के लिए प्रतिबद्ध हैं।`
+इन शर्तों को स्वीकार करके, आप ऊपर दर्शाई गई सभी शर्तों से सहमत हैं और हमारे प्लेटफॉर्म के गुणवत्ता मानकों को बनाए रखने के लिए प्रतिबद्ध छો.`
     },
     categories: {
       groceries: 'किराना सामान',
@@ -314,7 +315,7 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       accountNumber: "खाते क्रमांक",
       ifscCode: 'बँक IFSC कोड टाका (ऐच्छिक)',
       accountHolderName: "खातेदाराचे नाव",
-      uploadGST: "जीएसटી सर્ટिफिकેટ अपलोड करा",
+      uploadGST: "जीएसटી सर्ટિફિકેટ अपलोड करा",
       uploadPAN: "पેન कार्ड अपलोड करा",
       uploadAadhaar: "आधार कार्ड अपलोड करा",
       uploadShopLicense: "दુકાન લાઇસન્સ अपलोड करा",
@@ -323,7 +324,7 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       customBusinessType: 'तुमच्या व्यवसायाचा प्रकार लिहा',
       businessDescription: 'तुमच्या व्यवसाय वિશે જણાવો (શું વેચો છો?)',
       upiId: 'तुमचा UPI आयडી टाका (उदा: मोબાઇલ@upi)',
-      bankAccount: 'बેંક एકાઉન્ટ નંબર લખો (વૈકલ્પિક)',
+      bankAccount: 'बएંક એકાઉન્ટ નંબર લખો (વૈકલ્પિક)',
       acceptsCOD: 'मी कॅश ऑन डિલિવરી स्वીકારીશ',
       productDescription: 'तुम्ही काय विकता? (उदा: मी ताज्या भाज्या विकतो)',
       selectCategory: 'तुमच्या वस्तूंचा प्रकार निवडा',
@@ -331,91 +332,11 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       acceptAgreement: 'मी सर्व नियमांचे पालन करून चांगली सेवा देईन'
     },
     errors: {
-      required: "हे क्षेत्र आवश्यक आहे",
-      invalidEmail: "कृपया वैध ईमेल प्रविष्ट करा",
-      invalidMobile: "कृपया वैध मोબाईल नंबर प्रविष्ट करा",
-      passwordMismatch: "पासवर्ड जुळत नाहीत",
-      invalidGST: "कृपया वैध जीएसटी क्रमांक प्रविष्ट करा",
-      invalidPAN: "कृपया वैध पૅन क्रमांक प्रविष्ट करा",
-      invalidPincode: "कृपया वैध पिन कोड प्रविष्ट करा",
-      invalidAadhar: "कृपया वैध 12-अंक आधार कार्ड नंबर दर्ज करें",
-      productImageRequired: 'उत्पादनाचा फोटो आवश्यक आहे',
-      customCategoryRequired: 'कृपया तुमच्या उत्पादनाची श्रेणी टाका',
-      voiceInputError: 'बोलणे ओळखण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
-      micPermission: 'व्हॉइस इनपुटसाठी मायक्रोफोनची परवानगी आवश्यक आहे.',
-      fullName: 'कृपया आपले पूर्ण नाव प्रविष्ट करा',
-      mobile: 'कृपया 10 अंकी वैध मोबाईल नंबर प्रविष्ट करा',
-      password: 'पासवर्ड किमान 8 अक्षरांचा असावा',
-      passwordMatch: 'पासवर्ड जुळत नाहीत',
-      businessType: 'कृपया व्यवसायाचा प्रकार निवडा',
-      customBusinessType: 'कृपया आपला व्यवसाय नमूद करा',
-      aadhar: 'कृपया 12 अंकी वैध आधार क्रमांक प्रविष्ट करा',
-      address: 'कृपया आपला पत्ता प्रविष्ट करा',
-      city: 'कृपया आपले शहर/गाव प्रविष्ट करा',
-      pincode: 'कृपया 6 अंकी वैध पिनकोड प्रविष्ट करा',
-      state: 'कृपया आपले राज्य प्रविष्ट करा',
-      productCategory: 'कृपया किमान एक उत्पाद श्रेणी निवडा',
-      productDescription: 'कृपया आपल्या उत्पादनाचे वर्णन करा',
-      productImage: 'कृपया किमान एक उत्पाद फोटो अपलोड करा',
-      agreement: 'कृपया नियम आणि अटी स्वीकारा'
-    },
-    buttons: {
-      next: "पुढे",
-      previous: "मागे",
-      submit: "सबमिट करा",
-      getCurrentLocation: "वर्तमान स्थान मिळवा"
-    },
-    progress: 'चरण %s पैकी %s',
-    agreement: {
-      title: 'अटी आणि शर्ती',
-      content: `1. सेवा अटी:\n
-• आमच्या प्लॅटफॉर्मवर विक्रेता म्हणून, तुम्ही प्रामाणिक आणि दर्जेदार उत्पादने/सेवा देण्यास सहमत आहात.
-• तुम्ही अचूक इन्व्हेंटरी आणि किंमत माहिती राखली पाहिजे.
-• ग्राहकांना वेळेवर वितरणासाठी तुम्ही जबाबदार आहात.
-
-2. पेमेंट अटी:\n
-• देयकांवर प्रक्रिया केली जाईल आणि मासिक आधारावर वितरित केले जाईल.
-• पेमेंट सायकल: महिन्याच्या 1 ला ते शेवटच्या दिवसापर्यंत सर्व विक्री पुढील महिन्याच्या 10 तारखेपर्यंत प्रक्रिया केली जाईल.
-• पेमेंट थेट तुमच्या नोंदणीकृत बँक खात्यात केले जाईल.
-• वर्तमान दरांनुसार प्लॅटफॉर्म फी आणि लागू कर वजा केले जातील.
-
-3. विक्रेत्याच्या जबाबदाऱ्या:\n
-• सर्व उत्पादनांसाठी उच्च दर्जाची मानके राखा
-• 24 तासांच्या आत ग्राहकांच्या प्रश्नांची उत्तरे द्या
-• तुमच्या दुकानाची माहिती आणि इन्व्हेंटरी अपडेट ठेवा
-• सर्व लागू स्थानिक आणि राष्ट्रीय नियमांचे पालन करा
-
-४. प्लॅटफॉर्म मार्गदर्शक तत्त्वे:\n
-• किमान 3.5 स्टार रेटिंग ठेवा
-• प्लॅटफॉर्म धोरणानुसार रिटर्न आणि रिफंड हाताळा
-• उत्पादनाच्या संरक्षणासाठी योग्य पॅकेजिंग वापरा
-• ग्राहकांशी व्यावसायिक संवाद कायम ठेवा
-
-5. खाते निलंबन:\n
-• प्लॅटफॉर्मने धोरणाच्या उल्लंघनासाठी खाती निलंबित करण्याचा अधिकार राखून ठेवला आहे
-• एकाधिक उल्लंघनांमुळे खाते कायमस्वरूपी समाप्त होऊ शकते
-• समस्यांचे निराकरण केल्यानंतर सर्व प्रलंबित पेमेंटवर प्रक्रिया केली जाईल
-
-या अटी स्वीकारून, तुम्ही वर नमूद केलेल्या सर्व अटींशी सहमत आहात आणि आमच्या प्लॅटफॉर्मची गुणवत्ता मानके राखण्यासाठी वचनबद्ध आहात.`
-    },
-    categories: {
-      groceries: 'किराणा सामान',
-      vegetables: 'भाज्या',
-      fruits: 'फळे',
-      dairy: 'दुधाचे पदार्थ',
-      meat: 'मांस',
-      bakery: 'बेकरी',
-      snacks: 'नाश्ता',
-      beverages: 'पेय',
-      household: 'घरगुती सामान',
-      other: 'इतर'
-    },
-    errors: {
-      paymentMethodRequired: 'कृपया किमान एक पेमेंट पद्धत निवडा',
-      invalidUPI: 'कृपया वैध UPI ID टाका',
-      uploadFailed: 'फोटो अपलोड करता आला नाही',
-      locationPermission: 'लोकेशन परवानगी आवश्यक आहे',
-      locationError: 'लोकेशन मिळवण्यात त्रुटी'
+      paymentMethodRequired: 'कૃપા કરી ઓછામાં ઓછી એક પેમેન્ટ પદ્ધતિ પસંદ કરો',
+      invalidUPI: 'કૃપા કરી માન્ય UPI ID દાખલ કરો',
+      uploadFailed: 'ફોટો અપલોડ કરી શકાયો નથી',
+      locationPermission: 'લોકેશન પરમિશન જરૂરી છે',
+      locationError: 'લોકેશન મેળવવામાં ભૂલ'
     }
   },
   gu: {
@@ -515,7 +436,7 @@ By accepting these terms, you agree to all conditions mentioned above and commit
 • તમામ ઉત્પાદનો માટે ઉચ્ચ ગુણવત્તાના ધોરણો જાળવો
 • ગ્રાહકની પૂછપરછનો 24 કલાકની અંદર જવાબ આપો
 • તમારી દુકાનની માહિતી અને ઇન્વેન્ટરી અપડેટ રાખો
-• તમામ લાગુ સ્થાનિક અને રાષ્ટ્રીય નિયमોનું પાલन કરો
+• તમામ લાગુ સ્થાનિક અને રાષ્ટ્રીય નિયમોનું પાલન કરો
 
 4. પ્લેટફોર્મ માર્ગદર્શિકા:\n
 • ન્યૂનતમ 3.5 સ્ટાર રેટિંગ ધરાવો
@@ -955,18 +876,60 @@ const SellerRegistrationScreen = () => {
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
     try {
-      // TODO: Implement API call to register seller
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.replace('/(seller)/dashboard');
+        if (!validateStep6()) {
+            return;
+        }
+
+        setIsLoading(true);
+
+        // Split full name into firstname and lastname
+        const nameParts = formData.fullName.split(' ');
+        const firstname = nameParts[0];
+        const lastname = nameParts.slice(1).join(' ') || nameParts[0];
+
+        const registrationData = {
+            firstname,
+            lastname,
+            mobileno: formData.mobile,
+            password: formData.password,
+            address: formData.address,
+            country: 'India',
+            state: formData.state,
+            city: formData.city,
+            pincode: formData.pincode,
+            userType: 'seller',
+            platformType: ['b2c'],
+            shopName: formData.shopName,
+            businessType: formData.businessType,
+            customBusinessType: formData.customBusinessType || '',
+            businessDescription: formData.businessDescription || '',
+            aadharNumber: formData.aadharNumber,
+            termsAccepted: formData.agreementAccepted ? "true" : "false"
+        };
+
+        console.log('Sending registration data:', registrationData);
+
+        const response = await sellerApi.register(registrationData);
+        
+        if (response.success) {
+            Alert.alert(
+                'Success',
+                'Registration successful! Please login to continue.',
+                [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+            );
+        }
+
     } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Registration failed', 'Please try again');
+        console.error('Registration error:', error);
+        Alert.alert(
+            'Error',
+            error.message || 'Registration failed. Please try again.'
+        );
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   const handleDocumentUpload = async (type) => {
     try {
@@ -1367,7 +1330,7 @@ const SellerRegistrationScreen = () => {
     { value: 'groceries', icon: '🛒' },
     { value: 'vegetables', icon: '🥬' },
     { value: 'fruits', icon: '🍎' },
-    { value: 'dairy', icon: '��' },
+    { value: 'dairy', icon: '  ' },
     { value: 'bakery', icon: '🥖' },
     { value: 'snacks', icon: '🍿' },
     { value: 'beverages', icon: '🥤' },

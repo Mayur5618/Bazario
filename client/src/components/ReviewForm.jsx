@@ -3,7 +3,7 @@ import { FaStar } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
-const ReviewForm = ({ productId, onReviewSubmitted }) => {
+const ReviewForm = ({ productId, orderId, onReviewSubmitted }) => {
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(0);
     const [comment, setComment] = useState('');
@@ -16,7 +16,25 @@ const ReviewForm = ({ productId, onReviewSubmitted }) => {
             toast.error('Maximum 5 images allowed');
             return;
         }
-        setImages(files);
+
+        // Convert images to base64
+        const promises = files.map(file => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(promises)
+            .then(base64Images => {
+                setImages(base64Images);
+            })
+            .catch(error => {
+                console.error('Error converting images:', error);
+                toast.error('Error processing images');
+            });
     };
 
     const handleSubmit = async (e) => {
@@ -32,19 +50,20 @@ const ReviewForm = ({ productId, onReviewSubmitted }) => {
 
         try {
             setIsSubmitting(true);
-            const formData = new FormData();
-            formData.append('rating', rating);
-            formData.append('comment', comment);
-            images.forEach(image => {
-                formData.append('images', image);
-            });
+            
+            const reviewData = {
+                rating,
+                comment,
+                images,
+                orderId
+            };
 
             const response = await axios.post(
                 `/api/products/${productId}/reviews`,
-                formData,
+                reviewData,
                 {
                     headers: {
-                        'Content-Type': 'multipart/form-data'
+                        'Content-Type': 'application/json'
                     },
                     withCredentials: true
                 }
@@ -60,6 +79,7 @@ const ReviewForm = ({ productId, onReviewSubmitted }) => {
                 }
             }
         } catch (error) {
+            console.error('Review submission error:', error);
             toast.error(error.response?.data?.message || 'Error submitting review');
         } finally {
             setIsSubmitting(false);
@@ -118,6 +138,18 @@ const ReviewForm = ({ productId, onReviewSubmitted }) => {
                     className="w-full"
                     max="5"
                 />
+                {images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {images.map((image, index) => (
+                            <img
+                                key={index}
+                                src={image}
+                                alt={`Preview ${index + 1}`}
+                                className="w-20 h-20 object-cover rounded-md"
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Submit Button */}

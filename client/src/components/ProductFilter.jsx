@@ -10,6 +10,10 @@ const ProductFilter = ({ onApplyFilter, initialFilters }) => {
     });
 
     const [isExpanded, setIsExpanded] = useState(false);
+    const [priceRange, setPriceRange] = useState({
+        min: initialFilters?.minPrice || 0,
+        max: initialFilters?.maxPrice || 1000
+    });
 
     useEffect(() => {
         if (initialFilters) {
@@ -18,27 +22,41 @@ const ProductFilter = ({ onApplyFilter, initialFilters }) => {
     }, [initialFilters]);
 
     const handleFilterChange = (name, value) => {
-        setFilters(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        if (name === 'minPrice' || name === 'maxPrice') {
+            // Ensure price is not negative
+            const numValue = Math.max(0, Number(value));
+            setFilters(prev => ({
+                ...prev,
+                [name]: numValue
+            }));
+        } else {
+            setFilters(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
     };
 
     const handleApply = () => {
-        // Validate price inputs
-        const validatedFilters = {
-            ...filters,
-            minPrice: filters.minPrice ? Math.max(0, Number(filters.minPrice)) : '',
-            maxPrice: filters.maxPrice ? Math.max(0, Number(filters.maxPrice)) : ''
-        };
+        // Validate and adjust price range
+        let validatedFilters = { ...filters };
 
-        // Ensure maxPrice is greater than minPrice
-        if (validatedFilters.minPrice && validatedFilters.maxPrice && 
-            Number(validatedFilters.maxPrice) < Number(validatedFilters.minPrice)) {
-            const temp = validatedFilters.maxPrice;
-            validatedFilters.maxPrice = validatedFilters.minPrice;
-            validatedFilters.minPrice = temp;
+        // Convert price values to numbers
+        const minPrice = Number(filters.minPrice);
+        const maxPrice = Number(filters.maxPrice);
+
+        // Validate price range
+        if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+            if (minPrice > maxPrice) {
+                // Swap values if min is greater than max
+                validatedFilters.minPrice = maxPrice;
+                validatedFilters.maxPrice = minPrice;
+            }
         }
+
+        // Ensure prices are within valid range
+        validatedFilters.minPrice = Math.max(0, Number(validatedFilters.minPrice));
+        validatedFilters.maxPrice = Math.max(validatedFilters.minPrice, Number(validatedFilters.maxPrice));
 
         onApplyFilter(validatedFilters);
     };
@@ -99,9 +117,9 @@ const ProductFilter = ({ onApplyFilter, initialFilters }) => {
 
                 {/* Rating Filter */}
                 <div className="mb-4">
-                    <h3 className="font-medium mb-2">Rating</h3>
+                    <h3 className="font-medium mb-2">Minimum Rating</h3>
                     <div className="flex flex-wrap gap-2">
-                        {[4, 3, 2, 1].map((star) => (
+                        {[5, 4, 3, 2, 1].map((star) => (
                             <button
                                 key={star}
                                 onClick={() => handleFilterChange('rating', 
@@ -113,7 +131,7 @@ const ProductFilter = ({ onApplyFilter, initialFilters }) => {
                                         : 'bg-gray-100 hover:bg-gray-200'
                                     }`}
                             >
-                                <FaStar className="text-yellow-400" />
+                                <FaStar className={filters.rating === star.toString() ? 'text-white' : 'text-yellow-400'} />
                                 <span>{star}+ Stars</span>
                             </button>
                         ))}

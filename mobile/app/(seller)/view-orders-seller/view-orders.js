@@ -204,7 +204,6 @@ const ViewOrders = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>मेरे ऑर्डर</Text>
             {orders.length === 0 ? (
                 <View style={styles.noOrders}>
                     <Ionicons name="cart-outline" size={64} color="#A0AEC0" />
@@ -234,14 +233,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F7FAFC',
         padding: 16,
-    },
-    header: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2D3748',
-        marginBottom: 16,
-        textAlign: 'center',
-        paddingVertical: 8,
     },
     listContainer: {
         paddingBottom: 16,

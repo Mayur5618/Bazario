@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import axios from '../config/axios';
+import { Alert } from 'react-native';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Calculate cart total
+  const cartTotal = useMemo(() => {
+    return Object.values(cartItems).reduce((total, item) => {
+      return total + (item.product.price * item.quantity);
+    }, 0);
+  }, [cartItems]);
 
   // Get cart items
   const getCart = async () => {
@@ -63,13 +71,35 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Clear cart
+  const clearCart = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.delete('/api/cart/clear');
+      if (response.data.success) {
+        setCartItems({});
+        return true;
+      } else {
+        throw new Error('Failed to clear cart');
+      }
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      Alert.alert('Error', 'Failed to clear cart. Please try again.');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <CartContext.Provider value={{
       cartItems,
       loading,
+      cartTotal,
       getCart,
       addToCart,
-      updateQuantity
+      updateQuantity,
+      clearCart
     }}>
       {children}
     </CartContext.Provider>

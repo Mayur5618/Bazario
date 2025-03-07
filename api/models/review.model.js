@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const replySchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Buyer',
+        ref: 'User',
         required: true
     },
     comment: {
@@ -34,7 +34,7 @@ const reviewSchema = new mongoose.Schema({
     // Buyer who wrote the review
     buyer: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Buyer',
+        ref: 'User',
         required: true
     },
 
@@ -74,14 +74,8 @@ const reviewSchema = new mongoose.Schema({
     }],
 
     likes: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Buyer'
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }],
 
     likesCount: {
@@ -96,10 +90,15 @@ const reviewSchema = new mongoose.Schema({
     helpfulVotes: [{
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Buyer'
+            ref: 'User'
         },
         helpful: Boolean
-    }]
+    }],
+
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
 }, {
     timestamps: true
 });
@@ -139,20 +138,23 @@ reviewSchema.post('save', async function() {
 
 // Add a method to handle likes
 reviewSchema.methods.toggleLike = async function(userId) {
-    const isLiked = this.likes.some(like => like.user.toString() === userId.toString());
+    const isLiked = this.likes.some(like => like.toString() === userId.toString());
     
     if (isLiked) {
         // Remove like
-        this.likes = this.likes.filter(like => like.user.toString() !== userId.toString());
+        this.likes = this.likes.filter(like => like.toString() !== userId.toString());
     } else {
         // Add like
-        this.likes.push({ user: userId });
+        this.likes.push(userId);
     }
     
     this.likesCount = this.likes.length;
     await this.save();
     return !isLiked; // returns true if liked, false if unliked
 };
+
+// Add index for faster search
+reviewSchema.index({ product: 1, rating: 1 });
 
 const Review = mongoose.model('Review', reviewSchema);
 

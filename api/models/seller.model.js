@@ -1,20 +1,44 @@
 import mongoose from "mongoose";
 import baseUserSchema from "./baseUser.model.js";
 
-const User = mongoose.model('User', baseUserSchema);
+// First, create the base User model if it doesn't exist
+const User = mongoose.models.User || mongoose.model('User', baseUserSchema);
 
-const Seller = User.discriminator('seller', new mongoose.Schema({
+// Create the Seller schema
+const sellerSchema = new mongoose.Schema({
+    shopName: {
+        type: String,
+        required: true
+    },
+    businessType: {
+        type: String,
+        required: true,
+    },
+    customBusinessType: String,
+    businessDescription: String,
+    aadharNumber: {
+        type: String,
+        required: true,
+        length: 12
+    },
     platformType: {
         type: [String],
         enum: ['b2b', 'b2c'],
+        required: true
+    },
+    termsAccepted: {
+        type: String,
         required: true,
         validate: {
             validator: function(v) {
-                return v.length > 0 && v.length <= 2;
+                return v === "true";
             },
-            message: 'At least one platform type must be selected'
+            message: "Terms must be accepted"
         }
     }
-}));
+});
+
+// Create the Seller model using discriminator
+const Seller = User.discriminator('seller', sellerSchema);
 
 export default Seller;

@@ -5,7 +5,7 @@ export const userApi = {
 
   getShippingAddresses: async () => {
     try {
-      const response = await axios.get('/api/user/shipping-addresses');
+      const response = await axios.get('/api/shipping-addresses');
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -17,7 +17,7 @@ export const userApi = {
 
   addShippingAddress: async (addressData) => {
     try {
-      const response = await axios.post('/api/user/shipping-addresses', addressData);
+      const response = await axios.post('/api/shipping-addresses', addressData);
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -29,7 +29,7 @@ export const userApi = {
 
   deleteShippingAddress: async (addressId) => {
     try {
-      const response = await axios.delete(`/api/user/shipping-addresses/${addressId}`);
+      const response = await axios.delete(`/api/shipping-addresses/${addressId}`);
       return response.data;
     } catch (error) {
       if (error.response) {

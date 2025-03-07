@@ -13,7 +13,8 @@ const Checkout = () => {
   const cart = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);Cabbage
+  const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
@@ -42,9 +43,22 @@ const Checkout = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
-    // Load states on component mount
-    setStates(getStates());
-  }, []);
+    // Initialize component
+    const initializeCheckout = async () => {
+      try {
+        setIsInitializing(true);
+        // Load states
+        setStates(getStates());
+      } catch (error) {
+        console.error('Error initializing checkout:', error);
+        toast.error('Failed to initialize checkout');
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeCheckout();
+  }, [cart, navigate, loading]);
 
   useEffect(() => {
     if (formData.shippingAddress.state) {
@@ -208,9 +222,20 @@ const Checkout = () => {
     setLoading(true);
 
     try {
+      // Calculate subtotal from cart items
+      const subtotal = cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+
       const response = await axios.post('/api/orders/create', {
         shippingAddress: formData.shippingAddress,
         paymentMethod: formData.paymentMethod,
+        items: cart.map(item => ({
+          product: item.product._id,
+          quantity: item.quantity,
+          price: item.product.price,
+          subtotal: item.product.price * item.quantity
+        })),
+        subtotal: subtotal,
+        total: subtotal // You can add shipping cost here if needed
       }, {
         withCredentials: true,
         headers: {
@@ -218,98 +243,88 @@ const Checkout = () => {
         }
       });
 
-      if (response.data.success) {
-        dispatch(clearCart());
+      if (response.data.success && response.data.orders && response.data.orders.length > 0) {
+        const orderId = response.data.orders[0]._id;
+        
+        // Clear cart first
+        await dispatch(clearCart());
+        
+        // Navigate to success page with replace:true to prevent back navigation
+        navigate(`/order-success/${orderId}`, { replace: true });
+        
+        // Show success message after navigation
         toast.success('Order placed successfully!');
-        navigate(`/order-success/${response.data.orders[0]._id}`);
+        return;
       }
+      
+      throw new Error(response.data.message || 'Failed to place order');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+      console.error('Order creation error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to place order');
     } finally {
       setLoading(false);
     }
   };
 
   // Function to get location from browser
-  const getBrowserLocation = () => {
-    return new Promise((resolve, reject) => {
+  const getBrowserLocation = async () => {
+    setIsLocationLoading(true);
+    try {
       if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by your browser'));
-        return;
+        throw new Error('Geolocation is not supported by your browser');
       }
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            const response = await axios.get(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-            );
-            
-            resolve({
-              city: response.data.city,
-              state: response.data.principalSubdivision,
-              country: response.data.countryName,
-              pincode: response.data.postcode
-            });
-          } catch (error) {
-            reject(error);
-          }
-        },
-        (error) => {
-          reject(error);
-        }
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+      const response = await axios.get(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
       );
-    });
+      
+      if (response.data.city) {
+        setFormData(prev => ({
+          ...prev,
+          shippingAddress: {
+            ...prev.shippingAddress,
+            city: response.data.city,
+            state: response.data.principalSubdivision || prev.shippingAddress.state
+          }
+        }));
+        setCitySearchTerm(response.data.city);
+      } else {
+        throw new Error('Could not determine your city');
+      }
+    } catch (error) {
+      console.error('Location error:', error);
+      toast.error(error.message || 'Failed to get your location');
+    } finally {
+      setIsLocationLoading(false);
+    }
   };
 
   // Function to fetch location from IP
   const fetchLocationFromIP = async () => {
+    setIsLocationLoading(true);
     try {
-      setIsLocationLoading(true);
-      
-      // First try browser geolocation
-      try {
-        const browserLocation = await getBrowserLocation();
-        setFormData(prev => ({
-          ...prev,
-          shippingAddress: {
-            ...prev.shippingAddress,
-            city: browserLocation.city || '',
-            state: browserLocation.state || '',
-            pincode: browserLocation.pincode || '',
-            country: browserLocation.country || 'India'
-          }
-        }));
-        setCitySearchTerm(browserLocation.city || '');
-        toast.success('Location detected successfully!');
-        return;
-      } catch (error) {
-        console.log('Browser geolocation failed, trying IP geolocation');
-      }
-
-      // Fallback to IP geolocation
       const response = await axios.get('https://ipapi.co/json/');
-      
-      if (response.data) {
-        const { city, region, postal, country_name } = response.data;
-        
+      if (response.data.city && response.data.region) {
         setFormData(prev => ({
           ...prev,
           shippingAddress: {
             ...prev.shippingAddress,
-            city: city || '',
-            state: region || '',
-            pincode: postal || '',
-            country: country_name || 'India'
+            city: response.data.city,
+            state: response.data.region
           }
         }));
-        setCitySearchTerm(city || '');
-        toast.success('Location detected from IP address');
+        setCitySearchTerm(response.data.city);
+      } else {
+        throw new Error('Could not determine your location');
       }
     } catch (error) {
-      console.error('Error fetching location:', error);
-      toast.error('Could not detect your location automatically');
+      console.error('IP location error:', error);
+      toast.error('Failed to get your location from IP');
     } finally {
       setIsLocationLoading(false);
     }
@@ -317,32 +332,55 @@ const Checkout = () => {
 
   // Function to fetch user profile
   const fetchUserProfile = async () => {
-    try {
-      setIsProfileLoading(true);
-      const response = await axios.get('/api/users/profile', {
-        withCredentials: true
-      });
-
-      if (response.data.success) {
-        const { firstName, lastName, email, phone } = response.data.user;
-        setFormData(prev => ({
-          ...prev,
-          shippingAddress: {
-            ...prev.shippingAddress,
-            firstName: firstName || '',
-            lastName: lastName || '',
-            email: email || '',
-            phone: phone || ''
+    setIsProfileLoading(true);
+    let retries = 3; // Number of retries
+    
+    while (retries > 0) {
+      try {
+        const response = await axios.get('/api/users/profile', {
+          withCredentials: true
+        });
+        
+        if (response.data.success && response.data.user) {
+          const { user } = response.data;
+          setFormData(prev => ({
+            ...prev,
+            shippingAddress: {
+              ...prev.shippingAddress,
+              firstName: user.firstname || '',
+              lastName: user.lastname || '',
+              email: user.email || '',
+              phone: user.phone || user.mobileno || '', 
+              street: user.address || '',
+              city: user.city || '',
+              state: user.state || '',
+              pincode: user.pincode || ''
+            }
+          }));
+          
+          if (user.city) {
+            setCitySearchTerm(user.city);
           }
-        }));
-        toast.success('Profile details loaded successfully!');
+          
+          // If successful, break the retry loop
+          break;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Profile fetch error:', error);
+        retries--;
+        
+        if (retries === 0) {
+          toast.error('Failed to load your profile. Please fill details manually.');
+        } else {
+          // Wait for 1 second before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast.error('Could not load profile details');
-    } finally {
-      setIsProfileLoading(false);
     }
+    
+    setIsProfileLoading(false);
   };
 
   // Update AutoLocateButton to include profile loading state
@@ -369,6 +407,15 @@ const Checkout = () => {
       </button>
     </div>
   );
+
+  // Show loading state while initializing
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

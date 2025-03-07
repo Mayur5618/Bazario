@@ -23,6 +23,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     shopName: '',
@@ -48,8 +49,12 @@ const ProfileScreen = () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/users/sellers/${user?._id}`);
+      const statsResponse = await axios.get('/api/seller/dashboard-stats');
+      
       if (response.data) {
-        const { seller, products = [] } = response.data;
+        const { seller } = response.data;
+        const stats = statsResponse.data?.stats || {};
+        
         setProfileData({
           name: `${seller.firstname} ${seller.lastname}` || '',
           shopName: seller.shopName || '',
@@ -61,9 +66,9 @@ const ProfileScreen = () => {
           pincode: seller.pincode || '',
           profileImage: seller.profileImage || null,
           bio: seller.bio || '',
-          totalProducts: products.length || 0,
-          totalOrders: seller.totalOrders || 0,
-          totalRevenue: seller.totalRevenue || 0
+          totalProducts: stats.totalProducts || 0,
+          totalOrders: stats.totalOrders || 0,
+          totalRevenue: stats.revenue || 0
         });
       }
     } catch (error) {
@@ -82,17 +87,62 @@ const ProfileScreen = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.5,
+        base64: true,
       });
 
-      if (!result.canceled) {
-        setProfileData(prev => ({
-          ...prev,
-          profileImage: result.assets[0].uri
-        }));
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setImageLoading(true);
+        
+        try {
+          console.log('Uploading image to Firebase...');
+          
+          // Upload base64 image to Firebase
+          const uploadResponse = await axios.post('/api/upload/firebase', {
+            file: result.assets[0].base64,
+            path: `profile-images/${user?._id}-${Date.now()}.jpg`,
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          console.log('Upload response:', uploadResponse.data);
+
+          if (uploadResponse.data?.success && uploadResponse.data?.url) {
+            console.log('Updating profile with new image URL...');
+            
+            // Update profile with Firebase URL
+            const updateResponse = await axios.put(`/api/users/sellers/${user?._id}`, {
+              profileImage: uploadResponse.data.url
+            });
+
+            if (updateResponse.data?.success) {
+              setProfileData(prev => ({
+                ...prev,
+                profileImage: uploadResponse.data.url
+              }));
+              Alert.alert('सफल', 'प्रोफाइल फोटो अपडेट हो गया है');
+              fetchProfileData(); // Refresh profile data
+            } else {
+              throw new Error('प्रोफाइल अपडेट नहीं हो सका');
+            }
+          } else {
+            throw new Error('फोटो अपलोड नहीं हो सका');
+          }
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError?.response?.data || uploadError);
+          Alert.alert(
+            'एरर',
+            uploadError?.response?.data?.message || 'फोटो अपलोड करने में समस्या हुई। कृपया पुनः प्रयास करें।'
+          );
+        }
       }
     } catch (error) {
-      Alert.alert('एरर', 'फोटो चुनने में समस्या हुई');
+      console.error('Error picking image:', error);
+      Alert.alert('एरर', 'फोटो चुनने में समस्या हुई। कृपया पुनः प्रयास करें।');
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -180,7 +230,11 @@ const ProfileScreen = () => {
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
           <TouchableOpacity onPress={handleImagePick} style={styles.imageWrapper}>
-            {profileData.profileImage ? (
+            {imageLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#6C63FF" />
+              </View>
+            ) : profileData.profileImage ? (
               <Image
                 source={{ uri: profileData.profileImage }}
                 style={styles.profileImage}
@@ -190,14 +244,14 @@ const ProfileScreen = () => {
                 <Ionicons name="person" size={60} color="#666" />
               </View>
             )}
-            {isEditing && (
+            {isEditing && !imageLoading && (
               <View style={styles.editImageOverlay}>
                 <Ionicons name="camera" size={24} color="#FFF" />
               </View>
             )}
           </TouchableOpacity>
           <Text style={styles.uploadText}>
-            {isEditing ? 'टैप करके फोटो बदलें' : 'प्रोफाइल फोटो'}
+            {isEditing ? (imageLoading ? 'अपलोड हो रहा है...' : 'टैप करके फोटो बदलें') : 'प्रोफाइल फोटो'}
           </Text>
         </View>
 
@@ -409,10 +463,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   loadingContainer: {
-    flex: 1,
+    backgroundColor: '#F0F0F0',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
   },
   loadingText: {
     marginTop: 12,

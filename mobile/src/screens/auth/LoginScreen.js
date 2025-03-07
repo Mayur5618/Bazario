@@ -13,7 +13,8 @@ const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     mobileno: '',
-    password: ''
+    password: '',
+    userType: 'buyer'
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
@@ -64,7 +65,8 @@ const LoginScreen = () => {
     try {
       const response = await axios.post('/api/users/signin', {
         mobileno: formData.mobileno,
-        password: formData.password
+        password: formData.password,
+        userType: formData.userType
       });
 
       // Handle successful response
@@ -78,18 +80,9 @@ const LoginScreen = () => {
         setServerError(response.data.message || 'Invalid credentials');
       }
     } catch (error) {
-      // Don't console.log the error in production
-      if (error.response?.status === 401) {
-        setServerError('User does not exist. Please sign up first.');
-      } else if (error.response?.status === 400) {
-        setServerError('Invalid mobile number or password');
-      } else if (error.response) {
-        setServerError(error.response.data?.message || 'Login failed. Please try again.');
-      } else if (error.request) {
-        setServerError('Network error. Please check your connection.');
-      } else {
-        setServerError('Something went wrong. Please try again.');
-      }
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
+      setServerError(errorMessage);
     } finally {
       setIsLoading(false);
     }

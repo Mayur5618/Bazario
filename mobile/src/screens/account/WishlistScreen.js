@@ -26,33 +26,20 @@ const WishlistScreen = () => {
   const fetchWishlistProducts = async () => {
     try {
       setLoading(true);
-      // Get wishlist data
-      const wishlistData = await getWishlist();
-      console.log('Wishlist Data:', wishlistData); // Debug log
+      const response = await axios.get('/api/wishlist');
+      console.log('Wishlist Response:', response.data); // Debug log
 
-      if (!wishlistData?.wishlist?.length) {
-        setWishlistProducts([]);
-        setLoading(false);
-        return;
+      if (response.data.success) {
+        const products = response.data.wishlist || [];
+        console.log('Fetched Products:', products); // Debug log
+        setWishlistProducts(products);
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch wishlist');
       }
-
-      // Fetch product details for each product ID
-      const products = [];
-      for (const item of wishlistData.wishlist) {
-        try {
-          const response = await axios.get(`/api/products/${item}`);
-          if (response.data?.product) {
-            products.push(response.data.product);
-          }
-        } catch (err) {
-          console.error(`Error fetching product ${item}:`, err);
-        }
-      }
-
-      setWishlistProducts(products);
     } catch (error) {
       console.error('Error fetching wishlist products:', error);
       Alert.alert('Error', 'Failed to load wishlist items');
+      setWishlistProducts([]);
     } finally {
       setLoading(false);
     }
@@ -68,10 +55,13 @@ const WishlistScreen = () => {
 
   const handleRemoveFromWishlist = async (productId) => {
     try {
-      await removeFromWishlist(productId);
-      // Refresh the wishlist after removing item
-      fetchWishlistProducts();
-      Alert.alert('Success', 'Product removed from wishlist');
+      const response = await axios.delete(`/api/wishlist/remove/${productId}`);
+      if (response.data.success) {
+        await fetchWishlistProducts(); // Refresh the list after removal
+        Alert.alert('Success', 'Product removed from wishlist');
+      } else {
+        throw new Error(response.data.message);
+      }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
       Alert.alert('Error', 'Failed to remove product from wishlist');

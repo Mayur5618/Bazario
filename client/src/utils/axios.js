@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-// Create axios instance
+// Create axios instance with dynamic base URL
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -14,8 +14,11 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // You can add loading state here if needed
-    // store.dispatch(setLoading(true));
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -128,6 +131,14 @@ const apiService = {
     get: () => api.get('/profile'),
     update: (data) => api.put('/profile', data),
     updatePassword: (data) => api.put('/profile/password', data)
+  },
+
+  // Wishlist endpoints
+  wishlist: {
+    get: () => api.get('/wishlist'),
+    add: (data) => api.post('/wishlist/add', data),
+    remove: (productId) => api.delete(`/wishlist/remove/${productId}`),
+    clear: () => api.delete('/wishlist/clear')
   }
 };
 

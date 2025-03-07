@@ -14,7 +14,9 @@ import bodyParser from 'body-parser';
 import otpRoutes from './routes/otp.route.js';
 import shippingAddressRoutes from './routes/shippingAddress.routes.js';
 import mobileSearchRoutes from './routes/Mobile_search.routes.js';
-import wishlistRoutes from './routes/wishlist.js';
+import wishlistRoutes from './routes/wishlist.route.js';
+import sellerRoutes from './routes/seller.route.js';
+import uploadRoutes from './routes/upload.route.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -54,7 +56,9 @@ app.use('/api/search', searchRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/user', shippingAddressRoutes);
 app.use('/api/search', mobileSearchRoutes);
-app.use('/api/user/wishlist', wishlistRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/seller', sellerRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);

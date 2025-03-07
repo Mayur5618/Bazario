@@ -156,27 +156,65 @@ const CategoryProducts = () => {
 
       // Add filters
       if (filters) {
-        if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
-        // Change rating filter to match backend expectation
-        if (filters.rating) queryParams.append('rating', filters.rating);
-        if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+        // Handle price filters
+        if (filters.minPrice) {
+          const minPrice = Number(filters.minPrice);
+          if (!isNaN(minPrice) && minPrice >= 0) {
+            queryParams.append('minPrice', minPrice);
+          }
+        }
+        
+        if (filters.maxPrice) {
+          const maxPrice = Number(filters.maxPrice);
+          if (!isNaN(maxPrice) && maxPrice >= 0) {
+            queryParams.append('maxPrice', maxPrice);
+          }
+        }
+
+        // Handle rating filter
+        if (filters.rating) {
+          const rating = Number(filters.rating);
+          if (!isNaN(rating) && rating >= 1 && rating <= 5) {
+            queryParams.append('minRating', rating);
+          }
+        }
+
+        // Handle sort
+        if (filters.sortBy) {
+          queryParams.append('sortBy', filters.sortBy);
+        }
       }
 
       // Always add platformType
       queryParams.append('platformType', 'b2c');
 
       const response = await axios.get(`/api/products/filtered?${queryParams.toString()}`);
-      console.log('Filter params:', queryParams.toString()); // Debug log
       
       if (response.data.success) {
-        // Client-side rating filter if server doesn't handle it
         let filteredProducts = response.data.products;
-        if (filters?.rating) {
-          filteredProducts = filteredProducts.filter(
-            product => product.rating >= parseInt(filters.rating)
-          );
+
+        // Additional client-side filtering
+        if (filters) {
+          // Price filter
+          if (filters.minPrice || filters.maxPrice) {
+            filteredProducts = filteredProducts.filter(product => {
+              const price = Number(product.price);
+              const minPrice = filters.minPrice ? Number(filters.minPrice) : 0;
+              const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : Infinity;
+              return price >= minPrice && price <= maxPrice;
+            });
+          }
+
+          // Rating filter
+          if (filters.rating) {
+            const minRating = Number(filters.rating);
+            filteredProducts = filteredProducts.filter(product => {
+              const rating = Number(product.rating) || 0;
+              return rating >= minRating;
+            });
+          }
         }
+
         setProducts(filteredProducts);
       }
     } catch (error) {

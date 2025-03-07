@@ -10,6 +10,7 @@ import ProductReviewSection from "../components/ProductReviewSection";
 import YouTube from "react-youtube";
 import ReviewItem from '../components/ReviewItem';
 import { addToWishlist, removeFromWishlist } from "../store/wishlistSlice";
+import ReviewEditModal from '../components/ReviewEditModal';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -56,6 +57,9 @@ const ProductDetail = () => {
   // Add loading state for wishlist actions
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
+  // Review edit states
+  const [editingReview, setEditingReview] = useState(null);
+
   useEffect(() => {
     fetchProductDetails();
     if (userData) {
@@ -67,22 +71,36 @@ const ProductDetail = () => {
 
   const fetchProductDetails = async () => {
     try {
-      const response = await fetch(`/api/products/${id}`);
+      setLoading(true);
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch product details');
       }
 
+      if (!data.success || !data.product) {
+        throw new Error('Product data not found');
+      }
+
       setProduct(data.product);
-      if (data.product.images.length > 0) {
+      if (data.product.images && data.product.images.length > 0) {
         setIsVideo(isYoutubeLink(data.product.images[0]));
       }
       fetchReviews();
       addToRecentlyViewed(data.product);
-      setLoading(false);
     } catch (err) {
+      console.error('Error fetching product:', err);
       setError(err.message || "Failed to fetch product details");
+      toast.error(err.message || "Failed to fetch product details");
+    } finally {
       setLoading(false);
     }
   };
@@ -338,6 +356,22 @@ const ProductDetail = () => {
             throw new Error('Review not found');
         }
 
+        // Update UI first
+        setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+        setProductStats(prev => ({
+            ...prev,
+            totalReviews: prev.totalReviews - 1,
+            ratingCounts: {
+                ...prev.ratingCounts,
+                [reviewToDelete.rating]: prev.ratingCounts[reviewToDelete.rating] - 1
+            }
+        }));
+        
+        // Reset review status
+        setHasReviewed(false);
+        setCanReview(true);
+
+        // Make API call
         const response = await axios.delete(`/api/reviews/${reviewId}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -345,32 +379,21 @@ const ProductDetail = () => {
         });
 
         if (response.data.success) {
-            // Update reviews state
-            setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
-            
-            // Update stats
-            setProductStats(prev => ({
-                ...prev,
-                totalReviews: prev.totalReviews - 1,
-                ratingCounts: {
-                    ...prev.ratingCounts,
-                    [reviewToDelete.rating]: prev.ratingCounts[reviewToDelete.rating] - 1
-                }
-            }));
-            
-            // Reset review status
-            setHasReviewed(false);
-            setCanReview(true);
-            
-            // Refresh data
+            // Refresh data in background
+            fetchReviews();
+            checkUserReview();
+            return true;
+        } else {
+            // Revert UI changes if API call fails
             await fetchReviews();
             await checkUserReview();
-
-            return true; // Return success
+            return false;
         }
-        return false; // Return failure
     } catch (error) {
         console.error('Error deleting review:', error);
+        // Revert UI changes if API call fails
+        await fetchReviews();
+        await checkUserReview();
         throw new Error(error.response?.data?.message || 'Failed to delete review');
     }
   };
@@ -437,7 +460,7 @@ const ProductDetail = () => {
       };
 
       if (!isInWishlist) {
-        const response = await axios.post('/api/user/wishlist/add', {
+        const response = await axios.post('/api/wishlist/add', {
           productId: id
         }, config);
 
@@ -446,9 +469,7 @@ const ProductDetail = () => {
           toast.success("Added to wishlist");
         }
       } else {
-        const response = await axios.post('/api/user/wishlist/remove', {
-          productId: id
-        }, config);
+        const response = await axios.delete(`/api/wishlist/remove/${id}`, config);
 
         if (response.data.success) {
           dispatch(removeFromWishlist(id));
@@ -647,12 +668,33 @@ const ProductDetail = () => {
     navigate(`/products?category=${slug}`);
   };
 
+  // Add this function to handle review edit
+  const handleReviewEdit = async (updatedReview) => {
+    try {
+      // Update the reviews state with the edited review
+      setReviews(prevReviews => 
+        prevReviews.map(review => 
+          review._id === updatedReview._id ? updatedReview : review
+        )
+      );
+
+      // Recalculate product stats
+      const updatedStats = calculateProductStats(reviews.map(review => 
+        review._id === updatedReview._id ? updatedReview : review
+      ));
+      setProductStats(updatedStats);
+    } catch (error) {
+      console.error('Error updating review:', error);
+      toast.error('Failed to update review');
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="container mx-auto px-4 py-8">
       {/* Product Section */}
       <div className="flex flex-col lg:flex-row gap-8 mb-16">
         {/* Media Gallery */}
@@ -984,10 +1026,21 @@ const ProductDetail = () => {
               currentUserId={userData?._id}
               onDelete={handleReviewDelete}
               onLike={handleReviewLike}
+              onEdit={(review) => setEditingReview(review)}
               refreshReviews={fetchReviews}
             />
           ))}
         </div>
+
+        {/* Review Edit Modal */}
+        {editingReview && (
+          <ReviewEditModal
+            review={editingReview}
+            isOpen={!!editingReview}
+            onClose={() => setEditingReview(null)}
+            onUpdate={handleReviewEdit}
+          />
+        )}
       </div>
 
       {/* Related Products Section */}

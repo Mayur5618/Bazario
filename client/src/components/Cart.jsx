@@ -9,6 +9,7 @@ import {
   selectCartItems,
   selectCartTotal,
   setCartItems,
+  clearCart
 } from "../store/cartSlice";
 import axios from "axios";
 import { FaShoppingCart, FaShoppingBasket, FaArrowLeft } from 'react-icons/fa';
@@ -21,15 +22,20 @@ const Cart = () => {
   const cartTotal = useSelector(selectCartTotal) || 0;
   const navigate = useNavigate();
   const [removingItems, setRemovingItems] = useState({});
+  const [isInitializing, setIsInitializing] = useState(true);
   
 
   // Fetch cart items when component mounts
   useEffect(() => {
     const fetchCartItems = async () => {
       try {
+        // Clear any stale cart data first
+        dispatch(clearCart());
+        
         const response = await axios.get("/api/cart/getCartItems", {
           withCredentials: true,
         });
+        
         if (response.data.success) {
           dispatch(setCartItems(response.data.cart.items));
         }
@@ -37,6 +43,8 @@ const Cart = () => {
         console.error("Error fetching cart:", error);
         toast.error("Failed to fetch cart items");
         dispatch(setCartItems([]));
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -44,8 +52,18 @@ const Cart = () => {
       fetchCartItems();
     } else {
       dispatch(setCartItems([]));
+      setIsInitializing(false);
     }
   }, [userData, dispatch]);
+
+  // Show loading state while initializing
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   if (!userData) {
     return (

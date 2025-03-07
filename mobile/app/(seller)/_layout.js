@@ -20,6 +20,18 @@ export default function SellerLayout() {
         }}
       />
       <Stack.Screen 
+        name="products"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="product-details/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
         name="add-product"
         options={{
           headerShown: false,
@@ -55,6 +67,12 @@ export default function SellerLayout() {
           headerTitleStyle: {
             fontWeight: 'bold',
           },
+        }}
+      />
+      <Stack.Screen 
+        name="edit-product/[id]"
+        options={{
+          headerShown: false
         }}
       />
     </Stack>

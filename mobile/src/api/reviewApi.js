@@ -30,13 +30,13 @@ export const reviewApi = {
       // Create FormData
       const formData = new FormData();
       
-      // Convert orderId to string if it's not already
-      const orderIdString = reviewData.orderId.toString();
+      // Convert orderId to string and append it
+      formData.append('orderId', String(reviewData.orderId));
+      formData.append('rating', String(reviewData.rating));
       
-      // Append basic data
-      formData.append('orderId', orderIdString);
-      formData.append('rating', reviewData.rating.toString());
-      formData.append('comment', reviewData.comment);
+      if (reviewData.comment) {
+        formData.append('comment', reviewData.comment);
+      }
 
       // Add images if any
       if (reviewData.images && reviewData.images.length > 0) {
@@ -53,12 +53,8 @@ export const reviewApi = {
         });
       }
 
-      // Log the actual FormData contents
-      const formDataObj = {};
-      for (let [key, value] of formData._parts) {
-        formDataObj[key] = value;
-      }
-      console.log('FormData contents:', formDataObj);
+      // Log FormData for debugging
+      console.log('Sending review with orderId:', String(reviewData.orderId));
 
       const response = await axios.post(
         `/api/reviews/products/${productId}/reviews`,
@@ -67,9 +63,6 @@ export const reviewApi = {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'multipart/form-data',
-          },
-          transformRequest: (data, headers) => {
-            return data;
           },
         }
       );
