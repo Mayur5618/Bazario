@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart, FaStore, FaArrowRight } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { cartAdd, cartRemove } from "../store/cartSlice";
@@ -61,6 +61,46 @@ const ProductDetail = () => {
   const [editingReview, setEditingReview] = useState(null);
 
   useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/products/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to fetch product details');
+        }
+
+        if (!data.success || !data.product) {
+          throw new Error('Product data not found');
+        }
+
+        setProduct(data.product);
+        if (data.product.youtubeLink) {
+          setIsVideo(true);
+        }
+        fetchReviews();
+        
+        // Add to recently viewed if user is logged in
+        if (userData) {
+          await addToRecentlyViewed(data.product);
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        setError(err.message || "Failed to fetch product details");
+        toast.error(err.message || "Failed to fetch product details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProductDetails();
     if (userData) {
       fetchCartItems();
@@ -68,42 +108,6 @@ const ProductDetail = () => {
       fetchCartItem();
     }
   }, [id, userData]);
-
-  const fetchProductDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch product details');
-      }
-
-      if (!data.success || !data.product) {
-        throw new Error('Product data not found');
-      }
-
-      setProduct(data.product);
-      if (data.product.images && data.product.images.length > 0) {
-        setIsVideo(isYoutubeLink(data.product.images[0]));
-      }
-      fetchReviews();
-      addToRecentlyViewed(data.product);
-    } catch (err) {
-      console.error('Error fetching product:', err);
-      setError(err.message || "Failed to fetch product details");
-      toast.error(err.message || "Failed to fetch product details");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchReviews = async () => {
     try {
@@ -484,74 +488,19 @@ const ProductDetail = () => {
     }
   };
 
-  const addToRecentlyViewed = (product) => {
-    if (!product) return;
+  const addToRecentlyViewed = async (product) => {
+    if (!userData || !product || !product._id) return;
 
     try {
-      // 1. Validation criteria for products
-      const isValidProduct = (
-        product._id &&
-        product.name &&
-        product.price &&
-        product.images?.length > 0 &&
-        typeof product.stock !== 'undefined'
-      );
-
-      if (!isValidProduct) {
-        console.log('Product does not meet criteria for recently viewed');
-        return;
-      }
-
-      // 2. Get existing recently viewed products
-      const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-      const currentTime = Date.now();
-      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
-
-      // 3. Clean up old entries
-      const validProducts = recentlyViewed.filter(item => {
-        return (currentTime - item.timestamp) < ONE_WEEK;
-      });
-
-      // 4. Check if product already exists
-      const existingIndex = validProducts.findIndex(item => item._id === product._id);
-
-      // 5. Remove if exists
-      if (existingIndex !== -1) {
-        validProducts.splice(existingIndex, 1);
-      }
-
-      // 6. Create product object with essential data
-      const productToAdd = {
-        _id: product._id,
-        name: product.name,
-        images: product.images,
-        price: product.price,
-        unit: product.unitType || 'piece',
-        rating: Number(product.rating || 0),
-        reviews: product.reviews || [],
-        stock: Number(product.stock),
-        timestamp: currentTime,
-        category: product.category,
-        viewCount: (existingIndex !== -1 ? 
-          validProducts[existingIndex].viewCount + 1 : 1)
-      };
-
-      // 7. Add to front of array
-      validProducts.unshift(productToAdd);
-
-      // 8. Keep only last 6 items
-      const filteredProducts = validProducts.slice(0, 6);
-
-      // 9. Save to localStorage
-      localStorage.setItem('recentlyViewed', JSON.stringify(filteredProducts));
-
-      // 10. Notify components of update
-      window.dispatchEvent(new Event('recentlyViewedUpdated'));
-
-      console.log('Added to recently viewed:', productToAdd); // Debug log
-
+        await axios.post('/api/recently-viewed/add', {
+            productId: product._id
+        }, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
     } catch (error) {
-      console.error('Error updating recently viewed products:', error);
+        console.error('Error updating recently viewed products:', error);
     }
   };
 
@@ -701,17 +650,7 @@ const ProductDetail = () => {
         <div className="lg:w-1/2">
           {/* Main Image Container */}
           <div className="mb-4 relative h-[400px] md:h-[500px] bg-white rounded-lg overflow-hidden">
-            {isVideo ? (
-              <YouTube
-                videoId={getYoutubeVideoId(product.images[selectedMedia])}
-                opts={{
-                  width: "100%",
-                  height: "100%",
-                  playerVars: { autoplay: 0 },
-                }}
-                className="w-full h-full"
-              />
-            ) : (
+            {selectedMedia < product.images.length ? (
               <motion.img
                 src={product.images[selectedMedia]}
                 alt={product.name}
@@ -726,48 +665,65 @@ const ProductDetail = () => {
                   e.target.src = "/placeholder-image.jpg";
                 }}
               />
-            )}
+            ) : isVideo && product.youtubeLink ? (
+              <YouTube
+                videoId={getYoutubeVideoId(product.youtubeLink)}
+                opts={{
+                  width: "100%",
+                  height: "100%",
+                  playerVars: { autoplay: 0 },
+                }}
+                className="w-full h-full"
+              />
+            ) : null}
           </div>
 
           {/* Thumbnails Grid */}
           <div className="grid grid-cols-5 gap-2">
             {product.images.map((image, index) => (
-              <motion.button
+              <button
                 key={index}
                 onClick={() => {
                   setSelectedMedia(index);
-                  setIsVideo(isYoutubeLink(image));
+                  setIsVideo(false);
                 }}
                 className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                   selectedMedia === index
                     ? "border-blue-500"
                     : "border-gray-200 hover:border-blue-300"
                 }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
-                {isYoutubeLink(image) ? (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={`https://img.youtube.com/vi/${getYoutubeVideoId(
-                        image
-                      )}/default.jpg`}
-                      alt="Video thumbnail"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
-                      <FaPlay className="text-white text-xl" />
-                    </div>
-                  </div>
-                ) : (
+                <img
+                  src={image}
+                  alt={`${product.name} thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+            {product.youtubeLink && (
+              <button
+                onClick={() => {
+                  setSelectedMedia(product.images.length);
+                  setIsVideo(true);
+                }}
+                className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                  selectedMedia === product.images.length && isVideo
+                    ? "border-blue-500"
+                    : "border-gray-200 hover:border-blue-300"
+                }`}
+              >
+                <div className="relative w-full h-full">
                   <img
-                    src={image}
-                    alt={`${product.name} thumbnail ${index + 1}`}
+                    src={`https://img.youtube.com/vi/${getYoutubeVideoId(product.youtubeLink)}/default.jpg`}
+                    alt="Video thumbnail"
                     className="w-full h-full object-cover"
                   />
-                )}
-              </motion.button>
-            ))}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+                    <FaPlay className="text-white text-xl" />
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
@@ -794,41 +750,13 @@ const ProductDetail = () => {
             </div>
 
             {/* Price - Enhanced */}
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+            <div className="mb-6 bg-white p-3 rounded-lg shadow-sm">
               <span className="text-4xl font-bold text-gray-900">₹{product.price}</span>
               <span className="text-gray-600 ml-2">per {product.unitType}</span>
             </div>
 
-            {/* Stock Status - Improved */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Stock Status</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {product.stock > 0 ? (
-                      <>
-                        <span className="text-green-600 font-medium">{product.stock}</span>
-                        <span> {product.unitType}s available</span>
-                      </>
-                    ) : (
-                      <span className="text-red-600">Out of Stock</span>
-                    )}
-                  </p>
-                </div>
-                <div className="text-sm text-gray-500">
-                  {product.stock > 10 
-                    ? "Plenty in stock"
-                    : product.stock > 5 
-                    ? "Limited stock"
-                    : product.stock > 0 
-                    ? "Low stock"
-                    : "Currently unavailable"}
-                </div>
-              </div>
-            </div>
-
             {/* Cart and Wishlist Controls */}
-            <div className="mt-6 flex gap-3">
+            <div className="mb-6 flex gap-3">
               <div className="flex-1">
                 {product.stock > 0 ? (
                   <AnimatePresence mode="wait">
@@ -909,7 +837,7 @@ const ProductDetail = () => {
                           />
                         ) : (
                           <>
-                            <FaShoppingCart className="text-xl" />
+                            <FaShoppingCart className="text-lg" />
                             <span>Add to Cart</span>
                           </>
                         )}
@@ -948,11 +876,68 @@ const ProductDetail = () => {
               </motion.button>
             </div>
 
-            {/* Description */}
+            {/* Shop Now Button */}
             <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Description</h2>
-              <p className="text-gray-700">{product.description}</p>
+                <Link 
+                    to={`/sellers/${product.seller._id}`}
+                    className="w-full bg-violet-600 text-white py-3 px-4 rounded-xl hover:bg-violet-700 transition-all duration-200 flex items-center justify-center gap-2 font-medium"
+                >
+                    <FaStore className="text-lg" />
+                    Shop Now
+                </Link>
             </div>
+
+            {/* Seller Info - Compact */}
+            <div 
+                onClick={() => navigate(`/sellers/${product.seller._id}`)}
+                className="mb-6 bg-white rounded-lg border border-gray-100 overflow-hidden cursor-pointer hover:border-blue-200 hover:shadow-md transition-all duration-200"
+            >
+                <div className="p-4">
+                    <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                            {product.seller.profileImage ? (
+                                <img 
+                                    src={product.seller.profileImage} 
+                                    alt={product.seller.shopName}
+                                    className="w-12 h-12 rounded-full object-cover border border-gray-100"
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+                                    <span className="text-lg font-medium text-blue-600">
+                                        {product.seller.shopName.charAt(0)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600">
+                                {product.seller.shopName}
+                            </h3>
+                            <div className="flex items-center text-sm text-gray-500 mt-0.5">
+                                <span className="flex items-center">
+                                    <FaStar className="text-yellow-400 w-4 h-4 mr-1" />
+                                    {product.seller.rating || "New"}
+                                </span>
+                                <span className="mx-2">•</span>
+                                <span>{product.seller.productsCount || product.seller.totalProducts || 4} Products</span>
+                            </div>
+                        </div>
+                        <div className="text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Description */}
+            {product.description && product.description.trim() !== "" && (
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-2">Description</h2>
+                <p className="text-gray-700">{product.description}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1044,165 +1029,135 @@ const ProductDetail = () => {
       </div>
 
       {/* Related Products Section */}
-      <div className="mt-16 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold">Related Products</h2>
-          <Link 
-            to={`/products/${product.category}`}
-            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
-          >
-            View All
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {product?.relatedProducts?.map((relatedProduct) => (
-            <motion.div
-              key={relatedProduct._id}
-              whileHover={{ y: -5 }}
-              className="group bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-xl"
+      <div className="mt-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Related Products</h2>
+            <Link 
+              to={`/products?category=${product.category}`}
+              className="text-blue-600 hover:text-blue-800 flex items-center gap-2 font-medium"
             >
-              <Link to={`/product/${relatedProduct._id}`} className="block">
-                {/* Image Container */}
-                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-                  <img
-                    src={relatedProduct.images[0]}
-                    alt={relatedProduct.name}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                  />
-                  {relatedProduct.stock <= 0 && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <span className="text-white font-medium px-4 py-2 bg-red-500 rounded-full">
-                        Out of Stock
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Content Container */}
-                <div className="p-4">
-                  {/* Category */}
-                  <div className="text-sm text-gray-500 mb-2">
-                    {relatedProduct.category}
-                  </div>
-
-                  {/* Product Name */}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[3.5rem]">
-                    {relatedProduct.name}
-                  </h3>
-
-                  {/* Rating */}
-                  <div className="flex items-center mb-3">
-                    <div className="flex text-yellow-400">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <FaStar
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= relatedProduct.rating ? "text-yellow-400" : "text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="ml-2 text-sm text-gray-600">
-                      ({relatedProduct.reviews?.length || 0})
-                    </span>
-                  </div>
-
-                  {/* Price and Stock Status */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-2xl font-bold text-gray-900">
-                        ₹{relatedProduct.price}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        per {relatedProduct.unitType || 'piece'}
-                      </span>
-                    </div>
-                    {relatedProduct.stock > 0 ? (
-                      <span className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded-full">
-                        In Stock
-                      </span>
-                    ) : (
-                      <span className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded-full">
-                        Out of Stock
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-
-              {/* Quick Actions */}
-              <div className="p-4 pt-0">
-                {relatedProductsCart[relatedProduct._id] ? (
-                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleRelatedProductQuantity(
-                          relatedProduct._id,
-                          relatedProductsCart[relatedProduct._id].quantity - 1
-                        );
-                      }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                    >
-                      <FaMinus className="w-4 h-4" />
-                    </button>
-                    <span className="text-lg font-medium">
-                      {relatedProductsCart[relatedProduct._id].quantity}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleRelatedProductQuantity(
-                          relatedProduct._id,
-                          relatedProductsCart[relatedProduct._id].quantity + 1
-                        );
-                      }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                    >
-                      <FaPlus className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className={`w-full py-2 px-4 rounded-xl text-white font-medium transition-colors ${
-                      relatedProduct.stock > 0
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-400 cursor-not-allowed"
-                    }`}
-                    disabled={relatedProduct.stock <= 0}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleRelatedProductAddToCart(relatedProduct);
-                    }}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <FaShoppingCart className="text-lg" />
-                      <span>Add to Cart</span>
-                    </div>
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {(!product?.relatedProducts || product.relatedProducts.length === 0) && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">No Related Products</h3>
-            <p className="mt-1 text-gray-500">We couldn't find any related products at this time.</p>
+              View All
+              <FaArrowRight className="text-sm" />
+            </Link>
           </div>
-        )}
+
+          <div className="relative">
+            <div className="overflow-x-auto hide-scrollbar">
+              <div className="flex gap-4 pb-4">
+                {product.relatedProducts?.map((relatedProduct) => (
+                  <div 
+                    key={relatedProduct._id}
+                    className="flex-shrink-0 w-[250px] bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                  >
+                    <Link to={`/product/${relatedProduct._id}`}>
+                      <div className="relative h-[200px] bg-gray-100">
+                        <img
+                          src={relatedProduct.images[0]}
+                          alt={relatedProduct.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {relatedProduct.stock <= 0 && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <span className="text-white font-medium">Out of Stock</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-medium text-gray-900 mb-1 truncate">
+                          {relatedProduct.name}
+                        </h3>
+                        <div className="flex items-center mb-2">
+                          <div className="flex text-yellow-400">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <FaStar
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= relatedProduct.rating ? "text-yellow-400" : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-1 text-sm text-gray-500">
+                            ({relatedProduct.reviews?.length || 0})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-gray-900">₹{relatedProduct.price}</span>
+                        </div>
+                        {relatedProduct.stock > 0 ? (
+                          <div className="mt-2">
+                            {relatedProductsCart[relatedProduct._id] ? (
+                              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRelatedProductQuantity(
+                                      relatedProduct._id,
+                                      relatedProductsCart[relatedProduct._id].quantity - 1
+                                    );
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white shadow-sm text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
+                                >
+                                  <FaMinus className="text-sm" />
+                                </button>
+                                <span className="font-medium text-gray-900">
+                                  {relatedProductsCart[relatedProduct._id].quantity}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRelatedProductQuantity(
+                                      relatedProduct._id,
+                                      relatedProductsCart[relatedProduct._id].quantity + 1
+                                    );
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white shadow-sm text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
+                                  disabled={relatedProductsCart[relatedProduct._id].quantity >= relatedProduct.stock}
+                                >
+                                  <FaPlus className="text-sm" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleRelatedProductAddToCart(relatedProduct);
+                                }}
+                                className="w-full py-2.5 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 flex items-center justify-center gap-2 transition-all hover:shadow-md"
+                              >
+                                <FaShoppingCart className="text-sm" />
+                                Add to Cart
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2">
+                            <div className="w-full py-2.5 text-center text-red-500 text-sm bg-red-50 rounded-xl">
+                              Out of Stock
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Add this CSS to hide scrollbar but keep functionality */}
+      <style jsx>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
+      `}</style>
     </div>
   );
 };

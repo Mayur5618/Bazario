@@ -18,6 +18,9 @@ import axios from '../../src/config/axios';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import * as Camera from 'expo-camera';
+import { useLanguage } from '../../src/context/LanguageContext';
+import { translations } from '../../src/translations/addProduct';
+import { useAuth } from '../../src/context/AuthContext';
 
 const categories = [
   'Homemade Snacks',
@@ -33,26 +36,29 @@ const categories = [
 ];
 
 const unitTypes = [
-  { label: 'किलोग्राम', value: 'kg' },
-  { label: 'ग्राम', value: 'g' },
-  { label: 'पीस', value: 'piece' },
-  { label: 'थाली', value: 'thali' },
-  { label: 'पैक', value: 'pack' },
-  { label: 'जार', value: 'jar' },
-  { label: 'बोतल', value: 'bottle' },
-  { label: 'पैकेट', value: 'pkt' },
-  { label: 'सेट', value: 'set' },
-  { label: 'बॉक्स', value: 'box' }
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'piece', label: 'piece' },
+  { value: 'thali', label: 'thali' },
+  { value: 'pack', label: 'pack' },
+  { value: 'jar', label: 'jar' },
+  { value: 'bottle', label: 'bottle' },
+  { value: 'pkt', label: 'pkt' },
+  { value: 'set', label: 'set' },
+  { value: 'box', label: 'box' }
 ];
 
 const AddProductScreen = () => {
   const router = useRouter();
+  const { language } = useLanguage();
+  const { user } = useAuth();
+  const t = translations[language] || translations.en;
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    category: '',
+    category: user?.customBusinessType || '',
     stock: '',
     images: [],
     tags: [],
@@ -63,7 +69,8 @@ const AddProductScreen = () => {
     subUnitPrices: {
       '250g': '',
       '500g': '',
-    }
+    },
+    availableLocations: []
   });
   const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,6 +84,8 @@ const AddProductScreen = () => {
   const [selectedPreviewImage, setSelectedPreviewImage] = useState(null);
   const [youtubeThumb, setYoutubeThumb] = useState(null);
   const [tagInputRef, setTagInputRef] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState('');
+  const [locationInputRef, setLocationInputRef] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +93,17 @@ const AddProductScreen = () => {
       setCameraPermission(status === 'granted');
     })();
   }, []);
+
+  useEffect(() => {
+    console.log('User data in useEffect:', user); // Debug log
+    if (user) {
+      const category = user.businessType === 'Other' ? user.customBusinessType : user.businessType;
+      setFormData(prev => ({
+        ...prev,
+        category: category || ''
+      }));
+    }
+  }, [user]);
 
   const calculateSubUnitPrices = (mainPrice, mainUnit) => {
     if (mainUnit === 'kg' && mainPrice) {
@@ -256,6 +276,29 @@ const AddProductScreen = () => {
     }
   };
 
+  const handleAddLocation = () => {
+    if (currentLocation.trim()) {
+      const newLocation = currentLocation.trim();
+      if (!formData.availableLocations.includes(newLocation)) {
+        setFormData(prev => ({
+          ...prev,
+          availableLocations: [...prev.availableLocations, newLocation]
+        }));
+      }
+      setCurrentLocation('');
+      if (locationInputRef) {
+        locationInputRef.focus();
+      }
+    }
+  };
+
+  const handleRemoveLocation = (locationToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      availableLocations: prev.availableLocations.filter(loc => loc !== locationToRemove)
+    }));
+  };
+
   const validateStep = () => {
     switch (step) {
       case 1:
@@ -285,6 +328,10 @@ const AddProductScreen = () => {
         }
         return true;
       case 4:
+        if (formData.availableLocations.length === 0) {
+          Alert.alert('ज़रूरी', 'कृपया कम से कम एक शहर चुनें जहाँ प्रोडक्ट उपलब्ध होगा');
+          return false;
+        }
         return true;
       default:
         return true;
@@ -313,6 +360,7 @@ const AddProductScreen = () => {
     setLoading(true);
     try {
       console.log('Starting product submission...');
+      console.log('Available Locations:', formData.availableLocations); // Debug log
       // Upload images first
       const imageUrls = await Promise.all(
         selectedImages.map(async (image, index) => {
@@ -349,18 +397,19 @@ const AddProductScreen = () => {
         name: formData.name,
         description: formData.description || '',
         price: Number(formData.price),
-        category: formData.category,
+        category: getDisplayCategory() || 'General Products',
         stock: Number(formData.stock),
         images: imageUrls,
         tags: formData.tags,
         youtubeLink: formData.youtubeLink || '',
-        platformType: ['b2c'], // Since this is a B2C product
+        platformType: ['b2c'],
         unitSize: Number(formData.unitSize) || 1,
         unitType: formData.unitType,
-        subUnitPrices: formData.subUnitPrices || {}
+        subUnitPrices: formData.subUnitPrices || {},
+        availableLocations: formData.availableLocations
       };
 
-      console.log('Sending product data to server:', productData);
+      console.log('Product data being sent:', productData); // Debug log
 
       const response = await axios.post('/api/products/create', productData);
       console.log('Product creation response:', response.data);
@@ -419,106 +468,54 @@ const AddProductScreen = () => {
     setFormData(prev => ({ ...prev, youtubeLink: text }));
   };
 
+  const getUnitTypeLabel = (value) => {
+    return t.fields.unitType.types[value] || value;
+  };
+
+  const getDisplayCategory = () => {
+    console.log('User data:', user); // Debug log
+    if (!user) return '';
+    if (user.businessType === 'Other') {
+      return user.customBusinessType || '';
+    }
+    return user.businessType || '';
+  };
+
   const renderStep1 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 1: बेसिक जानकारी</Text>
+      <Text style={styles.stepTitle}>{t.steps[1]}</Text>
       
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>प्रोडक्ट का नाम *</Text>
+        <Text style={styles.label}>{t.fields.productName.label}</Text>
         <TextInput
           style={styles.input}
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-          placeholder="उदाहरण: मसाला डोसा"
+          placeholder={t.fields.productName.placeholder}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>श्रेणी चुनें *</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryScrollView}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryChip,
-                formData.category === category && styles.categoryChipSelected
-              ]}
-              onPress={() => setFormData(prev => ({ ...prev, category }))}
-            >
-              <Text 
-                style={[
-                  styles.categoryChipText,
-                  formData.category === category && styles.categoryChipTextSelected
-                ]}
-              >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>विवरण</Text>
+        <Text style={styles.label}>{t.fields.description.label}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={formData.description}
           onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-          placeholder="प्रोडक्ट का विवरण लिखें"
+          placeholder={t.fields.description.placeholder}
           multiline
           numberOfLines={4}
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>टैग्स (वैकल्पिक)</Text>
-        <View style={styles.tagInputContainer}>
-          <TextInput
-            ref={ref => setTagInputRef(ref)}
-            style={styles.tagInput}
-            value={currentTag}
-            onChangeText={setCurrentTag}
-            placeholder="#टमाटर"
-            onSubmitEditing={handleAddTag}
-            returnKeyType="done"
-          />
-          <TouchableOpacity 
-            style={styles.addTagButton} 
-            onPress={handleAddTag}
-          >
-            <Ionicons name="add-circle" size={24} color="#6C63FF" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.tagsContainer}>
-          {formData.tags.map((tag, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.tagChip}
-              onPress={() => handleRemoveTag(tag)}
-            >
-              <Text style={styles.tagChipText}>{tag}</Text>
-              <View style={styles.tagRemoveButton}>
-                <Ionicons name="close-circle" size={20} color="#FF4444" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
     </View>
   );
 
   const renderStep2 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 2: मीडिया अपलोड</Text>
+      <Text style={styles.stepTitle}>{t.steps[2]}</Text>
       <Text style={styles.stepDescription}>
         {formData.youtubeLink 
-          ? 'अधिकतम 4 फोटो और 1 यूट्यूब वीडियो अपलोड कर सकते हैं'
-          : 'अधिकतम 5 फोटो अपलोड कर सकते हैं'}
+          ? t.fields.mediaUpload.description
+          : t.fields.mediaUpload.description}
       </Text>
       
       <TouchableOpacity style={styles.imageUpload} onPress={handleImageSource}>
@@ -534,18 +531,18 @@ const AddProductScreen = () => {
                     }}
                   >
                     <Image source={{ uri: image.uri }} style={styles.previewImage} />
-                    <Text style={styles.imageNumber}>फोटो {index + 1}</Text>
+                    <Text style={styles.imageNumber}>{t.fields.mediaUpload.photoNumber} {index + 1}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.removeImageButton}
                     onPress={() => {
                       Alert.alert(
-                        'फोटो हटाएं',
-                        'क्या आप इस फोटो को हटाना चाहते हैं?',
+                        t.fields.mediaUpload.removeConfirm,
+                        t.fields.mediaUpload.removeMessage,
                         [
-                          { text: 'नहीं', style: 'cancel' },
+                          { text: t.fields.mediaUpload.no, style: 'cancel' },
                           { 
-                            text: 'हाँ', 
+                            text: t.fields.mediaUpload.yes, 
                             onPress: () => {
                               setSelectedImages(prev => prev.filter((_, i) => i !== index));
                               setFormData(prev => ({
@@ -571,25 +568,25 @@ const AddProductScreen = () => {
                 onPress={handleImageSource}
               >
                 <Ionicons name="add-circle" size={24} color="#6C63FF" />
-                <Text style={styles.addMoreButtonText}>और फोटो जोड़ें</Text>
+                <Text style={styles.addMoreButtonText}>{t.fields.mediaUpload.addMore}</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
           <>
             <Ionicons name="camera-outline" size={40} color="#666" />
-            <Text style={styles.imageUploadText}>फोटो अपलोड करने के लिए यहाँ टैप करें</Text>
+            <Text style={styles.imageUploadText}>{t.fields.mediaUpload.tap}</Text>
           </>
         )}
       </TouchableOpacity>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>यूट्यूब वीडियो लिंक (वैकल्पिक)</Text>
+        <Text style={styles.label}>{t.fields.youtube.label}</Text>
         <TextInput
           style={styles.input}
           value={formData.youtubeLink}
           onChangeText={handleYoutubeLink}
-          placeholder="https://youtube.com/..."
+          placeholder={t.fields.youtube.placeholder}
         />
         {youtubeThumb && (
           <View style={styles.youtubeThumbContainer}>
@@ -611,14 +608,14 @@ const AddProductScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>फोटो कैसे लेना चाहेंगे?</Text>
+            <Text style={styles.modalTitle}>{t.fields.imageSource.title}</Text>
             
             <TouchableOpacity 
               style={styles.modalButton}
               onPress={takePhoto}
             >
               <Ionicons name="camera" size={24} color="#6C63FF" />
-              <Text style={styles.modalButtonText}>कैमरा से फोटो लें</Text>
+              <Text style={styles.modalButtonText}>{t.fields.imageSource.camera}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -626,14 +623,14 @@ const AddProductScreen = () => {
               onPress={pickFromGallery}
             >
               <Ionicons name="images" size={24} color="#6C63FF" />
-              <Text style={styles.modalButtonText}>गैलरी से फोटो चुनें</Text>
+              <Text style={styles.modalButtonText}>{t.fields.imageSource.gallery}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.modalButton, styles.cancelButton]}
               onPress={() => setShowImageSourceModal(false)}
             >
-              <Text style={styles.cancelButtonText}>रद्द करें</Text>
+              <Text style={styles.cancelButtonText}>{t.fields.imageSource.cancel}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -645,10 +642,10 @@ const AddProductScreen = () => {
 
   const renderStep3 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 3: कीमत और स्टॉक</Text>
+      <Text style={styles.stepTitle}>{t.steps[3]}</Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>यूनिट टाइप *</Text>
+        <Text style={styles.label}>{t.fields.unitType.label}</Text>
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.unitType}
@@ -660,14 +657,18 @@ const AddProductScreen = () => {
             itemStyle={styles.pickerItem}
           >
             {unitTypes.map((type) => (
-              <Picker.Item key={type.value} label={type.label} value={type.value} />
+              <Picker.Item 
+                key={type.value} 
+                label={getUnitTypeLabel(type.value)} 
+                value={type.value} 
+              />
             ))}
           </Picker>
         </View>
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>मुख्य कीमत (₹) *</Text>
+        <Text style={styles.label}>{t.fields.price.label}</Text>
         <View style={styles.priceContainer}>
           <TextInput
             style={[styles.input, styles.priceInput]}
@@ -677,34 +678,34 @@ const AddProductScreen = () => {
               calculateSubUnitPrices(text, formData.unitType);
             }}
             keyboardType="numeric"
-            placeholder={`प्रति ${unitTypes.find(t => t.value === formData.unitType)?.label || ''} की कीमत`}
+            placeholder={`${t.fields.price.placeholder} ${getUnitTypeLabel(formData.unitType)}`}
           />
-          <Text style={styles.priceUnit}>₹ / {formData.unitType}</Text>
+          <Text style={styles.priceUnit}>₹ / {getUnitTypeLabel(formData.unitType)}</Text>
         </View>
       </View>
 
       {formData.unitType === 'kg' && formData.price && (
         <View style={styles.subUnitPrices}>
-          <Text style={styles.subUnitTitle}>अन्य मात्रा की कीमत:</Text>
+          <Text style={styles.subUnitTitle}>{t.fields.price.subUnits.title}</Text>
           <View style={styles.subUnitItem}>
-            <Text style={styles.subUnitLabel}>250g:</Text>
+            <Text style={styles.subUnitLabel}>{t.fields.price.subUnits.gram250}</Text>
             <Text style={styles.subUnitValue}>₹{formData.subUnitPrices['250g']}</Text>
           </View>
           <View style={styles.subUnitItem}>
-            <Text style={styles.subUnitLabel}>500g:</Text>
+            <Text style={styles.subUnitLabel}>{t.fields.price.subUnits.gram500}</Text>
             <Text style={styles.subUnitValue}>₹{formData.subUnitPrices['500g']}</Text>
           </View>
         </View>
       )}
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>स्टॉक *</Text>
+        <Text style={styles.label}>{t.fields.stock.label}</Text>
         <TextInput
           style={styles.input}
           value={formData.stock}
           onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text }))}
           keyboardType="numeric"
-          placeholder={`कितने ${formData.unitType} उपलब्ध हैं`}
+          placeholder={t.fields.stock.placeholder}
         />
       </View>
     </View>
@@ -712,7 +713,44 @@ const AddProductScreen = () => {
 
   const renderStep4 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 4: प्रीव्यू</Text>
+      <Text style={styles.stepTitle}>{t.steps[4]}</Text>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{t.fields.availability.label}</Text>
+        <Text style={styles.sublabel}>{t.fields.availability.sublabel}</Text>
+        <View style={styles.locationInputContainer}>
+          <TextInput
+            ref={ref => setLocationInputRef(ref)}
+            style={styles.locationInput}
+            value={currentLocation}
+            onChangeText={setCurrentLocation}
+            placeholder={t.fields.availability.placeholder}
+            onSubmitEditing={handleAddLocation}
+            returnKeyType="done"
+          />
+          <TouchableOpacity 
+            style={styles.addLocationButton} 
+            onPress={handleAddLocation}
+          >
+            <Ionicons name="add-circle" size={24} color="#6C63FF" />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.locationsContainer}>
+          {formData.availableLocations.map((location, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.locationChip}
+              onPress={() => handleRemoveLocation(location)}
+            >
+              <Text style={styles.locationChipText}>{location}</Text>
+              <View style={styles.locationRemoveButton}>
+                <Ionicons name="close-circle" size={20} color="#FF4444" />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       <View style={styles.previewCard}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewImages}>
@@ -727,7 +765,7 @@ const AddProductScreen = () => {
         {formData.youtubeLink && (
           <View style={styles.youtubePreview}>
             <Ionicons name="logo-youtube" size={24} color="red" />
-            <Text style={styles.youtubeText}>यूट्यूब वीडियो जुड़ा है</Text>
+            <Text style={styles.youtubeText}>YouTube video attached</Text>
           </View>
         )}
 
@@ -736,7 +774,7 @@ const AddProductScreen = () => {
           
           <View style={styles.previewPriceContainer}>
             <Text style={styles.previewPrice}>₹{formData.price}</Text>
-            <Text style={styles.previewUnit}>/ {formData.unitType}</Text>
+            <Text style={styles.previewUnit}>/ {getUnitTypeLabel(formData.unitType)}</Text>
           </View>
 
           {formData.unitType === 'kg' && (
@@ -746,7 +784,7 @@ const AddProductScreen = () => {
             </View>
           )}
 
-          <Text style={styles.previewStock}>स्टॉक: {formData.stock} {formData.unitType}</Text>
+          <Text style={styles.previewStock}>{t.review.stock} {formData.stock} {getUnitTypeLabel(formData.unitType)}</Text>
           
           {formData.description && (
             <Text style={styles.previewDescription}>{formData.description}</Text>
@@ -770,26 +808,26 @@ const AddProductScreen = () => {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>प्रोडक्ट की जानकारी जाँच लें</Text>
+          <Text style={styles.modalTitle}>{t.review.title}</Text>
           
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>प्रोडक्ट:</Text>
+            <Text style={styles.confirmationLabel}>{t.review.product}</Text>
             <Text style={styles.confirmationValue}>{formData.name}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>कीमत:</Text>
-            <Text style={styles.confirmationValue}>₹{formData.price} प्रति {formData.unitSize} {formData.unitType}</Text>
+            <Text style={styles.confirmationLabel}>{t.review.price}</Text>
+            <Text style={styles.confirmationValue}>₹{formData.price} per {formData.unitSize} {getUnitTypeLabel(formData.unitType)}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>श्रेणी:</Text>
-            <Text style={styles.confirmationValue}>{formData.category}</Text>
+            <Text style={styles.confirmationLabel}>Available In</Text>
+            <Text style={styles.confirmationValue}>{formData.availableLocations.join(', ')}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>स्टॉक:</Text>
-            <Text style={styles.confirmationValue}>{formData.stock} पैक</Text>
+            <Text style={styles.confirmationLabel}>{t.review.stock}</Text>
+            <Text style={styles.confirmationValue}>{formData.stock} {getUnitTypeLabel(formData.unitType)}</Text>
           </View>
 
           <View style={styles.modalButtons}>
@@ -797,7 +835,7 @@ const AddProductScreen = () => {
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={() => setShowConfirmation(false)}
             >
-              <Text style={styles.modalButtonTextSecondary}>वापस जाएं</Text>
+              <Text style={styles.modalButtonTextSecondary}>{t.review.back}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -806,7 +844,7 @@ const AddProductScreen = () => {
               disabled={loading}
             >
               <Text style={styles.modalButtonTextPrimary}>
-                {loading ? 'प्रोडक्ट जोड़ा जा रहा है...' : 'हाँ, जोड़ें'}
+                {loading ? t.review.loading : t.review.confirm}
               </Text>
             </TouchableOpacity>
           </View>
@@ -845,7 +883,7 @@ const AddProductScreen = () => {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>नया प्रोडक्ट जोड़ें</Text>
+        <Text style={styles.headerTitle}>{t.title}</Text>
       </View>
 
       <View style={styles.stepIndicator}>
@@ -874,7 +912,7 @@ const AddProductScreen = () => {
             disabled={loading}
           >
             <Text style={styles.submitButtonText}>
-              {step === 4 ? 'समीक्षा करें' : 'अगला'}
+              {step === 4 ? t.buttons.review : t.buttons.next}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1396,6 +1434,55 @@ const styles = StyleSheet.create({
   },
   categoryChipTextSelected: {
     color: '#FFFFFF',
+  },
+  locationInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  locationInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+  },
+  addLocationButton: {
+    padding: 8,
+  },
+  locationsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  locationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0FF',
+    borderRadius: 20,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#6C63FF',
+  },
+  locationChipText: {
+    color: '#6C63FF',
+    fontSize: 14,
+    marginRight: 4,
+  },
+  locationRemoveButton: {
+    padding: 2,
+  },
+  sublabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
   },
 });
 

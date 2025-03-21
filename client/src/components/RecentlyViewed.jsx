@@ -1,164 +1,127 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { FaArrowLeft, FaArrowRight, FaChevronLeft, FaChevronRight, FaStar } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
-import '../styles/recentlyViewed.css';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import axios from 'axios';
+import { FaStar } from 'react-icons/fa';
 
 const RecentlyViewed = () => {
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const sliderRef = useRef(null);
-  const navigate = useNavigate();
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { userData } = useSelector((state) => state.user);
 
-  const loadRecentlyViewed = () => {
-    try {
-      const currentTime = Date.now();
-      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    useEffect(() => {
+        fetchRecentlyViewed();
+    }, [userData]);
 
-      // Get and parse stored products
-      const storedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+    const fetchRecentlyViewed = async () => {
+        if (!userData) {
+            setProducts([]);
+            setLoading(false);
+            return;
+        }
 
-      // Filter out products older than a week
-      const recentProducts = storedProducts.filter(product => {
-        return (currentTime - product.timestamp) < ONE_WEEK;
-      });
+        try {
+            setLoading(true);
+            const response = await axios.get('/api/recently-viewed/get', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
-      // Update localStorage with filtered list
-      if (recentProducts.length !== storedProducts.length) {
-        localStorage.setItem('recentlyViewed', JSON.stringify(recentProducts));
-      }
-
-      setRecentlyViewed(recentProducts);
-    } catch (error) {
-      console.error('Error loading recently viewed products:', error);
-      setRecentlyViewed([]);
-    }
-  };
-
-  useEffect(() => {
-    loadRecentlyViewed();
-
-    // Listen for updates to recently viewed products
-    window.addEventListener('recentlyViewedUpdated', loadRecentlyViewed);
-
-    return () => {
-      window.removeEventListener('recentlyViewedUpdated', loadRecentlyViewed);
+            if (response.data.success) {
+                setProducts(response.data.products);
+            }
+        } catch (error) {
+            console.error('Error fetching recently viewed products:', error);
+        } finally {
+            setLoading(false);
+        }
     };
-  }, []);
 
-  const scroll = (direction) => {
-    if (sliderRef.current) {
-      const scrollAmount = direction === 'left' ? -1200 : 1200;
-      sliderRef.current.scrollBy({
-        left: scrollAmount,
-        behavior: 'smooth'
-      });
+    if (!userData || products.length === 0) {
+        return null;
     }
-  };
 
-  const handleProductClick = (product) => {
-    // Updated navigation path to match your route structure
-    navigate(`/product/${product._id}`);
-    // If you need to refresh the page after navigation
-    // window.location.href = `/product/${product._id}`;
-  };
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-40">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
-  // Don't show section if no recently viewed products
-  if (recentlyViewed.length === 0) {
-    return null;
-  }
+    return (
+        <div className="py-8">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Recently Viewed</h2>
+                {products.length > 0 && (
+                    <button
+                        onClick={async () => {
+                            try {
+                                await axios.delete('/api/recently-viewed/clear', {
+                                    headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                    }
+                                });
+                                setProducts([]);
+                            } catch (error) {
+                                console.error('Error clearing recently viewed:', error);
+                            }
+                        }}
+                        className="text-sm text-red-600 hover:text-red-800"
+                    >
+                        Clear All
+                    </button>
+                )}
+            </div>
 
-  return (
-    <div className="py-4 bg-gradient-to-b from-purple-100/50 to-white">
-      <div className="max-w-[1600px] mx-auto">
-        <div className="px-6">
-          <h2 className="text-xl font-bold mb-3">Recently Viewed Products</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {products.map((item) => (
+                    <Link
+                        key={`${item.product._id}-${item.viewedAt}`}
+                        to={`/product/${item.product._id}`}
+                        className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                        <div className="aspect-square">
+                            <img
+                                src={item.product.images[0]}
+                                alt={item.product.name}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <div className="p-2">
+                            <h3 className="text-sm font-medium text-gray-900 line-clamp-1">
+                                {item.product.name}
+                            </h3>
+                            <div className="flex items-center mt-1">
+                                <div className="flex text-yellow-400">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <FaStar
+                                            key={star}
+                                            className={`w-3 h-3 ${
+                                                star <= item.product.rating ? "text-yellow-400" : "text-gray-300"
+                                            }`}
+                                        />
+                                    ))}
+                                </div>
+                                <span className="ml-1 text-xs text-gray-500">
+                                    ({item.product.reviews?.length || 0})
+                                </span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between">
+                                <span className="text-base font-bold text-gray-900">
+                                    ₹{item.product.price}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    per {item.product.unitType || 'piece'}
+                                </span>
+                            </div>
+                        </div>
+                    </Link>
+                ))}
+            </div>
         </div>
-        
-        <div className="relative px-2">
-          {/* Navigation Buttons */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              scroll('left');
-            }}
-            className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 p-2 rounded-full shadow-lg transition-all"
-          >
-            <FaChevronLeft className="w-4 h-4 text-gray-600" />
-          </button>
-
-          {/* Products Slider */}
-          <div 
-            ref={sliderRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-6"
-          >
-            {recentlyViewed.map((product) => (
-              <div 
-                key={product._id}
-                onClick={() => handleProductClick(product)}
-                className="flex-none w-[220px] cursor-pointer hover:shadow-lg transition-all"
-              >
-                <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
-                  {/* Product Image */}
-                  <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="p-3 flex flex-col flex-grow">
-                    <h3 className="text-base font-medium text-gray-900 mb-1 line-clamp-2 hover:text-blue-600">
-                      {product.name}
-                    </h3>
-
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-lg font-bold">₹{product.price}</span>
-                        <span className="text-xs text-gray-500">per {product.unit}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, index) => (
-                          <FaStar
-                            key={index}
-                            className={`w-3 h-3 ${
-                              index < product.rating ? 'text-yellow-400' : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs text-gray-600">
-                        ({product.reviews?.length || 0})
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs mt-auto">
-                      <span className="text-green-600 font-medium">In Stock</span>
-                      <span className="text-gray-500">Stock: {product.stock}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Next Button */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              scroll('right');
-            }}
-            className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 p-2 rounded-full shadow-lg transition-all"
-          >
-            <FaChevronRight className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default RecentlyViewed;

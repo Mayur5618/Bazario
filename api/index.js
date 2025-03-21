@@ -17,6 +17,8 @@ import mobileSearchRoutes from './routes/Mobile_search.routes.js';
 import wishlistRoutes from './routes/wishlist.route.js';
 import sellerRoutes from './routes/seller.route.js';
 import uploadRoutes from './routes/upload.route.js';
+import './models/seller.model.js'; // Import Seller model to register it
+import recentlyViewedRoutes from './routes/recentlyViewed.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -59,6 +61,7 @@ app.use('/api/search', mobileSearchRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/recently-viewed', recentlyViewedRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);

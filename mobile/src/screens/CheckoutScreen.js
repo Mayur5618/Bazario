@@ -58,15 +58,13 @@ const CheckoutScreen = () => {
   const fetchUserProfile = async () => {
     setIsProfileLoading(true);
     try {
-      // Check if user is logged in
       if (!user) {
         console.log('No user found in context:', user);
-        Alert.alert('Login Required', 'Please login to auto-fill your details.');
         return;
       }
 
       console.log('Fetching user profile with token:', user.token);
-      const response = await axios.get('/api/users/profile');  // Changed endpoint to /api/users/profile
+      const response = await axios.get('/api/users/profile');
       console.log('API Response:', response.data);
       
       if (response.data && response.data.user) {
@@ -84,7 +82,6 @@ const CheckoutScreen = () => {
           pincode: userData.pincode || userData.zipcode || '',
           paymentMethod: 'COD'
         });
-        Alert.alert('Success', 'Profile details loaded successfully!');
       } else {
         console.log('No user data in response:', response.data);
         throw new Error('No profile data found');
@@ -95,10 +92,6 @@ const CheckoutScreen = () => {
         response: error.response?.data,
         status: error.response?.status
       });
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to load profile. Please try again.'
-      );
     } finally {
       setIsProfileLoading(false);
     }
@@ -238,10 +231,13 @@ const CheckoutScreen = () => {
         keyboardType={keyboardType}
         multiline={multiline}
         numberOfLines={multiline ? 3 : 1}
-        autoCapitalize="words"
+        autoCapitalize={keyboardType === "email-address" ? "none" : "words"}
         autoCorrect={false}
-        blurOnSubmit={!multiline}
-        returnKeyType={multiline ? 'default' : 'next'}
+        blurOnSubmit={false}
+        returnKeyType={multiline ? "default" : "next"}
+        enablesReturnKeyAutomatically={true}
+        onSubmitEditing={() => {}}
+        textContentType="none"
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -252,14 +248,16 @@ const CheckoutScreen = () => {
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       
       <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        enabled
       >
         <ScrollView 
           style={styles.content} 
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="none"
+          showsVerticalScrollIndicator={false}
         >
           {/* Auto-fill Button */}
           <TouchableOpacity

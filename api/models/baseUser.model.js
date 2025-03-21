@@ -11,7 +11,21 @@ const baseUserSchema = new mongoose.Schema({
     city: { type: String, required: true },
     pincode: { type: String, required: true },
     password: { type: String, required: true },
-    profileImage: { type: String, default: '' }, // Added this line
+    profileImage: { type: String, default: '' },
+    userType: { 
+        type: String, 
+        required: true,
+        enum: ['buyer', 'seller', 'agency'],
+        default: 'buyer'
+    },
+    location: {
+        type: {
+            latitude: { type: Number, required: true },
+            longitude: { type: Number, required: true }
+        },
+        required: true,
+        default: { latitude: 0, longitude: 0 }
+    }
 }, {
     timestamps: true,
     discriminatorKey: 'userType',
@@ -40,4 +54,7 @@ baseUserSchema.methods.comparePassword = async function(candidatePassword) {
     }
 };
 
-export default baseUserSchema;
+const User = mongoose.model('User', baseUserSchema);
+
+export { baseUserSchema };
+export default User;

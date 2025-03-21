@@ -20,6 +20,7 @@ const Register = () => {
 
   const [errors, setErrors] = useState({});
   const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [showAddressTextarea, setShowAddressTextarea] = useState(false);
 
   // Validation function
   const validateField = (name, value) => {
@@ -51,18 +52,46 @@ const Register = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    
+    // Special handling for mobile number
+    if (name === 'mobile') {
+      // Only allow numbers
+      const numbersOnly = value.replace(/[^0-9]/g, '');
+      // Limit to 10 digits
+      const limitedValue = numbersOnly.slice(0, 10);
+      
+      setFormData({
+        ...formData,
+        [name]: limitedValue
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+
+      // Check if address length exceeds threshold
+      if (name === 'address' && value.length > 50) {
+        setShowAddressTextarea(true);
+      }
+    }
 
     // Clear error when user starts typing
-    if (errors[e.target.name]) {
+    if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [e.target.name]: ''
+        [name]: ''
       }));
     }
+  };
+
+  // Function to handle textarea auto-grow
+  const handleTextareaChange = (e) => {
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+    handleChange(e);
   };
 
   const validateStep = (stepNumber) => {
@@ -101,41 +130,67 @@ const Register = () => {
 
   const handleNextStep = async () => {
     // First validate all fields
-    const stepErrors = {};
+    const emptyFields = [];
     
     if (!formData.firstName.trim()) {
-      stepErrors.firstName = 'First name is required';
+      emptyFields.push('First Name');
     }
     if (!formData.lastName.trim()) {
-      stepErrors.lastName = 'Last name is required';
+      emptyFields.push('Last Name');
     }
     if (!formData.mobile.trim()) {
-      stepErrors.mobile = 'Mobile number is required';
+      emptyFields.push('Mobile Number');
     } else if (!/^\d{10}$/.test(formData.mobile)) {
-      stepErrors.mobile = 'Invalid mobile number format';
-    }
-    if (!formData.password) {
-      stepErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      stepErrors.password = 'Password must be at least 6 characters';
-    }
-    if (!formData.confirmPassword) {
-      stepErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      stepErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(stepErrors);
-
-    // If there are any validation errors, don't proceed
-    if (Object.keys(stepErrors).length > 0) {
-      toast('Please fill in all required fields', {
-        icon: '📝',
+      toast.error('Please enter a valid 10-digit mobile number', {
         style: {
           borderRadius: '10px',
           background: '#333',
           color: '#fff',
         },
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+    if (!formData.password) {
+      emptyFields.push('Password');
+    } else if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+    if (!formData.confirmPassword) {
+      emptyFields.push('Confirm Password');
+    } else if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+
+    // If there are empty fields, show a single toast message
+    if (emptyFields.length > 0) {
+      toast.error(`Please fill in the following fields: ${emptyFields.join(', ')}`, {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+        duration: 3000,
+        position: 'top-center',
       });
       return;
     }
@@ -145,31 +200,20 @@ const Register = () => {
       const phoneExists = await checkPhoneExists(formData.mobile);
       
       if (phoneExists) {
-        setErrors(prev => ({
-          ...prev,
-          mobile: 'This phone number is already registered'
-        }));
-        toast('This mobile number is already registered', {
-          icon: '📱',
+        toast.error('This mobile number is already registered', {
           style: {
             borderRadius: '10px',
             background: '#333',
             color: '#fff',
           },
+          duration: 3000,
+          position: 'top-center',
         });
         return;
       }
 
       // If everything is valid and phone is not registered, proceed to next step
       setStep(2);
-      toast.success('Great! Now let\'s add your address details', {
-        icon: '🏠',
-        style: {
-          borderRadius: '10px',
-          background: '#333',
-          color: '#fff',
-        },
-      });
     } catch (error) {
       console.error('Error:', error);
       toast.error('Something went wrong. Please try again.', {
@@ -178,6 +222,8 @@ const Register = () => {
           background: '#333',
           color: '#fff',
         },
+        duration: 3000,
+        position: 'top-center',
       });
     }
   };
@@ -379,6 +425,9 @@ const Register = () => {
     error ? <p className="text-red-500 text-xs mt-1">{error}</p> : null
   );
 
+  // Update the input field styling to remove red border on error
+  const inputClassName = "mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2";
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
@@ -412,14 +461,9 @@ const Register = () => {
                     id="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.firstName ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className={inputClassName}
                     required
                   />
-                  {errors.firstName && (
-                    <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
-                  )}
                 </div>
 
                 <div>
@@ -432,14 +476,9 @@ const Register = () => {
                     id="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.lastName ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className={inputClassName}
                     required
                   />
-                  {errors.lastName && (
-                    <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
-                  )}
                 </div>
               </div>
 
@@ -453,14 +492,12 @@ const Register = () => {
                   id="mobile"
                   value={formData.mobile}
                   onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border ${
-                    errors.mobile ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                  maxLength="10"
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  className={inputClassName}
                   required
                 />
-                {errors.mobile && (
-                  <p className="mt-2 text-sm text-red-600">{errors.mobile}</p>
-                )}
               </div>
 
               <div>
@@ -474,9 +511,7 @@ const Register = () => {
                     id="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.password ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className={inputClassName}
                     required
                   />
                   <button
@@ -487,9 +522,6 @@ const Register = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="mt-2 text-sm text-red-600">{errors.password}</p>
-                )}
               </div>
 
               <div>
@@ -503,9 +535,7 @@ const Register = () => {
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className={inputClassName}
                     required
                   />
                   <button
@@ -516,9 +546,6 @@ const Register = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.confirmPassword && (
-                  <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
-                )}
               </div>
 
               <div className="flex justify-between">
@@ -563,15 +590,34 @@ const Register = () => {
                 <label className="block text-sm font-medium text-gray-700">
                   Address
                 </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border ${
-                    errors.address ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
-                />
+                {showAddressTextarea ? (
+                  <textarea
+                    name="address"
+                    value={formData.address}
+                    onChange={handleTextareaChange}
+                    onFocus={() => setShowAddressTextarea(true)}
+                    rows="3"
+                    style={{ minHeight: '80px', resize: 'none' }}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.address ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    onFocus={() => {
+                      if (formData.address?.length > 50) {
+                        setShowAddressTextarea(true);
+                      }
+                    }}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.address ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                  />
+                )}
                 {errors.address && <ErrorMessage error={errors.address} />}
               </div>
 

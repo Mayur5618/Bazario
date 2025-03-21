@@ -13,6 +13,7 @@ import User from '../models/buyer.model.js';
 import { uploadToFirebase } from '../utilities/firebase.js';
 import Order from '../models/order.model.js';
 import Review from '../models/review.model.js';
+import { getCoordinatesFromAddress } from '../utils/geocoding.js';
 // Twilio configuration
 const twilioClient = twilio("AC7e47441a2fde99bca427d17971d3036b", "7ae83cc4d9f5d8e445eff220b5340b0d");
 const TWILIO_PHONE_NUMBER = "+918140023599";
@@ -96,6 +97,9 @@ export const signup = async (req, res) => {
             });
         }
 
+        // Get coordinates from address
+        const coordinates = await getCoordinatesFromAddress(address, city, state, pincode, country);
+
         if (!password || password.length < 6) {
             return res.status(400).json({ 
                 success: false,
@@ -126,7 +130,8 @@ export const signup = async (req, res) => {
             state,
             city,
             pincode,
-            password
+            password,
+            location: coordinates
         };
 
         switch (userType.toLowerCase()) {
@@ -212,7 +217,6 @@ export const sellerSignup = async (req, res) => {
             platformType = ['b2c']
         } = req.body;
 
-        // Convert mobileno to string
         const mobilenoString = mobileno.toString();
 
         // Basic validation
@@ -257,6 +261,9 @@ export const sellerSignup = async (req, res) => {
             });
         }
 
+        // Get coordinates from address
+        const coordinates = await getCoordinatesFromAddress(address, city, state, pincode, country);
+
         // Check if user already exists
         const existingUser = await Promise.any([
             Seller.findOne({ mobileno: mobilenoString }),
@@ -271,7 +278,7 @@ export const sellerSignup = async (req, res) => {
             });
         }
 
-        // Create seller object
+        // Create seller object with coordinates
         const seller = new Seller({
             firstname,
             lastname,
@@ -290,7 +297,8 @@ export const sellerSignup = async (req, res) => {
             termsAccepted,
             platformType,
             userType: 'seller',
-            status: 'pending'
+            status: 'pending',
+            location: coordinates
         });
 
         await seller.save();
@@ -599,16 +607,58 @@ export const updateProfile = async (req, res) => {
 export const getSellerData = async (req, res) => {
   try {
     const sellerId = req.params.id;
-    const seller = await Seller.findById(sellerId);
+    
+    // Find seller and populate necessary fields
+    const seller = await Seller.findById(sellerId)
+      .select('firstname lastname shopName profileImage businessType city state createdAt rating');
+    
     if (!seller) {
-      return res.status(404).json({ success: false, message: 'Seller not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Seller not found' 
+      });
     }
 
-    const products = await Product.find({ seller: sellerId }); // Fetch products by seller ID
-    res.status(200).json({ seller, products });
+    // Get seller's products with essential details
+    const products = await Product.find({ seller: sellerId })
+      .select('name images price stock rating numReviews')
+      .sort('-createdAt')
+      .limit(10); // Limit to 10 recent products
+
+    // Get seller's stats
+    const stats = {
+      totalProducts: await Product.countDocuments({ seller: sellerId }),
+      totalOrders: await Order.countDocuments({ 'items.seller': sellerId }),
+      averageRating: 0,
+      totalReviews: 0
+    };
+
+    // Calculate average rating from reviews
+    const reviews = await Review.find({ 
+      product: { $in: products.map(p => p._id) }
+    });
+    
+    if (reviews.length > 0) {
+      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      stats.averageRating = (totalRating / reviews.length).toFixed(1);
+      stats.totalReviews = reviews.length;
+    }
+
+    res.status(200).json({ 
+      success: true,
+      seller: {
+        ...seller.toObject(),
+        stats
+      },
+      products 
+    });
   } catch (error) {
     console.error('Error fetching seller data:', error);
-    res.status(500).json({ success: false, message: 'Error fetching seller data' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching seller data',
+      error: error.message 
+    });
   }
 };
 

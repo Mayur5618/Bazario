@@ -66,12 +66,7 @@ const HomeScreen = () => {
 
   const fetchFeaturedProducts = async () => {
     try {
-      const response = await axios.get('/api/products', {
-        params: {
-          limit: 6,
-          sortBy: 'rating'
-        }
-      });
+      const response = await axios.get('/api/products');
       setFeaturedProducts(response.data.products);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -82,10 +77,9 @@ const HomeScreen = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch featured products using your API
+      // Fetch all products using your API
       const response = await axios.get('/api/products', {
         params: {
-          limit: 5,
           sortBy: 'rating'
         }
       });

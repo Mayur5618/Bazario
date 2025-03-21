@@ -22,6 +22,7 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import Voice from '@react-native-voice/voice';
 import { sellerApi } from '../../api/sellerApi';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Translations object
 const translations = {
@@ -32,7 +33,8 @@ const translations = {
       3: 'Business Verification',
       4: 'Address Details',
       5: 'Product Details',
-      6: 'Agreement',
+      6: 'Profile Photo',
+      7: 'Terms & Conditions'
     },
     fields: {
       fullName: 'Full Name',
@@ -106,42 +108,48 @@ const translations = {
     },
     labels: {
       cod: 'Accept Cash on Delivery (COD)',
-      terms: 'I agree to the Terms and Conditions',
+      terms: 'I agree to follow all terms and conditions',
       bankDetails: 'Add Bank Account Details (Optional)',
       locationFetch: 'Getting your location...',
     },
     progress: 'Step %s of %s',
     agreement: {
       title: 'Terms and Conditions',
-      content: `1. Terms of Service:\n
-• As a seller on our platform, you agree to provide authentic and quality products/services.
-• You must maintain accurate inventory and pricing information.
-• You are responsible for timely delivery of products to customers.
+      content: `1. Seller Responsibilities:
+- Provide accurate and truthful information about products
+- Maintain quality standards for all products
+- Process orders promptly and professionally
+- Maintain cleanliness and hygiene standards
+- Follow all local regulations and guidelines
 
-2. Payment Terms:\n
-• Payments will be processed and disbursed on a monthly basis.
-• Payment cycle: All sales from 1st to last day of month will be processed by 10th of next month.
-• Payment will be made directly to your registered bank account.
-• Platform fee and applicable taxes will be deducted as per current rates.
+2. Product Guidelines:
+- List only permitted products
+- Provide accurate product descriptions and images
+- Maintain fresh inventory for perishable items
+- Follow proper storage guidelines
+- Display clear pricing
 
-3. Seller Responsibilities:\n
-• Maintain high quality standards for all products
-• Respond to customer queries within 24 hours
-• Keep your store information and inventory updated
-• Follow all applicable local and national regulations
+3. Order Fulfillment:
+- Accept orders only when you can fulfill them
+- Maintain promised delivery times
+- Package products safely and hygienically
+- Provide proper bills/invoices
+- Handle customer complaints professionally
 
-4. Platform Guidelines:\n
-• Maintain a minimum rating of 3.5 stars
-• Handle returns and refunds as per platform policy
-• Use appropriate packaging for product safety
-• Maintain professional communication with customers
+4. Platform Rules:
+- Maintain active communication
+- Keep your shop information updated
+- Follow platform pricing guidelines
+- Maintain good customer ratings
+- Cooperate with platform support team
 
-5. Account Suspension:\n
-• The platform reserves the right to suspend accounts for policy violations
-• Multiple violations may result in permanent account termination
-• All pending payments will be processed after resolution of issues
-
-By accepting these terms, you agree to all conditions mentioned above and commit to maintaining the quality standards of our platform.`
+5. Quality Assurance:
+- Regular quality checks of products
+- Proper storage of items
+- Clean packaging materials
+- Fresh and quality products only
+- Handle customer feedback positively`,
+      acceptTerms: 'I agree to follow all terms and conditions'
     },
     categories: {
       groceries: 'groceries',
@@ -155,6 +163,22 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       household: 'household',
       other: 'other'
     },
+    productSection: {
+      title: 'Product Photos',
+      description: 'Upload photos of your products to attract customers',
+      addPhotos: 'Add Product Photos',
+      maxPhotos: '(Maximum 5 photos)',
+      tip: 'Tip: Clear, well-lit photos help customers better understand your products'
+    },
+    profileSection: {
+      title: 'Profile Photo',
+      description: 'Add your profile photo to build trust with customers',
+      addPhoto: 'Add Profile Photo',
+      optional: '(Optional but recommended)',
+      changePhoto: 'Change Photo',
+      remove: 'Remove',
+      tip: 'Tip: A professional profile photo helps build customer trust'
+    }
   },
   hi: {
     steps: {
@@ -163,7 +187,8 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       3: 'व्यवसाय सत्यापन',
       4: 'पता विवरण',
       5: 'उत्पाद विवरण',
-      6: 'समझौता',
+      6: 'प्रोफाइल फोटो',
+      7: 'नियम और शर्तें'
     },
     fields: {
       fullName: 'अपना पूरा नाम लिखें',
@@ -225,7 +250,7 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       state: 'कृपया अपने राज्य का नाम दर्ज करें',
       productCategory: 'कृपया कम से कम एक उत्पाद श्रेणी चुनें',
       productDescription: 'कृपया अपने उत्पाद का विवरण दें',
-      productImage: 'कृपया कम से कम एक उत्पाद फोटो अपलोड करें',
+      productImage: 'कृपया कम से कम एक उत्पाद फોटો अपलोड करें',
       agreement: 'कृपया नियम और शर्तें स्वीकार करें'
     },
     buttons: {
@@ -237,64 +262,87 @@ By accepting these terms, you agree to all conditions mentioned above and commit
     },
     labels: {
       cod: 'कैश ऑन डिलीवरी स्वीकार करें',
-      terms: 'मैं नियम और शर्तों से सहमत हूं',
+      terms: 'मैं सभी नियमों और शर्तों का पालन करने के लिए सहमत हूं',
       bankDetails: 'बैंक खाता विवरण जोड़ें (वैकल्पिक)',
       locationFetch: 'आपका स्थान प्राप्त किया जा रहा है...',
     },
     progress: 'चरण %s में से %s',
     agreement: {
       title: 'नियम और शर्तें',
-      content: `1. सेवा की शर्तें:\n
-• हमारे प्लेटफॉर्म पर विक्रेता के रूप में, आप प्रामाणिक अनે गુણવત્તાયુક્ત उत्पादने/सેવा देણ्यास सहमत आहात.
-• आपको सटीक इन्व्हेंटरी आणि किंमत माहिती राखली पाहिजे.
-• ग्राहकांना समयसर डिलिवरी माटે आप जवाबदार छો.
+      content: `1. विक्रेता की जिम्मेदारियां:
+- उत्पादों के बारे में सटीक और सच्ची जानकारी प्रदान करें
+- सभी उत्पादों के लिए गुणवत्ता मानकों को बनाए रखें
+- ऑर्डर को तुरंत और पेशेवर तरीके से प्रोसेस करें
+- स्वच्छता और साफ-सफाई के मानकों को बनाए रखें
+- सभी स्थानीय नियमों और दिशानिर्देशों का पालन करें
 
-2. चુकवणીની शर्तો:\n
-• चુकवणીની प્रक્रિયા मાસિક धોરણે करवામાં आવશે अनે तેનું वितरण करवામાં आવશે.
-• चુकवणી चक्र: महीनાના 1લીથી छેલ્લા दिवस सुधીના तमામ वेचाणની प્रक્रિયા नીचેના महीनાની 10મી तारીખ सुधીमાં करवામાં आવશે.
-• चુकवणી सीधી आपके नोंधायેલા बેंक खातામાं करवામાં आવશે.
-• प्लेटफોर્म फी अनે लागु कर वर्तमान दरों के अनुसार कापवામાં आવશે.
+2. उत्पाद दिशानिर्देश:
+- केवल अनुमत उत्पादों को सूचीबद्ध करें
+- सटीक उत्पाद विवरण और छवियां प्रदान करें
+- नाशवान वस्तुओं के लिए ताजी इन्व्हेंट्री बनाए रखें
+- उचित भंडारण दिशानिर्देशों का पालन करें
+- स्पष्ट मूल्य निर्धारण प्रदर्शित करें
 
-3. विक्रेता की जिम्मेदारियां:\n
-• सभी उत्पादों के लिए उच्च गુणवत्ता मानकों को बनाए रखें
-• 24 घंटों के भीतर ग्राहक प्रश्नों का जवाब दें
-• अपनी दुकान की जानकारी और इन्व्हेंटरी को अपडेट रखें
-• सभी लागू स्थानीय और राष्ट्रीय नियमांचे पालन करें
+3. ऑर्डर पूर्ति:
+- ऑर्डर केवल तभी स्वीकार करें जब आप उन्हें पूरा कर सकें
+- वादा किए गए डिलीवरी समय को बनाए रखें
+- उत्पादों को सुरक्षित और स्वच्छ तरीके से पैक करें
+- उचित बिल/चालान प्रदान करें
+- ग्राहक शिकायतों को पेशेवर तरीके से संभालें
 
-4. प्लेटफॉर्म दिशानिर्देश:\n
-• न्यूनतम 3.5 स्टार रेटिंग बनाए रखें
-• प्लेटफॉर्म नीति के अनुसार रिटर्न और रिफंड को संभालें
-• उत्पाद सुरक्षा के लिए उचित पैकेजिंग का उपयोग करें
-• ग्राहकांशी व्यावसायिक संवाद कायम ठेवा
+4. प्लेटफॉर्म नियम:
+- सक्रिय संचार बनाए रखें
+- अपनी दुकान की जानकारी अपडेट रखें
+- प्लेटफॉर्म मूल्य निर्धारण दिशानिर्देशों का पालन करें
+- अच्छी ग्राहक रेटिंग बनाए रखें
+- प्लेटफॉर्म सपोर्ट टीम के साथ सहयोग करें
 
-5. एकाउन્ट सस્पેન્શન:\n
-• प्लेटफोर્म नीतिના उल्लंघन माटે एकाउन્ट્सને सस્पેન્ड करवानો अधिकार अनामत राखे छે
-• बहुविध उल्लंघनों के परिणामस्वरूप खातુं कायमी समाप्त थी शकે छે
-• आपके बाकी चૂकवणીओ मुद્दाओं के निराकरण पछि प्रक્रिया करवामां आवशે
-
-इन शर्तों को स्वीकार करके, आप ऊपर दर्शाई गई सभी शर्तों से सहमत हैं और हमारे प्लेटफॉर्म के गुणवत्ता मानकों को बनाए रखने के लिए प्रतिबद्ध छો.`
+5. गुणवत्ता आश्वासन:
+- उत्पादों की नियमित गुणवत्ता जांच
+- वस्तुओं का उचित भंडारण
+- स्वच्छ पैकेजिंग सामग्री
+- केवल ताजी और गुणवत्तापूर्ण उत्पाद
+- ग्राहक प्रतिक्रिया को सकारात्मक रूप से संभालें`,
+      acceptTerms: 'मैं सभी नियमों और शर्तों का पालन करने के लिए सहमत हूं'
     },
     categories: {
-      groceries: 'किराना सामान',
-      vegetables: 'सब्जियां',
-      fruits: 'फल',
-      dairy: 'डेयरी उत्पाद',
-      meat: 'मांस',
-      bakery: 'बेकरी',
-      snacks: 'नाश्ता',
-      beverages: 'पेय पदार्थ',
-      household: 'घरेलू सामान',
-      other: 'अन्य'
+      groceries: 'કિરાણા સામાન',
+      vegetables: 'શાકભાજી',
+      fruits: 'ફળો',
+      dairy: 'ડેરી ઉત્પાદનો',
+      meat: 'માંસ',
+      bakery: 'બેકરી',
+      snacks: 'નાસ્તો',
+      beverages: 'પીણાં',
+      household: 'ઘરવપરાશની વસ્તુઓ',
+      other: 'અન્ય'
     },
+    productSection: {
+      title: 'उत्पाद फोटो',
+      description: 'ग्राहकों को आकर्षित करने के लिए अपने उत्पादों की फोटो अपलोड करें',
+      addPhotos: 'उत्पाद फोटो जोड़ें',
+      maxPhotos: '(अधिकतम 5 फोटो)',
+      tip: 'टिप: साफ और अच्छी रोशनी वाली फोटो ग्राहकों को आपके उत्पादों को बेहतर समझने में मदद करती हैं'
+    },
+    profileSection: {
+      title: 'प्रोफाइल फोटो',
+      description: 'ग्राहकों का विश्वास बनाने के लिए अपनी प्रोफाइल फोटो जोड़ें',
+      addPhoto: 'प्रोफाइल फोटो जोड़ें',
+      optional: '(वैकल्पिक लेकिन अनुशंसित)',
+      changePhoto: 'फोटो बदलें',
+      remove: 'हटाएं',
+      tip: 'टिप: एक पेशेवर प्रोफाइल फोटो ग्राहक विश्वास बनाने में मदद करती है'
+    }
   },
   mr: {
     steps: {
       1: "मूलभूत माहिती",
-      2: "संपर्क तपशील",
-      3: "व्यवसाय माहिती",
-      4: "स्थान तपशील",
-      5: "उत्पाद तपशील",
-      6: "करार",
+      2: "व्यवसाय प्रकार",
+      3: "व्यवसाय पडताळणी",
+      4: "पत्ता तपशील",
+      5: "उत्पादन तपशील",
+      6: "प्रोफाइल फोटो",
+      7: "नियम आणि अटी"
     },
     fields: {
       fullName: 'तुमचे संपूर्ण नाव लिहा',
@@ -322,11 +370,11 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       aadharNumber: '12 अंकी आधार कार्ड नंबर टाका',
       shopName: 'दुकानाचे नाव(ऐच्छिक)',
       customBusinessType: 'तुमच्या व्यवसायाचा प्रकार लिहा',
-      businessDescription: 'तुमच्या व्यवसाय वિશે જણાવો (શું વેચો છો?)',
+      businessDescription: 'आम्हाला तुमच्या व्यवसायाबद्दल सांगा (तुम्ही काय विकता?)',
       upiId: 'तुमचा UPI आयडી टाका (उदा: मोબાઇલ@upi)',
       bankAccount: 'बएંક એકાઉન્ટ નંબર લખો (વૈકલ્પિક)',
       acceptsCOD: 'मी कॅश ऑन डિલિવરી स्वીકારીશ',
-      productDescription: 'तुम्ही काय विकता? (उदा: मी ताज्या भाज्या विकतो)',
+      productDescription: 'तुम्ही काय वેચો છો? (उदा: मी ताज्या भाज्या वેચું છું)',
       selectCategory: 'तुमच्या वस्तूंचा प्रकार निवडा',
       uploadProductImage: 'तुमच्या वस्तूंचा फोटो पोस्ट करा (पर्यायी)',
       acceptAgreement: 'मी सर्व नियमांचे पालन करून चांगली सेवा देईन'
@@ -337,6 +385,86 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       uploadFailed: 'ફોટો અપલોડ કરી શકાયો નથી',
       locationPermission: 'લોકેશન પરમિશન જરૂરી છે',
       locationError: 'લોકેશન મેળવવામાં ભૂલ'
+    },
+    buttons: {
+      next: 'अगला',
+      previous: 'पिछला',
+      submit: 'जमा करें',
+      getCurrentLocation: 'वर्तमान स्थान प्राप्त करें',
+      uploadImage: 'फोटो अपलोड करें'
+    },
+    labels: {
+      cod: 'कैश ऑन डिलीवरी स्वीकार करें',
+      terms: 'मैं सभी नियमों और शर्तों का पालन करने के लिए सहमत हूं',
+      bankDetails: 'बैंक खाता विवरण जोड़ें (वैकल्पिक)',
+      locationFetch: 'आपका स्थान प्राप्त किया जा रहा है...',
+    },
+    progress: 'चरण %s में से %s',
+    agreement: {
+      title: "नियम आणि अटी",
+      content: `1. विक्रेत्याच्या जबाबदाऱ्या:
+- उत्पादनांबद्दल अचूक आणि खरी माहिती द्या
+- सर्व उत्पादनांसाठी गुणवत्ता मानके राखा
+- ऑर्डर त्वरित आणि व्यावसायिकपणे प्रक्रिया करा
+- स्वच्छता आणि आरोग्याची मानके राखा
+- सर्व स्थानिक नियम आणि मार्गदर्शक तत्त्वांचे पालन करा
+
+2. उत्पादन मार्गदर्शक तत्त्वे:
+- केवळ परवानगी असलेली उत्पादने सूचीबद्ध करा
+- अचूक उत्पादन वर्णन आणि प्रतिमा प्रदान करा
+- नाशवंत वस्तूंसाठी ताजी इन्व्हेंटरी ठेवा
+- योग्य साठवणूक मार्गदर्शक तत्त्वांचे पालन करा
+- स्पष्ट किंमत दर्शवा
+
+3. ऑर्डर पूर्तता:
+- केवळ तेव्हाच ऑर्डर स्वीकारा जेव्हा तुम्ही त्या पूर्ण करू शकता
+- वचन दिलेली डिलिव्हरी वेळ पाळा
+- उत्पादने सुरक्षित आणि स्वच्छतेने पॅकेज करा
+- योग्य बिले/चलने प्रदान करा
+- ग्राहकांच्या तक्रारी व्यावसायिकपणे हाताळा
+
+4. प्लॅटफॉर्म नियम:
+- सक्रिय संवाद ठेवा
+- तुमच्या दुकानाची माहिती अद्ययावत ठेवा
+- प्लॅटफॉर्म किंमत मार्गदर्शक तत्त्वांचे पालन करा
+- चांगली ग्राहक रेटिंग राखा
+- प्लॅटफॉर्म सपोर्ट टीमशी सहकार्य करा
+
+5. गुणवत्ता हमी:
+- उत्पादनांची नियमित गुणवत्ता तपासणी
+- वस्तूंची योग्य साठवण
+- स्वच्छ पॅकेजिंग साहित्य
+- केवळ ताजी आणि गुणवत्तापूर्ण उत्पादने
+- ग्राहक प्रतिसाद सकारात्मकपणे हाताळा`,
+      acceptTerms: "मी सर्व नियम आणि अटींचे पालन करण्यास सहमत आहे"
+    },
+    categories: {
+      groceries: 'કિરાણા સામાન',
+      vegetables: 'શાકભાજી',
+      fruits: 'ફળો',
+      dairy: 'ડેરી ઉત્પાદનો',
+      meat: 'માંસ',
+      bakery: 'બેકરી',
+      snacks: 'નાસ્તો',
+      beverages: 'પીણાં',
+      household: 'ઘરવપરાશની વસ્તુઓ',
+      other: 'અન્ય'
+    },
+    productSection: {
+      title: 'ઉત્પાદન ફોટા',
+      description: 'ગ્રાહકોને આકર્ષિત કરવા માટે તમારા ઉત્પાદનોના ફોટા અપલોડ કરો',
+      addPhotos: 'ઉત્પાદન ફોટા ઉમેરો',
+      maxPhotos: '(જાસ્તીત જાસ્ત 5 ફોટો)',
+      tip: 'ટીપ: સ્પષ્ટ અને ચાંગલી પ્રકાશતીલ ફોટો ગ્રાહકોને તમારા ઉત્પાદનો વધુ સારી રીતે સમજવામાં મદદ કરે છે'
+    },
+    profileSection: {
+      title: 'પ્રોફાઇલ ફોટો',
+      description: 'ગ્રાહકોનો વિશ્વાસ કેળવવા માટે તમારો પ્રોફાઇલ ફોટો ઉમેરો',
+      addPhoto: 'પ્રોફાઇલ ફોટો ઉમેરો',
+      optional: '(વૈકલ્પિક પરંતુ ભલામણ કરેલ)',
+      changePhoto: 'ફોટો બદલો',
+      remove: 'દૂર કરો',
+      tip: 'ટીપ: વ્યાવસાયિક પ્રોફાઇલ ફોટો ગ્રાહક વિશ્વાસ વધારવામાં મદદ કરે છે'
     }
   },
   gu: {
@@ -433,10 +561,10 @@ By accepting these terms, you agree to all conditions mentioned above and commit
 • પ્લેટફોર્મ ફી અને લાગુ કર વર્તમાન દરો મુજબ કાપવામાં આવશે.
 
 3. વિક્રેતાની જવાબદારીઓ:\n
-• તમામ ઉત્પાદનો માટે ઉચ્ચ ગુણવત્તાના ધોરણો જાળવો
+• તમામ ઉત્પादનો માટે ઉચ્ચ ગુણવત્તાના ધોરણો જાળવો
 • ગ્રાહકની પૂછપરછનો 24 કલાકની અંદર જવાબ આપો
 • તમારી દુકાનની માહિતી અને ઇન્વેન્ટરી અપડેટ રાખો
-• તમામ લાગુ સ્થાનિક અને રાષ્ટ્રીય નિયમોનું પાલન કરો
+• તમામ લાગુ સ્થાનિક અને રાષ્ટ્રીય નિયमોનું પાલन કરો
 
 4. પ્લેટફોર્મ માર્ગદર્શિકા:\n
 • ન્યૂનતમ 3.5 સ્ટાર રેટિંગ ધરાવો
@@ -447,9 +575,9 @@ By accepting these terms, you agree to all conditions mentioned above and commit
 5. એકાઉન્ટ સસ્પેન્શન:\n
 • પ્લેટફોર્મ નીતિના ઉલ્લંઘન માટે એકાઉન્ટ્સને સસ્પેન્ડ કરવાનો અધિકાર અનામત રાખે છે
 • બહુવિધ ઉલ્લંઘનોના પરિણામે ખાતું કાયમી સમાપ્ત થઈ શકે છે
-• તમામ બાકી ચૂકવણીઓ મુદ્દાઓના નિરાકરણ પછી પ્રક્રિયા કરવામાં આવશે
+• તમામ બાકી ચૂકવણીઓ મુદ્દાઓના નિરાકરણ પછી પ્રક્રિયા કરવામાં આવશે`,
 
-આ શરતો સ્વીકારીને, તમે ઉપર દર્શાવેલ તમામ શરતો સાથે સંમત થાઓ છો અને અમારા પ્લેટફોર્મના ગુણવત્તાના ધોરણો જાળવવા માટે પ્રતિબદ્ધ છો.`
+ acceptTerms:'આ શરતો સ્વીકારીને, તમે ઉપર દર્શાવેલ તમામ શરતો સાથે સંમત થાઓ છો અને અમારા પ્લેટફોર્મના ગુણવત્તાના ધોરણો જાળવવા માટે પ્રતિબદ્ધ છો.',
     },
     categories: {
       groceries: 'કિરાણા સામાન',
@@ -463,12 +591,21 @@ By accepting these terms, you agree to all conditions mentioned above and commit
       household: 'ઘરવપરાશની વસ્તુઓ',
       other: 'અન્ય'
     },
-    errors: {
-      paymentMethodRequired: 'કૃપા કરી ઓછામાં ઓછી એક પેમેન્ટ પદ્ધતિ પસંદ કરો',
-      invalidUPI: 'કૃપા કરી માન્ય UPI ID દાખલ કરો',
-      uploadFailed: 'ફોટો અપલોડ કરી શકાયો નથી',
-      locationPermission: 'લોકેશન પરમિશન જરૂરી છે',
-      locationError: 'લોકેશન મેળવવામાં ભૂલ'
+    productSection: {
+      title: 'ઉત્પાદન ફોટા',
+      description: 'ગ્રાહકોને આકર્ષિત કરવા માટે તમારા ઉત્પાદનોના ફોટા અપલોડ કરો',
+      addPhotos: 'ઉત્પાદન ફોટા ઉમેરો',
+      maxPhotos: '(જાસ્તીત જાસ્ત 5 ફોટો)',
+      tip: 'ટીપ: સ્પષ્ટ અને ચાંગલી પ્રકાશતીલ ફોટો ગ્રાહકોને તમારા ઉત્પાદનો વધુ સારી રીતે સમજવામાં મદદ કરે છે'
+    },
+    profileSection: {
+      title: 'પ્રોફાઇલ ફોટો',
+      description: 'ગ્રાહકોનો વિશ્વાસ કેળવવા માટે તમારો પ્રોફાઇલ ફોટો ઉમેરો',
+      addPhoto: 'પ્રોફાઇલ ફોટો ઉમેરો',
+      optional: '(વૈકલ્પિક પરંતુ ભલામણ કરેલ)',
+      changePhoto: 'ફોટો બદલો',
+      remove: 'દૂર કરો',
+      tip: 'ટીપ: વ્યાવસાયિક પ્રોફાઇલ ફોટો ગ્રાહક વિશ્વાસ વધારવામાં મદદ કરે છે'
     }
   },
 };
@@ -603,6 +740,8 @@ const SellerRegistrationScreen = () => {
     
     // Step 6: Agreement
     agreementAccepted: false,
+    productPhotos: [],
+    profilePhoto: null,
   });
 
   // Initialize voice recognition
@@ -806,38 +945,20 @@ const SellerRegistrationScreen = () => {
   };
 
   const validateStep5 = () => {
-    if (!formData.selectedCategories || formData.selectedCategories.length === 0) {
-      Alert.alert(
-        translations[language].errors.required,
-        translations[language].errors.productCategory
-      );
-      return false;
-    }
-    
-    if (!formData.productDescription || formData.productDescription.trim() === '') {
-      Alert.alert(
-        translations[language].errors.required,
-        translations[language].errors.productDescription
-      );
-      return false;
-    }
-    
-    if (!formData.productImage) {
-      Alert.alert(
-        translations[language].errors.required,
-        translations[language].errors.productImage
-      );
-      return false;
-    }
-    
+    // Product photos are optional, so always return true
     return true;
   };
 
   const validateStep6 = () => {
-    if (!formData.agreementAccepted) {
+    // Profile photo is optional, so always return true
+    return true;
+  };
+
+  const validateStep7 = () => {
+    if (!formData.termsAccepted) {
       Alert.alert(
-        translations[language].errors.required,
-        translations[language].errors.agreement
+        'Error',
+        translations[language].errors.termsRequired
       );
       return false;
     }
@@ -866,6 +987,9 @@ const SellerRegistrationScreen = () => {
       case 6:
         isValid = validateStep6();
         break;
+      case 7:
+        isValid = validateStep7();
+        break;
       default:
         isValid = true;
     }
@@ -877,7 +1001,7 @@ const SellerRegistrationScreen = () => {
 
   const handleSubmit = async () => {
     try {
-        if (!validateStep6()) {
+        if (!validateStep7()) {
             return;
         }
 
@@ -905,26 +1029,82 @@ const SellerRegistrationScreen = () => {
             customBusinessType: formData.customBusinessType || '',
             businessDescription: formData.businessDescription || '',
             aadharNumber: formData.aadharNumber,
-            termsAccepted: formData.agreementAccepted ? "true" : "false"
+            termsAccepted: formData.termsAccepted ? "true" : "false"
         };
-
-        console.log('Sending registration data:', registrationData);
 
         const response = await sellerApi.register(registrationData);
         
         if (response.success) {
+            // Language specific success messages
+            const successMessages = {
+                en: {
+                    title: 'Success',
+                    message: 'Registration successful! Please login to continue.'
+                },
+                hi: {
+                    title: 'सफल',
+                    message: 'पंजीकरण सफल! जारी रखने के लिए कृपया लॉगिन करें।'
+                },
+                gu: {
+                    title: 'સફળ',
+                    message: 'નોંધણી સફળ! કૃપા કરી ચાલુ રાખવા માટે લૉગિન કરો.'
+                },
+                mr: {
+                    title: 'यशस्वी',
+                    message: 'नोंदणी यशस्वी! कृपया सुरू ठेवण्यासाठी लॉगिन करा.'
+                }
+            };
+
+            const currentLang = successMessages[language] || successMessages.en;
+
             Alert.alert(
-                'Success',
-                'Registration successful! Please login to continue.',
-                [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+                currentLang.title,
+                currentLang.message,
+                [
+                    { 
+                        text: language === 'en' ? 'OK' : 
+                              language === 'hi' ? 'ठीक है' :
+                              language === 'gu' ? 'બરાબર' :
+                              language === 'mr' ? 'ठीक आहे' : 'OK',
+                        onPress: () => {
+                            router.replace({
+                                pathname: '/(auth)/seller/login',
+                                params: { language: language }
+                            });
+                        }
+                    }
+                ]
             );
         }
 
     } catch (error) {
         console.error('Registration error:', error);
+        
+        // Language specific error messages
+        const errorMessages = {
+            en: {
+                title: 'Error',
+                message: 'Registration failed. Please try again.'
+            },
+            hi: {
+                title: 'त्रुटि',
+                message: 'पंजीकरण विफल। कृपया पुनः प्रयास करें।'
+            },
+            gu: {
+                title: 'ભૂલ',
+                message: 'નોંધણી નિષ્ફળ. કૃपા કરી ફરી પ્રયાસ કરો.'
+            },
+            mr: {
+                title: 'त्रुटी',
+                message: 'नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
+            }
+        };
+
+        const currentLang = errorMessages[language] || errorMessages.en;
+
         Alert.alert(
-            'Error',
-            error.message || 'Registration failed. Please try again.'
+            currentLang.title,
+            error.message || currentLang.message
         );
     } finally {
         setIsLoading(false);
@@ -936,29 +1116,38 @@ const SellerRegistrationScreen = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
+        aspect: type === 'profile' ? [1, 1] : [4, 3],
+        quality: 0.8,
       });
 
       if (!result.canceled) {
-        const documentUri = result.assets[0].uri;
         if (type === 'product') {
+          // Check if we already have 5 photos
+          if (formData.productPhotos.length >= 5) {
+            Alert.alert(
+              'Maximum Limit Reached',
+              'You can only upload up to 5 product photos'
+            );
+            return;
+          }
+          
+          // Add new photo to the array
           setFormData(prev => ({
             ...prev,
-            productImage: documentUri
+            productPhotos: [...prev.productPhotos, result.assets[0].uri]
           }));
-        } else {
+        } else if (type === 'profile') {
           setFormData(prev => ({
             ...prev,
-            [`${type}Document`]: documentUri
+            profilePhoto: result.assets[0].uri
           }));
         }
       }
     } catch (error) {
-      console.error('Document upload error:', error);
+      console.error('Error uploading image:', error);
       Alert.alert(
-        'Upload Failed',
-        translations[language].errors.uploadFailed
+        'Error',
+        'Failed to upload image. Please try again.'
       );
     }
   };
@@ -1215,113 +1404,142 @@ const SellerRegistrationScreen = () => {
   const renderStep5 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>{translations[language].steps[5]}</Text>
-      <View style={styles.inputGroup}>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder={translations[language].fields.productDescription}
-          value={formData.productDescription}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, productDescription: text }))}
-          multiline
-          numberOfLines={3}
-        />
-
-        <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>{translations[language].fields.selectCategory}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
-            {productCategories.map((category) => (
-              <TouchableOpacity
-                key={category.value}
-                style={[
-                  styles.categoryChip,
-                  formData.selectedCategories?.includes(category.value) && styles.selectedCategoryChip
-                ]}
-                onPress={() => {
-                  const selected = formData.selectedCategories || [];
-                  const newSelected = selected.includes(category.value)
-                    ? selected.filter(c => c !== category.value)
-                    : [...selected, category.value];
-                  setFormData(prev => ({ ...prev, selectedCategories: newSelected }));
-                }}
-              >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text style={styles.categoryText}>
-                  {translations[language].categories[category.value]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {formData.selectedCategories?.includes('other') && (
-          <View style={styles.voiceInputContainer}>
-            <TextInput
-              style={[styles.input, styles.voiceInput]}
-              placeholder={translations[language].fields.customCategory}
-              value={formData.customCategory}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, customCategory: text }))}
-            />
-            <TouchableOpacity
-              style={[styles.voiceButton, isRecording && recordingType === 'other' && styles.recordingButton]}
-              onPress={() => isRecording ? stopVoiceRecording() : startVoiceRecording('other')}
-            >
-              <Ionicons
-                name={isRecording && recordingType === 'other' ? "mic" : "mic-outline"}
-                size={24}
-                color={isRecording && recordingType === 'other' ? "#FF4444" : "#6C63FF"}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-
+      <Text style={styles.stepDescription}>
+        {translations[language].productSection.description}
+      </Text>
+      
+      <View style={styles.photoSection}>
         <TouchableOpacity 
-          style={styles.uploadButton}
+          style={styles.uploadPhotoButton}
           onPress={() => handleDocumentUpload('product')}
         >
-          <Ionicons name="camera-outline" size={24} color="#666" />
-          <Text style={styles.uploadButtonText}>
-            {translations[language].fields.uploadProductImage}
+          <Icon name="image-plus" size={32} color="#6C63FF" />
+          <Text style={styles.uploadPhotoText}>
+            {translations[language].productSection.addPhotos}
+          </Text>
+          <Text style={styles.uploadSubText}>
+            {translations[language].productSection.maxPhotos}
           </Text>
         </TouchableOpacity>
 
-        {formData.productImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image 
-              source={{ uri: formData.productImage }} 
-              style={styles.previewImage}
-              resizeMode="cover"
-            />
-            <TouchableOpacity
-              style={styles.removeImageButton}
-              onPress={() => setFormData(prev => ({ ...prev, productImage: null }))}
-            >
-              <Ionicons name="close-circle" size={24} color="#FF4444" />
-            </TouchableOpacity>
+        {formData.productPhotos && formData.productPhotos.length > 0 && (
+          <View style={styles.photoGrid}>
+            {formData.productPhotos.map((photo, index) => (
+              <View key={index} style={styles.photoContainer}>
+                <Image 
+                  source={{ uri: photo }}
+                  style={styles.photoPreview}
+                />
+                <TouchableOpacity 
+                  style={styles.removePhotoButton}
+                  onPress={() => {
+                    const updatedPhotos = formData.productPhotos.filter((_, i) => i !== index);
+                    setFormData(prev => ({
+                      ...prev,
+                      productPhotos: updatedPhotos
+                    }));
+                  }}
+                >
+                  <Icon name="close-circle" size={24} color="#FF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
         )}
       </View>
+
+      <Text style={styles.photoTip}>
+        {translations[language].productSection.tip}
+      </Text>
     </View>
   );
 
   const renderStep6 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>{translations[language].steps[6]}</Text>
-      <ScrollView style={styles.agreementContainer}>
-        <Text style={styles.agreementTitle}>{translations[language].agreement.title}</Text>
-        <Text style={styles.agreementText}>
+      <Text style={styles.stepDescription}>
+        {translations[language].profileSection.description}
+      </Text>
+
+      <View style={styles.profilePhotoSection}>
+        {formData.profilePhoto ? (
+          <View style={styles.profilePhotoContainer}>
+            <Image 
+              source={{ uri: formData.profilePhoto }}
+              style={styles.profilePhotoPreview}
+            />
+            <View style={styles.profilePhotoActions}>
+              <TouchableOpacity 
+                style={styles.photoActionButton}
+                onPress={() => handleDocumentUpload('profile')}
+              >
+                <Icon name="camera" size={24} color="#6C63FF" />
+                <Text style={styles.photoActionText}>
+                  {translations[language].profileSection.changePhoto}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.photoActionButton, styles.removeButton]}
+                onPress={() => setFormData(prev => ({ ...prev, profilePhoto: null }))}
+              >
+                <Icon name="delete" size={24} color="#FF4444" />
+                <Text style={[styles.photoActionText, styles.removeText]}>
+                  {translations[language].profileSection.remove}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.uploadProfileButton}
+            onPress={() => handleDocumentUpload('profile')}
+          >
+            <Icon name="account-circle" size={64} color="#6C63FF" />
+            <Text style={styles.uploadProfileText}>
+              {translations[language].profileSection.addPhoto}
+            </Text>
+            <Text style={styles.uploadSubText}>
+              {translations[language].profileSection.optional}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <Text style={styles.photoTip}>
+        {translations[language].profileSection.tip}
+      </Text>
+    </View>
+  );
+
+  const renderStep7 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>{translations[language].steps[7]}</Text>
+      
+      <View style={styles.termsContent}>
+        <Text style={styles.termsTitle}>
+          {translations[language].agreement.title}
+        </Text>
+        <Text style={styles.termsText}>
           {translations[language].agreement.content}
         </Text>
-      </ScrollView>
-      <View style={styles.inputGroup}>
-        <View style={styles.checkboxContainer}>
-          <TouchableOpacity
-            style={[styles.checkbox, formData.agreementAccepted && styles.checkboxChecked]}
-            onPress={() => setFormData(prev => ({ ...prev, agreementAccepted: !prev.agreementAccepted }))}
-          >
-            {formData.agreementAccepted && <Text style={styles.checkmark}>✓</Text>}
-          </TouchableOpacity>
-          <Text style={styles.checkboxLabel}>{translations[language].fields.acceptAgreement}</Text>
-        </View>
       </View>
+
+      <TouchableOpacity 
+        style={[styles.checkboxContainer, { backgroundColor: '#F0EEFF', padding: 12, borderRadius: 8, marginTop: 16 }]}
+        onPress={() => setFormData(prev => ({
+          ...prev,
+          termsAccepted: !prev.termsAccepted
+        }))}
+      >
+        <Icon 
+          name={formData.termsAccepted ? "checkbox-marked" : "checkbox-blank-outline"}
+          size={24}
+          color={formData.termsAccepted ? "#4CAF50" : "#666"}
+        />
+        <Text style={[styles.checkboxText, { fontSize: 15 }]}>
+          {translations[language].agreement.acceptTerms}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -1357,12 +1575,12 @@ const SellerRegistrationScreen = () => {
               <View 
                 style={[
                   styles.progressFill,
-                  { width: `${(currentStep / 6) * 100}%` }
+                  { width: `${(currentStep / 7) * 100}%` }
                 ]} 
               />
             </View>
             <Text style={styles.progressText}>
-              {translations[language].progress.replace('%s', currentStep).replace('%s', '6')}
+              {translations[language].progress.replace('%s', currentStep).replace('%s', '7')}
             </Text>
           </View>
         </View>
@@ -1380,13 +1598,14 @@ const SellerRegistrationScreen = () => {
           {currentStep === 4 && renderStep4()}
           {currentStep === 5 && renderStep5()}
           {currentStep === 6 && renderStep6()}
+          {currentStep === 7 && renderStep7()}
           {/* Add padding at bottom to prevent content from being hidden behind footer */}
           <View style={styles.bottomPadding} />
         </ScrollView>
 
         <View style={styles.footerContainer}>
           <View style={styles.footer}>
-            {currentStep < 6 ? (
+            {currentStep < 7 ? (
               <TouchableOpacity 
                 style={styles.nextButton}
                 onPress={handleNext}
@@ -1786,6 +2005,202 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#1A1A1A',
   },
+  optionalText: {
+    color: '#666',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginBottom: 10
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10
+  },
+  uploadButtonText: {
+    marginLeft: 10,
+    color: '#666'
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    margin: 5,
+    borderRadius: 8
+  },
+  profilePreview: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    alignSelf: 'center',
+    marginTop: 20
+  },
+  termsContainer: {
+    height: 400,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    flexGrow: 0
+  },
+  termsContent: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  termsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333'
+  },
+  termsText: {
+    color: '#333',
+    lineHeight: 24,
+    fontSize: 14,
+    marginBottom: 15
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 10
+  },
+  checkboxText: {
+    marginLeft: 10,
+    color: '#333',
+    flex: 1
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center'
+  },
+  photoSection: {
+    marginVertical: 15,
+  },
+  uploadPhotoButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0EEFF',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+    borderStyle: 'dashed'
+  },
+  uploadPhotoText: {
+    fontSize: 16,
+    color: '#6C63FF',
+    fontWeight: '600',
+    marginTop: 10
+  },
+  uploadSubText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 15,
+    gap: 10
+  },
+  photoContainer: {
+    position: 'relative',
+    width: '31%',
+    aspectRatio: 1,
+    marginBottom: 10
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4
+  },
+  photoTip: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 15,
+    paddingHorizontal: 20
+  },
+  profilePhotoSection: {
+    alignItems: 'center',
+    marginVertical: 20
+  },
+  profilePhotoContainer: {
+    alignItems: 'center'
+  },
+  profilePhotoPreview: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    marginBottom: 20
+  },
+  profilePhotoActions: {
+    flexDirection: 'row',
+    gap: 15
+  },
+  photoActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0EEFF',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20
+  },
+  removeButton: {
+    backgroundColor: '#FFEEEE'
+  },
+  photoActionText: {
+    marginLeft: 5,
+    color: '#6C63FF',
+    fontWeight: '500'
+  },
+  removeText: {
+    color: '#FF4444'
+  },
+  uploadProfileButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0EEFF',
+    borderRadius: 12,
+    padding: 30,
+    width: '80%',
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+    borderStyle: 'dashed'
+  },
+  uploadProfileText: {
+    fontSize: 18,
+    color: '#6C63FF',
+    fontWeight: '600',
+    marginTop: 15
+  }
 });
 
 export default SellerRegistrationScreen; 

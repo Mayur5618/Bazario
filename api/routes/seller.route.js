@@ -3,12 +3,14 @@ import { getDashboardStats, getPendingOrders, getSellerProducts } from '../contr
 import { getSellerReviews } from '../controllers/review.controller.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import Product from '../models/product.model.js';
-import { signup } from '../controllers/seller.controller.js';
+// import { signup } from '../controllers/seller.controller.js';
+import { sellerSignup } from '../controllers/user.controller.js';
+import { getSellerProfile, verifySeller } from '../controllers/seller.controller.js';
 
 const router = express.Router();
 
 // Seller Registration
-router.post('/signup', signup);
+router.post('/signup', sellerSignup);
 
 
 // Dashboard stats
@@ -22,6 +24,7 @@ router.get('/reviews', verifyToken, getSellerReviews);
 
 // Get seller's products
 router.get('/products', verifyToken, getSellerProducts);
+router.get('/:sellerId/products', getSellerProducts);
 
 // Get product details
 router.get('/products/:id', verifyToken, async (req, res) => {
@@ -107,5 +110,8 @@ router.put('/products/:id', verifyToken, async (req, res) => {
         });
     }
 });
+
+router.get('/verify/:sellerId', verifySeller);
+router.get('/profile/:sellerId', getSellerProfile);
 
 export default router;

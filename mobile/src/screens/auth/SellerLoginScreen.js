@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from '../../config/axios';
@@ -69,7 +69,8 @@ const translations = {
 
 const SellerLoginScreen = () => {
   const router = useRouter();
-  const { language } = useLanguage();
+  const params = useLocalSearchParams();
+  const { language, setLanguage } = useLanguage();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     mobileno: '',
@@ -80,6 +81,13 @@ const SellerLoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // If language parameter is passed, update the language context
+    if (params.language && params.language !== language) {
+      setLanguage(params.language);
+    }
+  }, [params.language]);
 
   // Get translations for current language
   const t = translations[language] || translations.en;

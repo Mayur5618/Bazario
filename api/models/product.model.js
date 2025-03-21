@@ -6,8 +6,7 @@ const productSchema = new mongoose.Schema({
         required: true 
     },
     description: { 
-        type: String, 
-        required: true 
+        type: String
     },
     price: { 
         type: Number, 
@@ -32,7 +31,7 @@ const productSchema = new mongoose.Schema({
     }],
     seller: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Seller',
+        ref: 'seller',
         required: true
     },
     platformType: {
@@ -92,6 +91,16 @@ const productSchema = new mongoose.Schema({
             },
             message: 'Invalid YouTube URL'
         }
+    },
+    // Location fields for city-based filtering
+    availableLocations: [{
+        type: String,
+        required: true
+    }],
+    // Default location (seller's primary city)
+    primaryLocation: {
+        type: String,
+        required: true
     }
 }, {
     timestamps: true

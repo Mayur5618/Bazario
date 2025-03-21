@@ -2,6 +2,7 @@ import express from 'express';
 import Product from '../models/product.model.js';
 import Review from '../models/review.model.js';
 import { uploadToFirebase } from '../utilities/firebase.js';
+import Seller from '../models/seller.model.js';
 
 const router = express.Router();
 
@@ -23,13 +24,14 @@ export const createProduct = async (req, res) => {
             platformType,
             unitSize,
             unitType,
-            subUnitPrices
+            subUnitPrices,
+            availableLocations
         } = req.body;
 
         // Validate required fields
-        if (!name || !price || !category || !stock || !unitType) {
-            console.log('Missing required fields:', { name, price, category, stock, unitType });
-            return res.status(400).json({ success: false, message: "All fields are required." });
+        if (!name || !price || !category || !stock || !unitType || !availableLocations) {
+            console.log('Missing required fields:', { name, price, category, stock, unitType, availableLocations });
+            return res.status(400).json({ success: false, message: "All fields including available locations are required." });
         }
 
         // Set default platform type to b2c if not provided
@@ -44,7 +46,7 @@ export const createProduct = async (req, res) => {
             });
         }
 
-        // Check if user exists
+        // Check if user exists and get their city
         if (!req.user) {
             console.log('No authenticated user found');
             return res.status(401).json({
@@ -120,6 +122,8 @@ export const createProduct = async (req, res) => {
             youtubeLink: youtubeLink || '',
             platformType: productPlatformType,
             seller: req.user._id,
+            availableLocations,
+            primaryLocation: req.user.city,
             ...(productPlatformType.includes('b2b') && {
                 minOrderQuantity,
                 maxOrderQuantity: maxOrderQuantity || null
@@ -289,129 +293,67 @@ export const deleteProduct =  async (req, res) => {
 //GET /api/products
 export const getProducts = async (req, res) => {
     try {
-        const { query, category, minPrice, maxPrice, sortBy } = req.query;
-        
-        const filter = {};
-        
-        // Text search
-        if (query) {
-            filter.$or = [
-                { name: { $regex: query, $options: 'i' } },
-                { description: { $regex: query, $options: 'i' } },
-                { category: { $regex: query, $options: 'i' } }
+        const { 
+            limit = 10, 
+            sort = '-createdAt',
+            category,
+            search,
+            city
+        } = req.query;
+
+        let query = {};
+
+        // Add category filter if provided
+        if (category) {
+            query.category = category;
+        }
+
+        // Add search filter if provided
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
             ];
         }
 
-        // Category filter
-        if (category && category !== 'all') {
-            filter.category = category;
+        // Add location filter if city is provided
+        if (city) {
+            query.availableLocations = { 
+                $regex: new RegExp(city, 'i')
+            };
         }
 
-        // Price range filter
-        if (minPrice || maxPrice) {
-            filter.price = {};
-            if (minPrice) filter.price.$gte = Number(minPrice);
-            if (maxPrice) filter.price.$lte = Number(maxPrice);
-        }
-
-        // Sort options
-        let sort = {};
-        switch (sortBy) {
-            case 'price_asc':
-                sort = { price: 1 };
-                break;
-            case 'price_desc':
-                sort = { price: -1 };
-                break;
-            case 'newest':
-                sort = { createdAt: -1 };
-                break;
-            default:
-                sort = { createdAt: -1 };
-        }
-
-        const products = await Product.find(filter)
+        const products = await Product.find(query)
             .sort(sort)
-            .lean();
+            .limit(parseInt(limit))
+            .populate('seller', 'firstname lastname shopName profileImage');
 
         res.json({
             success: true,
-            count: products.length,
             products
         });
+
     } catch (error) {
-        console.error('Get products error:', error);
+        console.error('Error fetching products:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error fetching products',
+            error: error.message
         });
     }
 };
 
 // GET /api/products/:id
-// export const getProduct = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-        
-//         // Find the product without populating seller initially
-//         const product = await Product.findById(id);
-
-//         if (!product) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'Product not found'
-//             });
-//         }
-
-//         // Fetch reviews separately with correct population
-//         const reviews = await Review.find({ product: id })
-//             .populate({
-//                 path: 'customer',
-//                 select: 'firstname lastname profileImage'
-//             })
-//             .sort({ createdAt: -1 })
-//             .lean();
-
-//         // Fetch related products from same category
-//         const relatedProducts = await Product.find({
-//             category: product.category,
-//             _id: { $ne: product._id },
-//             platformType: { $in: product.platformType }
-//         })
-//         .limit(4)
-//         .select('name images price stock rating numReviews')
-//         .lean();
-
-//         // Calculate average rating
-//         const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-//         const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
-
-//         res.status(200).json({
-//             success: true,
-//             product: {
-//                 ...product.toObject(),
-//                 reviews,
-//                 averageRating,
-//                 numReviews: reviews.length,
-//                 relatedProducts
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error('Error fetching product:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching product',
-//             error: error.message
-//         });
-//     }
-// };
 export const getProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const product = await Product.findById(id);
-            // .populate('seller', 'firstname lastname')
-            // .populate('reviews');
+        
+        const product = await Product.findById(id)
+            .populate({
+                path: 'seller',
+                select: 'firstname lastname shopName profileImage businessType city state createdAt',
+                model: 'User'  // Explicitly specify the model
+            });
 
         if (!product) {
             return res.status(404).json({
@@ -419,6 +361,9 @@ export const getProduct = async (req, res) => {
                 message: 'Product not found'
             });
         }
+
+        // Get seller's total products count
+        const productsCount = await Product.countDocuments({ seller: product.seller._id });
 
         // Fetch related products from same category
         const relatedProducts = await Product.find({
@@ -428,15 +373,23 @@ export const getProduct = async (req, res) => {
         .limit(4) // Limit to 4 related products
         .select('name images price stock rating reviews'); // Select only needed fields
 
+        // Add productsCount to seller object
+        const productWithSellerInfo = {
+            ...product.toObject(),
+            seller: {
+                ...product.seller.toObject(),
+                productsCount
+            },
+            relatedProducts
+        };
+
         res.status(200).json({
             success: true,
-            product: {
-                ...product.toObject(),
-                relatedProducts
-            }
+            product: productWithSellerInfo
         });
 
     } catch (error) {
+        console.error('Get product error:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching product',
@@ -444,146 +397,6 @@ export const getProduct = async (req, res) => {
         });
     }
 };
-
-// // GET /api/search
-// export const searchProducts = async (req, res) => {
-//     try {
-//         const { query, category, sortBy } = req.query;
-        
-//         // Build search filter
-//         const filter = {};
-        
-//         // Text search if query exists
-//         if (query) {
-//             filter.$or = [
-//                 { name: { $regex: query, $options: 'i' } },
-//                 { description: { $regex: query, $options: 'i' } },
-//                 { category: { $regex: query, $options: 'i' } }
-//             ];
-//         }
-
-//         // Category filter
-//         if (category && category !== 'all') {
-//             filter.category = category;
-//         }
-
-//         // Build sort object
-//         let sort = {};
-//         switch (sortBy) {
-//             case 'price_asc':
-//                 sort = { price: 1 };
-//                 break;
-//             case 'price_desc':
-//                 sort = { price: -1 };
-//                 break;
-//             case 'newest':
-//                 sort = { createdAt: -1 };
-//                 break;
-//             default:
-//                 // For 'relevance' or default sorting
-//                 if (query) {
-//                     // If there's a search query, prioritize exact matches
-//                     sort = { score: { $meta: "textScore" } };
-//                 } else {
-//                     // Default sort by newest
-//                     sort = { createdAt: -1 };
-//                 }
-//         }
-
-//         // Execute search query
-//         const products = await Product.find(filter)
-//             .sort(sort)
-//             .populate('seller', 'firstname lastname')
-//             .select('name description price category stock images platformType unitSize unitType createdAt');
-
-//         // Return results
-//         res.json({
-//             success: true,
-//             count: products.length,
-//             products
-//         });
-
-//     } catch (error) {
-//         console.error('Search error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error searching products',
-//             error: error.message
-//         });
-//     }
-// };
-
-// // GET /api/search/suggestions
-// export const getSearchSuggestions = async (req, res) => {
-//     try {
-//         const { query } = req.query;
-
-//         if (!query || query.length < 2) {
-//             return res.json({
-//                 success: true,
-//                 suggestions: []
-//             });
-//         }
-
-//         // Find products matching the query
-//         const suggestions = await Product.find({
-//             $or: [
-//                 { name: { $regex: query, $options: 'i' } },
-//                 { category: { $regex: query, $options: 'i' } }
-//             ]
-//         })
-//         .select('name category')
-//         .limit(5);
-
-//         // Extract unique categories and product names
-//         const uniqueSuggestions = Array.from(new Set([
-//             ...suggestions.map(p => p.name),
-//             ...suggestions.map(p => p.category)
-//         ])).slice(0, 5);
-
-//         res.json({
-//             success: true,
-//             suggestions: uniqueSuggestions
-//         });
-
-//     } catch (error) {
-//         console.error('Search suggestions error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error getting search suggestions',
-//             error: error.message
-//         });
-//     }
-// };
-
-// // GET /api/search/trending
-// export const getTrendingSearches = async (req, res) => {
-//     try {
-//         // Get most viewed or most ordered products
-//         const trendingProducts = await Product.find({})
-//             .sort({ numReviews: -1 }) // You can change this to any trending metric
-//             .limit(5)
-//             .select('name category');
-
-//         const trending = Array.from(new Set([
-//             ...trendingProducts.map(p => p.name),
-//             ...trendingProducts.map(p => p.category)
-//         ])).slice(0, 5);
-
-//         res.json({
-//             success: true,
-//             trending
-//         });
-
-//     } catch (error) {
-//         console.error('Trending searches error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error getting trending searches',
-//             error: error.message
-//         });
-//     }
-// };
 
 // Add this new controller function
 export const getBulkProducts = async (req, res) => {
@@ -627,7 +440,8 @@ export const getFilteredProducts = async (req, res) => {
             category,
             page = 1,
             limit = 12,
-            platformType = 'b2c'
+            platformType = 'b2c',
+            city
         } = req.query;
 
         console.log('Received Query Params:', req.query);
@@ -637,6 +451,13 @@ export const getFilteredProducts = async (req, res) => {
             platformType: { $in: [platformType] },
             stock: { $gt: 0 }
         };
+
+        // Add location filter if city is provided
+        if (city) {
+            filter.availableLocations = { 
+                $regex: new RegExp(city, 'i')
+            };
+        }
 
         // Category filter
         if (category) {
@@ -772,7 +593,8 @@ export const getFilteredProducts = async (req, res) => {
                 sortBy,
                 search,
                 category,
-                platformType
+                platformType,
+                city
             }
         });
 
@@ -813,26 +635,19 @@ export const getProductsByCategory = async (req, res) => {
     }
 };
 
-// Add this new controller function
+// Get all unique categories
 export const getCategories = async (req, res) => {
     try {
-        const { platformType } = req.query;
-        
-        // Build query for platform type
-        const query = platformType ? { platformType: { $in: [platformType] } } : {};
-        
-        // Get distinct categories
-        const categories = await Product.distinct('category', query);
-        
+        const categories = await Product.distinct('category');
         res.status(200).json({
             success: true,
             categories
         });
     } catch (error) {
-        console.error('Error fetching categories:', error);
         res.status(500).json({
             success: false,
-            message: 'Error fetching categories'
+            message: 'Error fetching categories',
+            error: error.message
         });
     }
 };

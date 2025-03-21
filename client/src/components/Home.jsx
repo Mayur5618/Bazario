@@ -2,83 +2,178 @@ import React, { useState, useEffect } from 'react';
 import Temp from './temp';
 import ProductCatalog from './ProductCatalog';
 import RecentlyViewed from './RecentlyViewed';
-import { FaShieldAlt, FaTruck, FaUndo, FaHeadset, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
+import { FaShieldAlt, FaTruck, FaUndo, FaHeadset, FaArrowRight, FaArrowLeft, FaStar } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import CategoryProducts from './CategoryProducts';
+import { useDispatch, useSelector } from 'react-redux';
+import { setCartItems, clearCart } from '../store/cartSlice';
+import axios from 'axios';
 
 const Home = () => {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { userData } = useSelector((state) => state.user);
 
-  const featuredCategories = [
-    {
-      title: "Fresh Vegetables",
-      description: "Farm-fresh vegetables delivered daily",
-      image: "https://i.pinimg.com/736x/1f/8d/cd/1f8dcd9fad685de5025213d4b846848b.jpg",
-      color: "from-green-500 to-emerald-700",
-      slug: 'vegetable'
-    },
-    {
-      title: "Home-Cooked Meals",
-      description: "Authentic homemade delicacies",
-      image: "https://i.pinimg.com/736x/87/55/50/8755508c64ce14492a4f622ed29762a2.jpg",
-      color: "from-orange-500 to-red-700",
-      slug: 'home-cooked'
-    },
-    {
-      title: "Traditional Pickles",
-      description: "Handcrafted with love and tradition",
-      image: "https://i.pinimg.com/736x/4c/6c/ba/4c6cbae47f19fb1a628624afc83d4406.jpg",
-      color: "from-yellow-500 to-amber-700",
-      slug: 'pickles'
-    },
-    {
-      title: "Seasonal Specials",
-      description: "Limited time seasonal offerings",
-      image: "https://i.pinimg.com/736x/8b/62/58/8b62584beeeb75fe5db7efc1d3dd2545.jpg",
-      color: "from-purple-500 to-indigo-700",
-      slug: 'seasonal'
-    }
-  ];
+  // Fetch categories and their best rated product
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/products/categories');
+        if (response.data.success) {
+          const uniqueCategories = response.data.categories;
+          
+          // For each category, fetch best rated product
+          const categoriesWithData = await Promise.all(
+            uniqueCategories.map(async (category) => {
+              try {
+                // First try to get best rated product
+                const productsResponse = await axios.get('/api/products', {
+                  params: {
+                    category,
+                    sort: 'rating',
+                    limit: 1
+                  }
+                });
+
+                if (productsResponse.data.success && productsResponse.data.products.length > 0) {
+                  const product = productsResponse.data.products[0];
+                  return {
+                    id: category.toLowerCase().replace(/\s+/g, '-'),
+                    title: category,
+                    description: `Explore our ${category} collection`,
+                    image: product.images[0] || '/placeholder-image.jpg',
+                    color: getRandomGradient(),
+                    slug: category.toLowerCase().replace(/\s+/g, '-'),
+                    totalProducts: productsResponse.data.total,
+                    featuredProduct: {
+                      _id: product._id,
+                      name: product.name,
+                      price: product.price,
+                      rating: product.rating,
+                      reviews: product.reviews?.length || 0,
+                      images: product.images
+                    }
+                  };
+                }
+                return null;
+              } catch (err) {
+                console.error(`Error fetching products for ${category}:`, err);
+                return null;
+              }
+            })
+          );
+
+          // Filter out any null values and set categories
+          setCategories(categoriesWithData.filter(cat => cat !== null));
+        }
+      } catch (err) {
+        setError('Failed to fetch categories');
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Get random gradient for category backgrounds
+  const getRandomGradient = () => {
+    const gradients = [
+      'from-blue-600 to-violet-600',
+      'from-emerald-500 to-teal-700',
+      'from-rose-500 to-pink-700',
+      'from-amber-500 to-orange-700',
+      'from-indigo-500 to-purple-700',
+      'from-cyan-500 to-blue-700'
+    ];
+    return gradients[Math.floor(Math.random() * gradients.length)];
+  };
+
+  // Add high quality background images for categories
+  const getCategoryImage = (category) => {
+    const placeholderImages = {
+      'Home Made Food': 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
+      'Arts & Crafts': 'https://images.unsplash.com/photo-1629196911514-f5934acc6b21?q=80&w=2070&auto=format&fit=crop',
+      'Cakes': 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=2070&auto=format&fit=crop',
+      'Handicrafts': 'https://images.unsplash.com/photo-1528805639423-c9818ad54888?q=80&w=2070&auto=format&fit=crop',
+      'Paintings': 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop',
+    };
+    return placeholderImages[category] || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop';
+  };
 
   useEffect(() => {
-    if (!isHovering) {
+    if (!isHovering && categories.length > 0) {
       const timer = setInterval(() => {
-        setActiveCategory((prev) => (prev + 1) % featuredCategories.length);
+        setActiveCategory((prev) => (prev + 1) % categories.length);
       }, 5000);
       return () => clearInterval(timer);
     }
-  }, [isHovering]);
+  }, [isHovering, categories.length]);
+
+  // Initialize cart
+  useEffect(() => {
+    const initializeCart = async () => {
+      try {
+        dispatch(clearCart());
+        
+        if (userData) {
+          const response = await axios.get("/api/cart/getCartItems", {
+            withCredentials: true
+          });
+          
+          if (response.data.success) {
+            dispatch(setCartItems(response.data.cart.items));
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing cart:", error);
+        dispatch(clearCart());
+      }
+    };
+
+    initializeCart();
+  }, [userData, dispatch]);
 
   const handleViewProduct = (product) => {
+    if (!userData) return; // Don't store if user is not logged in
+
     const viewedProducts = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
     const currentTime = new Date().getTime();
-    const timeLimit = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    const timeLimit = 7 * 24 * 60 * 60 * 1000;
   
-    // Remove products older than 7 days
+    // Store or update user ID
+    localStorage.setItem('recentlyViewedUserId', userData._id);
+
     const filteredProducts = viewedProducts.filter(p => (currentTime - p.timestamp) < timeLimit);
-  
-    // Check if the product is already in the recently viewed list
     const existingProductIndex = filteredProducts.findIndex(p => p._id === product._id);
   
     if (existingProductIndex !== -1) {
-      // If it exists, remove it and add it to the front
       filteredProducts.splice(existingProductIndex, 1);
     }
   
-    // Add the new product with a timestamp
     filteredProducts.unshift({
       ...product,
-      timestamp: currentTime // Store the current timestamp
+      timestamp: currentTime
     });
   
-    // Limit the number of products to a maximum of 5
     if (filteredProducts.length > 5) {
-      filteredProducts.pop(); // Remove the oldest product
+      filteredProducts.pop();
     }
   
     localStorage.setItem('recentlyViewed', JSON.stringify(filteredProducts));
+    
+    // Dispatch event to update RecentlyViewed component
+    window.dispatchEvent(new Event('recentlyViewedUpdated'));
+
+    // Navigate to product page
+    window.location.href = `/product/${product._id}`;
   };
 
   const trustFeatures = [
@@ -105,117 +200,165 @@ const Home = () => {
   ];
 
   const handleCategoryClick = (slug) => {
-    console.log('Navigating to:', `/products/${slug}`);
-    navigate(`/products/${slug}`);
+    // Convert slug to proper format
+    const formattedSlug = slug
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/&/g, 'and');
+    navigate(`/products/category/${formattedSlug}`);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 py-8">
+        <p className="text-lg">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Modern Category Showcase - Reduced height */}
-      <div className="relative h-[50vh] overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeCategory}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0"
-          >
-            <div className={`relative h-full bg-gradient-to-r ${featuredCategories[activeCategory].color}`}>
-              {/* Background Image with Overlay */}
-              <div 
-                className="absolute inset-0 opacity-30"
-                style={{
-                  backgroundImage: `url(${featuredCategories[activeCategory].image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              />
+      {/* Dynamic Category Showcase */}
+      {categories.length > 0 && (
+        <div className="relative h-[45vh] overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeCategory}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0"
+            >
+              <div className={`relative h-full bg-gradient-to-r ${categories[activeCategory].color}`}>
+                <div 
+                  className="absolute inset-0 opacity-60 bg-center bg-cover transition-opacity duration-500"
+                  style={{
+                    backgroundImage: `url(${getCategoryImage(categories[activeCategory].title)})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'brightness(0.8)'
+                  }}
+                />
 
-              {/* Content - Adjusted spacing */}
-              <div className="relative h-full max-w-7xl mx-auto px-4 py-8 flex items-center">
-                <div className="w-1/2">
-                  <motion.h2
-                    initial={{ x: -100, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-4xl md:text-5xl font-bold text-white mb-4"
-                  >
-                    {featuredCategories[activeCategory].title}
-                  </motion.h2>
-                  <motion.p
-                    initial={{ x: -100, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-lg text-white/90 mb-6"
-                  >
-                    {featuredCategories[activeCategory].description}
-                  </motion.p>
-                  <motion.button
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                    className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-opacity-90 transition-all"
-                    onClick={() => handleCategoryClick(featuredCategories[activeCategory].slug)}
-                  >
-                    Explore Collection
-                  </motion.button>
+                <div className="relative h-full max-w-7xl mx-auto px-4 py-8 flex items-center">
+                  <div className="w-1/2">
+                    <motion.h2
+                      initial={{ x: -100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-4xl md:text-5xl font-bold text-white mb-4"
+                    >
+                      {categories[activeCategory].title}
+                    </motion.h2>
+                    <motion.p
+                      initial={{ x: -100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-lg text-white/90 mb-6"
+                    >
+                      {categories[activeCategory].description}
+                    </motion.p>
+                    <motion.button
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.6 }}
+                      className="bg-white text-gray-900 px-8 py-3 rounded-full font-semibold hover:bg-opacity-90 transition-all flex items-center gap-2"
+                      onClick={() => handleCategoryClick(categories[activeCategory].slug)}
+                    >
+                      Explore Collection
+                      <FaArrowRight className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+
+                  {/* Featured Product Preview */}
+                  {categories[activeCategory].featuredProduct && (
+                    <motion.div 
+                      initial={{ x: 100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="w-1/2 flex justify-end"
+                    >
+                      <Link 
+                        to={`/product/${categories[activeCategory].featuredProduct._id}`}
+                        className="w-[300px] h-[300px] rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-shadow"
+                      >
+                        <img 
+                          src={categories[activeCategory].featuredProduct.images[0]}
+                          alt={categories[activeCategory].featuredProduct.name}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </Link>
+                    </motion.div>
+                  )}
                 </div>
               </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
 
-        {/* Category Navigation - Adjusted position */}
-        <div 
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4"
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-        >
-          {featuredCategories.map((_, index) => (
-            <button
-              key={index}
-              
-              onClick={() => setActiveCategory(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === activeCategory 
-                  ? 'bg-white w-6' 
-                  : 'bg-white/50 hover:bg-white/70'
-              }`}
-              
-            />
-          ))}
+          {/* Navigation Dots */}
+          <div 
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full"
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          >
+            {categories.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveCategory(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === activeCategory 
+                    ? 'bg-white w-8' 
+                    : 'bg-white/50 hover:bg-white/70'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={() => setActiveCategory((prev) => (prev - 1 + categories.length) % categories.length)}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-4 rounded-full text-white transition-all backdrop-blur-sm"
+          >
+            <FaArrowLeft size={24} />
+          </button>
+          <button
+            onClick={() => setActiveCategory((prev) => (prev + 1) % categories.length)}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-4 rounded-full text-white transition-all backdrop-blur-sm"
+          >
+            <FaArrowRight size={24} />
+          </button>
         </div>
+      )}
 
-        {/* Navigation Arrows - Adjusted size */}
-        <button
-          onClick={() => setActiveCategory((prev) => (prev - 1 + featuredCategories.length) % featuredCategories.length)}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full text-white transition-all"
-        >
-          <FaArrowLeft size={20} />
-        </button>
-        <button
-          onClick={() => setActiveCategory((prev) => (prev + 1) % featuredCategories.length)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full text-white transition-all"
-        >
-          <FaArrowRight size={20} />
-        </button>
-      </div>
-
-      {/* Recently Viewed Section - Moved here */}
-      <div className="bg-purple-50 py-12">
+      {/* Recently Viewed Section */}
+      <div className="bg-purple-50 py-4">
         <div className="max-w-7xl mx-auto px-4">
           <RecentlyViewed handleViewProduct={handleViewProduct} />
         </div>
       </div>
 
-      {/* Featured Products Grid - Adjusted spacing */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      {/* Dynamic Categories Grid */}
+      {categories.length > 0 && (
+      <div className=" max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredCategories.map((category, index) => (
+            {categories.map((category, index) => (
             <motion.div
-              key={index}
+                key={category.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
@@ -239,11 +382,61 @@ const Home = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6">
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-2">{category.title}</h3>
-                  <p className="text-white/80 text-sm">{category.description}</p>
+                    <p className="text-white/80 text-sm">{category.totalProducts} Products Available</p>
+                  </div>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Category-wise Products Sections */}
+      {categories.map((category) => (
+        <div key={category.id} className="py-1">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{category.title}</h2>
+                <p className="text-gray-600 text-sm">{category.description}</p>
               </div>
-            </motion.div>
-          ))}
+              <Link 
+                to={`/products?category=${encodeURIComponent(category.slug)}`}
+                className="flex items-center text-primary hover:text-primary-dark transition-colors"
+              >
+                View All <FaArrowRight className="ml-2" />
+              </Link>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm mb-2">
+              <CategoryProducts
+                key={`${category.slug}-${userData?.city}`}
+                category={category.slug}
+                title=""
+                description={category.description}
+                city={userData?.city}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Featured Products Section */}
+      <div className="py-8 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Featured Products
+            </h2>
+            <Link 
+              to="/products"
+              className="flex items-center text-primary hover:text-primary-dark transition-colors"
+            >
+              View All <FaArrowRight className="ml-2" />
+            </Link>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            <ProductCatalog />
+          </div>
         </div>
       </div>
 
@@ -259,16 +452,6 @@ const Home = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Featured Products Section */}
-      <div className="py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-purple-800 text-center mb-8">
-            Featured Products
-          </h2>
-          <ProductCatalog />
         </div>
       </div>
 

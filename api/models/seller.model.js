@@ -1,25 +1,25 @@
 import mongoose from "mongoose";
-import baseUserSchema from "./baseUser.model.js";
+import User from "./baseUser.model.js";
 
-// First, create the base User model if it doesn't exist
-const User = mongoose.models.User || mongoose.model('User', baseUserSchema);
-
-// Create the Seller schema
+// Create the Seller schema that extends the base user schema
 const sellerSchema = new mongoose.Schema({
     shopName: {
         type: String,
         required: true
     },
+    logo: {
+        type: String,
+        default: ''
+    },
     businessType: {
         type: String,
-        required: true,
+        required: true
     },
     customBusinessType: String,
     businessDescription: String,
     aadharNumber: {
         type: String,
-        required: true,
-        length: 12
+        required: true
     },
     platformType: {
         type: [String],
@@ -27,18 +27,25 @@ const sellerSchema = new mongoose.Schema({
         required: true
     },
     termsAccepted: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function(v) {
-                return v === "true";
-            },
-            message: "Terms must be accepted"
+        type: Boolean,
+        required: true
+    },
+    notifications: [{
+        message: {
+            type: String,
+            required: true
+        },
+        read: {
+            type: Boolean,
+            default: false
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
         }
-    }
+    }]
 });
 
-// Create the Seller model using discriminator
+// Create and export the Seller model
 const Seller = User.discriminator('seller', sellerSchema);
-
 export default Seller;

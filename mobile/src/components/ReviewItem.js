@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { user } = useAuth();
-  const isLiked = review.likes?.includes(user?._id);
-  const isOwnReview = currentUserId === review.buyer._id;
+  const isLiked = review?.likes?.includes(user?._id);
+  const isOwnReview = currentUserId && review?.buyer?._id && currentUserId === review.buyer._id;
 
   const handleDelete = () => {
     Alert.alert(
@@ -55,7 +55,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
       {/* User Info Section */}
       <View style={styles.reviewHeader}>
         <View style={styles.userInfo}>
-          {review.buyer.profilePic ? (
+          {review?.buyer?.profilePic ? (
             <Image 
               source={{ uri: review.buyer.profilePic }}
               style={styles.profilePic}
@@ -63,14 +63,14 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>
-                {review.buyer.firstname?.[0]?.toUpperCase()}
+                {review?.buyer?.firstname?.[0]?.toUpperCase() || '?'}
               </Text>
             </View>
           )}
           <View style={styles.nameAndDate}>
-            <Text style={styles.userName}>{review.buyer.firstname}</Text>
+            <Text style={styles.userName}>{review?.buyer?.firstname || 'Anonymous'}</Text>
             <Text style={styles.date}>
-              {new Date(review.createdAt).toLocaleDateString()}
+              {review?.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
             </Text>
           </View>
         </View>
@@ -79,7 +79,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
         {isOwnReview && (
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              onPress={() => onEdit(review)}
+              onPress={() => onEdit && onEdit(review)}
               style={styles.actionButton}
             >
               <Ionicons name="pencil" size={20} color="#666" />
@@ -98,7 +98,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
           {[...Array(5)].map((_, index) => (
             <Ionicons
               key={index}
-              name={index < review.rating ? "star" : "star-outline"}
+              name={index < (review?.rating || 0) ? "star" : "star-outline"}
               size={16}
               color="#FFD700"
             />
@@ -110,7 +110,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
       {renderComment()}
 
       {/* Review Images */}
-      {review.images?.length > 0 && (
+      {review?.images?.length > 0 && (
         <View style={styles.imagesContainer}>
           {review.images.map((image, index) => (
             <Image
@@ -125,7 +125,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
       {/* Updated Like Button */}
       <TouchableOpacity 
         style={styles.likeButton}
-        onPress={() => onLike(review._id)}
+        onPress={() => onLike && onLike(review?._id)}
       >
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
@@ -136,7 +136,7 @@ const ReviewItem = ({ review, onLike, onDelete, onEdit, currentUserId }) => {
           styles.likeCount,
           isLiked && styles.likedCount
         ]}>
-          {review.likes?.length || 0}
+          {review?.likes?.length || 0}
         </Text>
       </TouchableOpacity>
     </View>

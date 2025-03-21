@@ -142,7 +142,11 @@ const AccountScreen = () => {
           onPress: async () => {
             try {
               await logout();
-              router.replace('/(auth)/login');
+              // Navigate to login screen with reset to prevent going back
+              router.replace({
+                pathname: '/(auth)/login',
+                params: { reset: true }
+              });
             } catch (error) {
               console.error('Logout error:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');

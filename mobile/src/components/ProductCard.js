@@ -1,126 +1,121 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
-import Toast from 'react-native-toast-message';
 
-const ProductCard = ({ product }) => {
-  const router = useRouter();
-  const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
-  const [loading, setLoading] = useState(false);
+const { width } = Dimensions.get('window');
+const cardWidth = (width - 32) / 2; // 2 columns with 16px padding on each side
 
-  const handleAddToCart = async () => {
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Login Required',
-        'Please login to add items to cart',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/(auth)/login') }
-        ]
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-      // Debug log
-      console.log('Adding product to cart:', product._id);
-      
-      await addToCart(product._id, 1);
-      
-      Toast.show({
-        type: 'success',
-        text1: 'Added to cart successfully',
-        position: 'bottom'
-      });
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      Toast.show({
-        type: 'error',
-        text1: error.response?.data?.message || 'Failed to add to cart',
-        position: 'bottom'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const ProductCard = ({ product, onPress }) => {
   return (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => router.push(`/(app)/product/${product._id}`)}
-    >
-      <Image 
-        source={{ uri: product.images[0] }} 
-        style={styles.image}
-        resizeMode="cover"
-      />
+    <TouchableOpacity style={styles.container} onPress={onPress}>
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: product.images[0] }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        {product.stock <= 0 && (
+          <View style={styles.outOfStockOverlay}>
+            <Text style={styles.outOfStockText}>Out of Stock</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.price}>₹{product.price}</Text>
-        
-        <TouchableOpacity 
-          style={[styles.addButton, loading && styles.addButtonDisabled]}
-          onPress={handleAddToCart}
-          disabled={loading}
-        >
-          <Text style={styles.addButtonText}>
-            {loading ? 'Adding...' : 'Add'}
+        <Text style={styles.name} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <View style={styles.priceContainer}>
+          <Text style={styles.price}>₹{product.price}</Text>
+          <Text style={styles.unit}>/{product.unitType}</Text>
+        </View>
+        <View style={styles.ratingContainer}>
+          <Ionicons name="star" size={16} color="#FFD700" />
+          <Text style={styles.rating}>
+            {product.rating || 'New'}
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
+  container: {
+    width: cardWidth,
     backgroundColor: '#fff',
     borderRadius: 12,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
     overflow: 'hidden',
-    elevation: 3,
-    margin: 8,
-    flex: 1,
+  },
+  imageContainer: {
+    width: '100%',
+    height: cardWidth,
+    position: 'relative',
   },
   image: {
     width: '100%',
-    height: 150,
-    backgroundColor: '#f5f5f5',
+    height: '100%',
+  },
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  outOfStockText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     padding: 12,
   },
   name: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
     color: '#333',
+    marginBottom: 4,
+    height: 40,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4,
   },
   price: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4B6BFB',
+    color: '#4169E1',
   },
-  addButton: {
-    backgroundColor: '#4B0082',
+  unit: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 2,
+  },
+  ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    borderRadius: 6,
-    gap: 4,
   },
-  addButtonDisabled: {
-    opacity: 0.7,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+  rating: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
   },
 });
 

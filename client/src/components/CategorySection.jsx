@@ -1,139 +1,149 @@
 // components/CategorySection.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { FaUtensils, FaLeaf, FaPaintBrush, FaSpa, FaRecycle, 
-         FaHeart, FaCarrot, FaPaw, FaSeedling, FaGift } from 'react-icons/fa';
-
-const categories = [
-  {
-    id: 1,
-    title: 'Home-Made Foods',
-    ads: '12 Items',
-    icon: <FaUtensils className="w-8 h-8" />,
-    iconColor: 'text-amber-600',
-    description: 'Authentic home-cooked'
-  },
-  {
-    id: 2,
-    title: 'Farm Fresh',
-    ads: '15 Items',
-    icon: <FaLeaf className="w-8 h-8" />,
-    iconColor: 'text-green-600',
-    description: 'Direct from local farms'
-  },
-  {
-    id: 3,
-    title: 'Handmade Crafts',
-    ads: '20 Items',
-    icon: <FaPaintBrush className="w-8 h-8" />,
-    iconColor: 'text-purple-600',
-    description: 'Artisanal crafted items'
-  },
-  {
-    id: 4,
-    title: 'Natural Beauty',
-    ads: '08 Items',
-    icon: <FaSpa className="w-8 h-8" />,
-    iconColor: 'text-pink-600',
-    description: 'Chemical-free beauty products'
-  },
-  {
-    id: 5,
-    title: 'Eco-Friendly Products',
-    ads: '14 Items',
-    icon: <FaRecycle className="w-8 h-8" />,
-    iconColor: 'text-teal-600',
-    description: 'Sustainable living essentials'
-  },
-  {
-    id: 6,
-    title: 'Traditional Wellness',
-    ads: '10 Items',
-    icon: <FaHeart className="w-8 h-8" />,
-    iconColor: 'text-red-600',
-    description: 'Ancient wellness wisdom'
-  },
-  {
-    id: 7,
-    title: 'Organic Pantry',
-    ads: '18 Items',
-    icon: <FaCarrot className="w-8 h-8" />,
-    iconColor: 'text-orange-600',
-    description: 'Pure organic ingredients'
-  },
-  {
-    id: 8,
-    title: 'Pet Care Natural',
-    ads: '07 Items',
-    icon: <FaPaw className="w-8 h-8" />,
-    iconColor: 'text-blue-600',
-    description: 'Natural pet care products'
-  },
-  {
-    id: 9,
-    title: 'Garden & Plants',
-    ads: '16 Items',
-    icon: <FaSeedling className="w-8 h-8" />,
-    iconColor: 'text-emerald-600',
-    description: 'Plants and gardening supplies'
-  },
-  {
-    id: 10,
-    title: 'Seasonal & Festive',
-    ads: '11 Items',
-    icon: <FaGift className="w-8 h-8" />,
-    iconColor: 'text-yellow-600',
-    description: 'Seasonal specialties'
-  }
-];
 
 const CategorySection = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categoryData, setCategoryData] = useState({});
+
+  useEffect(() => {
+    const fetchCategoriesWithProducts = async () => {
+      try {
+        // Fetch unique categories from products
+        const response = await axios.get('/api/products/categories');
+        
+        if (response.data.success) {
+          const uniqueCategories = response.data.categories;
+          setCategories(uniqueCategories);
+
+          // For each category, fetch one product to get its image and count
+          const categoryDataPromises = uniqueCategories.map(async (category) => {
+            try {
+              const productsResponse = await axios.get('/api/products', {
+                params: {
+                  category,
+                  limit: 1
+                }
+              });
+
+              if (productsResponse.data.success) {
+                const products = productsResponse.data.products;
+                const totalProducts = productsResponse.data.total;
+                
+                if (products && products.length > 0) {
+                  return {
+                    category,
+                    image: products[0].images[0],
+                    productCount: totalProducts
+                  };
+                }
+              }
+            } catch (err) {
+              console.error(`Error fetching products for ${category}:`, err);
+            }
+            return null;
+          });
+
+          const results = await Promise.all(categoryDataPromises);
+          const categoryDataMap = {};
+          results.forEach(result => {
+            if (result) {
+              categoryDataMap[result.category] = {
+                image: result.image,
+                productCount: result.productCount
+              };
+            }
+          });
+
+          setCategoryData(categoryDataMap);
+        }
+      } catch (err) {
+        setError('Failed to fetch categories');
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategoriesWithProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 py-8">
+        <p className="text-lg">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-lg text-gray-600">No categories available</p>
+      </div>
+    );
+  }
+
   return (
-    <section className="py-10 ">
+    <section className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-12">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">
-              Our <span className="relative">Categories</span>
+              Categories
             </h2>
-            <p className="mt-2 text-gray-600">Discover Natural & Handcrafted Treasures</p>
+            <p className="mt-2 text-gray-600">
+              {categories.length} {categories.length === 1 ? 'Category' : 'Categories'} Available
+            </p>
           </div>
           <Link 
-            to="/categories" 
-            className="mt-4 sm:mt-0 px-5 py-2.5 relative rounded group overflow-hidden font-medium bg-green-50 text-green-600 inline-block"
+            to="/products" 
+            className="mt-4 sm:mt-0 px-5 py-2.5 relative rounded group overflow-hidden font-medium bg-primary text-white inline-block"
           >
-            <span className="absolute bottom-0 left-0 flex w-full h-0 mb-0 transition-all duration-200 ease-out transform translate-y-full bg-green-600 group-hover:h-full opacity-90"></span>
-            <span className="relative group-hover:bg-red-500">View All</span>
+            <span className="absolute bottom-0 left-0 flex w-full h-0 mb-0 transition-all duration-200 ease-out transform translate-y-full bg-primary-dark group-hover:h-full opacity-90"></span>
+            <span className="relative group-hover:text-white">View All Products</span>
           </Link>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
             <Link
-              key={category.id}
-              to={`/category/${category.title.toLowerCase().replace(/\s+/g, '-')}`}
-              className="group"
+              key={category}
+              to={`/products?category=${encodeURIComponent(category)}`}
+              className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              <div 
-                className="border rounded-lg p-4 transition-all duration-300
-                  hover:shadow-lg hover:-translate-y-1 hover:scale-105 hover:bg-[#272F38] group-hover:text-white flex flex-col items-center"
-              >
-                <div 
-                  className={`w-16 h-16 mb-2 flex items-center justify-center rounded-full 
-                    ${category.iconColor} transition-transform group-hover:scale-110`}
-                >
-                  {category.icon}
-                </div>
-                <div className="text-center">
-                  <h3 className="text-black font-medium mb-1 group-hover:text-white">{category.title}</h3>
-                  <p className="text-sm text-gray-500 mb-2 group-hover:text-white">{category.description}</p>
-                  <span 
-                    className="inline-block px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-600 group-hover:bg-white group-hover:text-black"
-                  >
-                    {category.ads}
-                  </span>
+              <div className="aspect-w-16 aspect-h-9">
+                <img
+                  src={categoryData[category]?.image || '/placeholder-image.jpg'}
+                  alt={category}
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent">
+                <div className="absolute bottom-0 left-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                  <h3 className="text-xl font-semibold text-white mb-2">{category}</h3>
+                  <p className="text-sm text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {categoryData[category]?.productCount || 0} Products Available
+                  </p>
                 </div>
               </div>
             </Link>

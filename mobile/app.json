@@ -22,6 +22,8 @@
       "newArchEnabled": true
     },
     "android": {
+      "package": "com.puritypath.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -45,6 +47,14 @@
       "isDebug": false,
       "fastRefresh": false,
       "newArchEnabled": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "764b3f23-4d64-44b3-bbcc-bbf555602735"
+      }
     }
   }
 }

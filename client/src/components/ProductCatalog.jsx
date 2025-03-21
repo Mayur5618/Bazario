@@ -24,6 +24,8 @@ const ProductCatalog = () => {
   const [imageLoading, setImageLoading] = useState({});
   const [removingItems, setRemovingItems] = useState({});
   const [isWishlistLoading, setIsWishlistLoading] = useState({});
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Animation variants for products
   const containerVariants = {
@@ -256,56 +258,69 @@ const ProductCatalog = () => {
     }
   };
 
-  const handleCategoryClick = (categoryId) => {
-    setLoading(true);
-    const searchParams = new URLSearchParams(location.search);
-    
-    if (categoryId === 'all') {
-      searchParams.delete('category');
-    } else {
-      searchParams.set('category', categoryId);
-    }
-
-    // Update URL without page reload
-    window.history.pushState(
-      {},
-      '',
-      `${location.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
-    );
-
-    // Trigger products fetch with new category
-    fetchProducts(categoryId);
-  };
-
-  const fetchProducts = async (categoryId) => {
+  const handleCategoryChange = async (category) => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/products/filtered', {
+      setSelectedCategory(category);
+
+      const response = await axios.get('/api/products', {
         params: {
-          category: categoryId === 'all' ? '' : categoryId,
-          platformType: 'b2c',
-          limit: 20
+          category: category === 'all' ? undefined : category,
+          limit: 8,
+          featured: true
         }
       });
 
       if (response.data.success) {
         setProducts(response.data.products);
-      } else {
-        setError('Failed to fetch products');
       }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError(error.response?.data?.message || 'Failed to fetch products');
+    } catch (err) {
+      setError('Failed to fetch products');
+      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Update useEffect to use the new fetchProducts function
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const category = searchParams.get('category') || 'all';
-    fetchProducts(category);
+    const fetchCategoriesAndProducts = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch categories first
+        const categoriesResponse = await axios.get('/api/products/categories');
+        if (categoriesResponse.data.success) {
+          const sortedCategories = categoriesResponse.data.categories.sort((a, b) => a.localeCompare(b));
+          setCategories(sortedCategories);
+        }
+
+        // Get category from URL if present
+        const urlParams = new URLSearchParams(location.search);
+        const categoryFromUrl = urlParams.get('category');
+        const initialCategory = categoryFromUrl || 'all';
+        setSelectedCategory(initialCategory);
+
+        // Fetch products based on initial category
+        const productsResponse = await axios.get('/api/products', {
+          params: {
+            category: initialCategory === 'all' ? undefined : initialCategory,
+            featured: true,
+            limit: 8
+          }
+        });
+
+        if (productsResponse.data.success) {
+          setProducts(productsResponse.data.products);
+        }
+      } catch (err) {
+        setError('Failed to fetch products');
+        console.error('Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategoriesAndProducts();
   }, [location.search]);
 
   const handleImageLoad = (productId) => {
@@ -315,169 +330,74 @@ const ProductCatalog = () => {
     }));
   };
 
-  const categories = [
-    { id: "all", name: "All Products" },
-    { id: "vegetable", name: "Vegetables" },
-    { id: "home-cooked", name: "Home Cooked Food" },
-    { id: "pickles", name: "Traditional Pickles" },
-    { id: "seasonal", name: "Seasonal Foods" },
-  ];
-
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Keep showing category tabs while loading */}
-        <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategoryClick(category.id)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition-all `}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Skeleton loader for products */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
-            <div key={item} className="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-              <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-10">
-        <p className="text-red-500">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+      <div className="text-center text-red-500 py-8">
+        <p className="text-lg">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
         >
-          Retry
+          Try Again
         </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      {/* Category Tabs */}
-      <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+    <div>
+      {/* Category Filters */}
+      <div className="flex flex-wrap gap-2 mb-8 justify-center">
+        <button
+          onClick={() => handleCategoryChange('all')}
+          className={`px-4 py-2 rounded-full transition-all ${
+            selectedCategory === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        >
+          All Products
+        </button>
         {categories.map((category) => (
           <button
-            key={category.id}
-            onClick={() => handleCategoryClick(category.id)}
-            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-              new URLSearchParams(location.search).get('category') === category.id
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            key={category}
+            onClick={() => handleCategoryChange(category)}
+            className={`px-4 py-2 rounded-full transition-all ${
+              selectedCategory === category
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
             }`}
           >
-            {category.name}
+            {category}
           </button>
         ))}
       </div>
 
       {/* Products Grid */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location.search}
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          exit="hidden"
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6"
-        >
-          {products.map((product) => (
-            <motion.div
-              key={product._id}
-              variants={productVariants}
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
-            >
-              <div className="relative">
-                <Link to={`/product/${product._id}`}>
-                  <div className="relative h-48 rounded-t-lg overflow-hidden">
-                    {/* Loading Skeleton */}
-                    {(!product.images[0] || imageLoading[product._id] !== false) && (
-                      <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                    )}
-                    
-                    {/* Product Image */}
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className={`w-full h-full object-cover transition-opacity duration-300 ${
-                        imageLoading[product._id] === false ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      onLoad={() => handleImageLoad(product._id)}
-                    />
-                  </div>
-                </Link>
-                
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => handleWishlist(e, product)}
-                  disabled={isWishlistLoading[product._id]}
-                  className={`absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white 
-                    transition-colors ${isWishlistLoading[product._id] ? 'opacity-50' : ''}`}
-                >
-                  <div className="w-8 h-8 flex items-center justify-center">
-                    {isProductInWishlist(product._id) ? (
-                      <FaHeart className={`w-6 h-6 text-red-500 
-                        ${isWishlistLoading[product._id] && 'animate-pulse'}`} 
-                      />
-                    ) : (
-                      <FaRegHeart className={`w-6 h-6 text-gray-400 
-                        ${isWishlistLoading[product._id] && 'animate-pulse'}`} 
-                      />
-                    )}
-                  </div>
-                </motion.button>
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {products.map((product) => (
+          <motion.div
+            key={product._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ProductCard product={product} />
+          </motion.div>
+        ))}
+      </div>
 
-              <div className="p-4">
-                <Link to={`/product/${product._id}`}>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
-                    {product.name}
-                  </h3>
-                </Link>
-                
-                <div className="mt-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-600 font-bold">₹{product.price}</p>
-                    <p className="text-sm text-gray-500">per {product.unitSize} {product.unitType}</p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center">
-                      <span className="text-sm text-yellow-500">★ {product.rating}</span>
-                      <span className="text-sm text-gray-500 ml-1">
-                        ({product.reviews?.length || 0})
-                      </span>
-                    </div>
-                    <p className={`text-sm font-medium ${
-                      product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </AnimatePresence>
       {products.length === 0 && (
-        <div className="col-span-full text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900">No products found</h3>
-          <p className="mt-1 text-gray-500">Try adjusting your search or filter criteria</p>
+        <div className="text-center py-8">
+          <p className="text-gray-500">No products found in this category</p>
         </div>
       )}
     </div>

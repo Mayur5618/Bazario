@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,12 +91,23 @@ const SellerDashboard = () => {
       }
     >
       <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
+        <View style={styles.headerLeft}>
           <Text style={styles.nameText}>{user?.firstname} {user?.lastname}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#FF4444" />
+        <TouchableOpacity 
+          onPress={() => router.push('/(seller)/profile')}
+          style={styles.headerRight}
+        >
+          {user?.profileImage ? (
+            <Image
+              source={{ uri: user.profileImage }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={styles.profileImagePlaceholder}>
+              <Ionicons name="person" size={24} color="#666" />
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -185,17 +197,31 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#FFFFFF',
   },
-  welcomeText: {
-    fontSize: 16,
-    color: '#666',
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   nameText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#1A1A1A',
   },
-  logoutButton: {
-    padding: 8,
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  profileImagePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statsContainer: {
     padding: 20,

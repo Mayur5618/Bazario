@@ -21,7 +21,7 @@ const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -163,6 +163,36 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      "लॉगआउट",
+      "क्या आप लॉगआउट करना चाहते हैं?",
+      [
+        {
+          text: "रद्द करें",
+          style: "cancel"
+        },
+        {
+          text: "लॉगआउट",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await logout();
+              // Navigate to login screen with reset to prevent going back
+              router.replace({
+                pathname: '/(auth)/login',
+                params: { reset: true }
+              });
+            } catch (error) {
+              console.error('Error logging out:', error);
+              Alert.alert('एरर', 'लॉगआउट करने में समस्या हुई');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderField = (label, value, key, keyboardType = 'default', multiline = false) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.label}>{label}</Text>
@@ -271,6 +301,15 @@ const ProfileScreen = () => {
             <Text style={styles.statLabel}>कमाई</Text>
           </View>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#FFF" />
+          <Text style={styles.logoutText}>लॉगआउट करें</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.formContainer}>
@@ -474,6 +513,22 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: '#666',
+  },
+  logoutButton: {
+    backgroundColor: '#FF4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
 

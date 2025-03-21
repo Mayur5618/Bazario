@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
-import { FaShoppingCart, FaMinus, FaPlus, FaCheck, FaStar } from 'react-icons/fa';
+import { FaShoppingCart, FaMinus, FaPlus, FaCheck, FaStar, FaArrowRight } from 'react-icons/fa';
 import { cartAdd, cartRemove, updateCartItemQuantity } from '../store/cartSlice';
 import ProductFilter from './ProductFilter';
 import ProductCard from './ProductCard';
@@ -115,8 +115,8 @@ const loadingDotVariants = {
   }
 };
 
-const CategoryProducts = () => {
-  const { category } = useParams();
+const CategoryProducts = ({ category, hideViewAll = false, city }) => {
+  const { category: urlCategory } = useParams();
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -149,73 +149,39 @@ const CategoryProducts = () => {
       setLoading(true);
       const queryParams = new URLSearchParams();
       
-      // Add category
-      if (category) {
-        queryParams.append('category', category);
+      // Get category from URL params first, then fallback to props
+      const categoryToUse = urlCategory || category;
+      
+      // Convert category slug to proper name (e.g., 'arts-and-crafts' to 'Arts & Crafts')
+      if (categoryToUse) {
+        const formattedCategory = categoryToUse
+          .split('-')
+          .map(word => {
+            if (word === 'and') return '&';
+            return word.charAt(0).toUpperCase() + word.slice(1);
+          })
+          .join(' ');
+        queryParams.append('category', formattedCategory);
+        console.log('Fetching products for category:', formattedCategory);
       }
 
-      // Add filters
-      if (filters) {
-        // Handle price filters
-        if (filters.minPrice) {
-          const minPrice = Number(filters.minPrice);
-          if (!isNaN(minPrice) && minPrice >= 0) {
-            queryParams.append('minPrice', minPrice);
-          }
-        }
-        
-        if (filters.maxPrice) {
-          const maxPrice = Number(filters.maxPrice);
-          if (!isNaN(maxPrice) && maxPrice >= 0) {
-            queryParams.append('maxPrice', maxPrice);
-          }
-        }
-
-        // Handle rating filter
-        if (filters.rating) {
-          const rating = Number(filters.rating);
-          if (!isNaN(rating) && rating >= 1 && rating <= 5) {
-            queryParams.append('minRating', rating);
-          }
-        }
-
-        // Handle sort
-        if (filters.sortBy) {
-          queryParams.append('sortBy', filters.sortBy);
-        }
+      // Add city filter if available
+      if (city) {
+        queryParams.append('city', city);
       }
 
       // Always add platformType
       queryParams.append('platformType', 'b2c');
 
+      // Limit to 8 products per category
+      queryParams.append('limit', '8');
+
+      console.log('API Query:', `/api/products/filtered?${queryParams.toString()}`);
       const response = await axios.get(`/api/products/filtered?${queryParams.toString()}`);
+      console.log('API Response:', response.data);
       
       if (response.data.success) {
-        let filteredProducts = response.data.products;
-
-        // Additional client-side filtering
-        if (filters) {
-          // Price filter
-          if (filters.minPrice || filters.maxPrice) {
-            filteredProducts = filteredProducts.filter(product => {
-              const price = Number(product.price);
-              const minPrice = filters.minPrice ? Number(filters.minPrice) : 0;
-              const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : Infinity;
-              return price >= minPrice && price <= maxPrice;
-            });
-          }
-
-          // Rating filter
-          if (filters.rating) {
-            const minRating = Number(filters.rating);
-            filteredProducts = filteredProducts.filter(product => {
-              const rating = Number(product.rating) || 0;
-              return rating >= minRating;
-            });
-          }
-        }
-
-        setProducts(filteredProducts);
+        setProducts(response.data.products);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -226,8 +192,9 @@ const CategoryProducts = () => {
   };
 
   useEffect(() => {
+    // Fetch products whenever category or URL category changes
     fetchProducts(currentFilters);
-  }, [category, searchParams.get('query')]);
+  }, [category, urlCategory, city]);
 
   // Fetch cart items
   useEffect(() => {
@@ -428,244 +395,156 @@ const CategoryProducts = () => {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="flex items-center justify-center h-40">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Category Title */}
-        <h1 className="text-2xl font-bold mb-8 capitalize">{category}</h1>
-
-        {/* Main Layout */}
-        <div className="flex gap-8">
-          {/* Filter Sidebar - Sticky position */}
-          <aside className="w-72 shrink-0">
-            <div className="bg-white rounded-lg shadow-sm sticky top-[84px]">
-              <div className="p-6">
-                {/* Filter Header */}
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
-                  <button
-                    onClick={() => {
-                      const resetFilters = {
-                        minPrice: '',
-                        maxPrice: '',
-                        rating: '',
-                        sortBy: 'newest'
-                      };
-                      setTempFilters(resetFilters);
-                      setCurrentFilters(resetFilters);
-                      fetchProducts(resetFilters);
-                    }}
-                    className="text-blue-600 text-sm hover:underline font-medium"
-                  >
-                    Clear All
-                  </button>
-                </div>
-
-                {/* Filter Content */}
-                <div className="space-y-6">
-                  {/* Price Range */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-3">Price Range</h3>
-                    <div className="flex gap-4">
-                      <input
-                        type="number"
-                        placeholder="Min"
-                        value={tempFilters.minPrice}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                        className="w-full px-3 py-2 border rounded"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Max"
-                        value={tempFilters.maxPrice}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                        className="w-full px-3 py-2 border rounded"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Rating */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-3">Rating</h3>
-                    <div className="space-y-2">
-                      {[4, 3, 2, 1].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => handleRatingClick(rating)}
-                          className={`w-full flex items-center p-2 rounded ${
-                            tempFilters.rating === rating.toString() ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <div className="flex">
-                            {[...Array(5)].map((_, index) => (
-                              <FaStar
-                                key={index}
-                                className={`w-4 h-4 ${
-                                  index < rating ? 'text-yellow-400' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="ml-2 text-sm text-gray-600">& Up</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sort By */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-3">Sort By</h3>
-                    <select
-                      value={tempFilters.sortBy}
-                      onChange={(e) => handleSortChange(e.target.value)}
-                      className="w-full px-3 py-2 border rounded"
-                    >
-                      <option value="newest">Newest</option>
-                      <option value="price_low">Price: Low to High</option>
-                      <option value="price_high">Price: High to Low</option>
-                      <option value="rating_high">Highest Rated</option>
-                      <option value="most_sold">Most Sold</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Apply Filters Button */}
-                <div className="mt-6">
-                  <button
-                    onClick={handleApplyFilter}
-                    className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* Main Content */}
-          <main className="flex-1">
-            {/* Products Grid */}
-            <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[400px]"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
+    <div className="py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {!hideViewAll && products.length > 0 && (
+          <div className="flex justify-between items-center mb-4">
+            <Link 
+              to={`/category/${category?.toLowerCase().replace(/\s+/g, '-')}`}
+              className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
-              <AnimatePresence mode="wait">
-                {products.length === 0 ? (
-                  // No products message
-                  <div className="col-span-full flex items-center justify-center min-h-[400px]">
-                    <div className="text-center">
-                      <p className="text-gray-500 text-lg">No products found</p>
-                      <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
-                    </div>
+              View All <FaArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+
+        {loading ? (
+          <motion.div
+            variants={loadingContainerVariants}
+            initial="initial"
+            animate="animate"
+            className="flex justify-center items-center h-64 gap-2"
+          >
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                variants={loadingDotVariants}
+                className="w-3 h-3 rounded-full bg-blue-500"
+              />
+            ))}
+          </motion.div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No products found in this category.</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+          >
+            {products.map((product) => (
+              <motion.div
+                key={product._id}
+                variants={productCardVariants}
+                whileHover="hover"
+                onClick={() => navigate(`/product/${product._id}`)}
+                className="cursor-pointer"
+              >
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+                  {/* Product Image */}
+                  <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                ) : (
-                  // Product cards
-                  products.map((product) => (
-                    <motion.div
-                      key={product._id}
-                      variants={productCardVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      className="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full"
-                    >
-                      {/* Product Image with fixed aspect ratio */}
-                      <div className="relative w-full pt-[100%] mb-4 overflow-hidden rounded-lg">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="absolute top-0 left-0 w-full h-full object-cover"
-                        />
+
+                  {/* Product Info */}
+                  <div className="p-2 flex flex-col flex-grow">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                      {product.name}
+                    </h3>
+
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-bold">₹{product.price}</span>
+                        <span className="text-xs text-gray-500">per {product.unitType || 'piece'}</span>
                       </div>
+                    </div>
 
-                      {/* Product Details */}
-                      <div className="flex flex-col flex-grow">
-                        {/* Title */}
-                        <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">
-                          {product.name}
-                        </h3>
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="flex">
+                        {[...Array(5)].map((_, index) => (
+                          <FaStar
+                            key={index}
+                            className={`w-3 h-3 ${
+                              index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-600">
+                        ({product.reviews?.length || 0})
+                      </span>
+                    </div>
 
-                        {/* Price and Unit */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xl font-bold">₹{product.price}</span>
-                          <span className="text-sm text-gray-500">per {product.unit}</span>
-                        </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                      <span className="text-gray-500">Stock: {product.stock}</span>
+                    </div>
 
-                        {/* Rating */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
-                            {[...Array(5)].map((_, index) => (
-                              <FaStar
-                                key={index}
-                                className={`w-4 h-4 ${
-                                  index < product.rating ? 'text-yellow-400' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-500">
-                            {product.rating} ({product.reviews?.length || 0})
-                          </span>
-                        </div>
-
-                        {/* Stock Status */}
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm text-green-600">In Stock</span>
-                          <span className="text-sm text-gray-500">Stock: {product.stock}</span>
-                        </div>
-
-                        {/* Add to Cart Button */}
-                        <div className="mt-auto">
-                          {cartItems[product._id] ? (
-                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                              <button
-                                onClick={() => handleUpdateQuantity(
-                                  product._id,
-                                  cartItems[product._id].quantity - 1,
-                                  product.stock
-                                )}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                              >
-                                <FaMinus className="w-4 h-4" />
-                              </button>
-                              <span className="text-lg font-medium">
-                                {cartItems[product._id].quantity}
-                              </span>
-                              <button
-                                onClick={() => handleUpdateQuantity(
-                                  product._id,
-                                  cartItems[product._id].quantity + 1,
-                                  product.stock
-                                )}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                              >
-                                <FaPlus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
+                    {/* Add to Cart Section */}
+                    {product.stock > 0 && (
+                      <div className="mt-2">
+                        {cartItems[product._id] ? (
+                          <div 
+                            className="flex items-center justify-between bg-gray-50 rounded-lg p-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
-                              onClick={() => handleAddToCart(product._id)}
-                              disabled={isAddingToCart[product._id]}
-                              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                              onClick={() => handleUpdateQuantity(
+                                product._id,
+                                cartItems[product._id].quantity - 1,
+                                product.stock
+                              )}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             >
-                              <FaShoppingCart className="w-4 h-4" />
-                              Add to Cart
+                              <FaMinus className="w-3 h-3" />
                             </button>
-                          )}
-                        </div>
+                            <span className="font-medium text-sm">
+                              {cartItems[product._id].quantity}
+                            </span>
+                            <button
+                              onClick={() => handleUpdateQuantity(
+                                product._id,
+                                cartItems[product._id].quantity + 1,
+                                product.stock
+                              )}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            >
+                              <FaPlus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(product._id);
+                            }}
+                            disabled={isAddingToCart[product._id]}
+                            className="w-full bg-blue-600 text-white py-1 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm"
+                          >
+                            <FaShoppingCart className="w-3 h-3" />
+                            {isAddingToCart[product._id] ? 'Adding...' : 'Add to Cart'}
+                          </button>
+                        )}
                       </div>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </main>
-        </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );

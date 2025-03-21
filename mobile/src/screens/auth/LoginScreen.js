@@ -1,8 +1,8 @@
 // Use the LoginScreen code we created earlier
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Alert, ActivityIndicator, ScrollView, BackHandler } from 'react-native';
 import axios from '../../config/axios';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 
@@ -10,6 +10,7 @@ const { width } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { reset } = useLocalSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     mobileno: '',
@@ -21,6 +22,14 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { login } = useAuth();
+
+  // Handle back button press when reset is true
+  useEffect(() => {
+    if (reset === 'true') {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
+      return () => backHandler.remove();
+    }
+  }, [reset]);
 
   // Validation function
   const validateField = (name, value) => {

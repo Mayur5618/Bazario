@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeart, FaShoppingCart } from 'react-icons/fa';
+import { FaHeart, FaShoppingCart, FaStar, FaMinus, FaPlus } from 'react-icons/fa';
 import { removeFromWishlist, setWishlistItems } from '../store/wishlistSlice';
 import { cartAdd } from '../store/cartSlice';
 import axios from 'axios';
@@ -162,129 +162,156 @@ const Wishlist = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {wishlistProducts.length > 0 && (
-        <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
-      )}
-
-      {wishlistProducts.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            <FaHeart className="w-16 h-16 mx-auto" />
+    <div className="min-h-screen bg-gradient-to-b from-purple-100/50 to-white py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">My Wishlist</h2>
+        </div>
+        
+        {wishlistProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <FaHeart className="w-16 h-16 mx-auto" />
+            </div>
+            <h2 className="text-2xl font-medium text-gray-900 mb-4">Your wishlist is empty</h2>
+            <p className="text-gray-600 mb-6">Start adding items you love to your wishlist</p>
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Continue Shopping
+            </Link>
           </div>
-          <h2 className="text-2xl font-medium text-gray-900 mb-4">Your wishlist is empty</h2>
-          <p className="text-gray-600 mb-6">Start adding items you love to your wishlist</p>
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <AnimatePresence>
-            {wishlistProducts.map((product) => (
-              <motion.div
-                key={product._id}
-                layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
-              >
-                <div className="relative">
-                  <Link to={`/product/${product._id}`}>
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-48 object-cover"
-                    />
-                  </Link>
-                  
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => handleRemoveFromWishlist(e, product._id)}
-                    disabled={removingItems[product._id]}
-                    className={`absolute top-2 right-2 p-2 rounded-full bg-white shadow-md 
-                      ${removingItems[product._id] ? 'opacity-50' : 'hover:bg-red-50'}`}
-                  >
-                    <FaHeart 
-                      className={`w-5 h-5 text-red-500 
-                        ${removingItems[product._id] && 'animate-pulse'}`}
-                    />
-                  </motion.button>
-                </div>
-
-                <div className="p-4">
-                  <Link to={`/product/${product._id}`} className="block">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">{product.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">₹{product.price}</span>
-                      <span className="text-sm text-gray-500">per {product.unitType || 'piece'}</span>
-                    </div>
-                  </Link>
-
-                  {/* Add to Cart Button */}
-                  {product.stock > 0 ? (
-                    <AnimatePresence mode="wait">
+        ) : (
+          <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {wishlistProducts.map((product) => (
+                <div
+                  key={product._id}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all"
+                >
+                  <div className="flex flex-col h-full">
+                    {/* Product Image */}
+                    <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                      <Link to={`/product/${product._id}`}>
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </Link>
                       <motion.button
-                        key={addedToCart[product._id] ? "added" : "add"}
-                        initial={{ scale: 0.95, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.95, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => handleAddToCart(product._id)}
-                        disabled={isAddingToCart[product._id] || addedToCart[product._id]}
-                        className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200
-                          ${addedToCart[product._id] 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-blue-600 hover:bg-blue-700'} 
-                          text-white`}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => handleRemoveFromWishlist(e, product._id)}
+                        disabled={removingItems[product._id]}
+                        className={`absolute top-2 right-2 p-2 rounded-full bg-white shadow-md 
+                          ${removingItems[product._id] ? 'opacity-50' : 'hover:bg-red-50'}`}
                       >
-                        {isAddingToCart[product._id] ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          />
-                        ) : addedToCart[product._id] ? (
-                          <>
-                            <svg 
-                              className="w-5 h-5" 
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth="2" 
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            <span>Added to Cart</span>
-                          </>
-                        ) : (
-                          <>
-                            <FaShoppingCart />
-                            <span>Add to Cart</span>
-                          </>
-                        )}
+                        <FaHeart 
+                          className={`w-4 h-4 text-red-500 
+                            ${removingItems[product._id] && 'animate-pulse'}`}
+                        />
                       </motion.button>
-                    </AnimatePresence>
-                  ) : (
-                    <div className="mt-4 text-center py-2 px-4 rounded-lg bg-red-50 text-red-500">
-                      Out of Stock
                     </div>
-                  )}
+
+                    {/* Product Info */}
+                    <div className="p-4 flex flex-col flex-grow">
+                      <Link to={`/product/${product._id}`}>
+                        <h3 className="text-base font-medium text-gray-900 mb-2 line-clamp-2 hover:text-blue-600">
+                          {product.name}
+                        </h3>
+                      </Link>
+
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-bold">₹{product.price}</span>
+                          <span className="text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 mb-2">
+                        <div className="flex">
+                          {[...Array(5)].map((_, index) => (
+                            <FaStar
+                              key={index}
+                              className={`w-3 h-3 ${
+                                index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          ({product.reviews?.length || 0})
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs mb-3">
+                        <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                        <span className="text-gray-500">Stock: {product.stock}</span>
+                      </div>
+
+                      {/* Add to Cart Section */}
+                      {product.stock > 0 && (
+                        <div className="mt-auto">
+                          {cartItems[product._id] ? (
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleUpdateQuantity(
+                                    product._id,
+                                    cartItems[product._id].quantity,
+                                    product.stock,
+                                    cartItems[product._id].quantity - 1
+                                  );
+                                }}
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <FaMinus className="w-3 h-3" />
+                              </button>
+                              <span className="font-medium text-sm">
+                                {cartItems[product._id].quantity}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleUpdateQuantity(
+                                    product._id,
+                                    cartItems[product._id].quantity,
+                                    product.stock,
+                                    cartItems[product._id].quantity + 1
+                                  );
+                                }}
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <FaPlus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleAddToCart(product._id);
+                              }}
+                              disabled={isAddingToCart[product._id]}
+                              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                            >
+                              <FaShoppingCart className="w-4 h-4" />
+                              {isAddingToCart[product._id] ? 'Adding...' : 'Add to Cart'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

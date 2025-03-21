@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-import baseUserSchema from "./baseUser.model.js";
-
-const User = mongoose.model('User', baseUserSchema);
+import User, { baseUserSchema } from "./baseUser.model.js";
 
 const Agency = User.discriminator('agency', new mongoose.Schema({
     platformType: {
