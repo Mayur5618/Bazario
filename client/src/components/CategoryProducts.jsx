@@ -410,9 +410,8 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
   }
 
   return (
-    <div className="py-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Filter Toggle Button - Only show on View All page */}
+    <div className="py-2 sm:py-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4">
         {!hideViewAll && (
           <div className="mb-4">
             <button
@@ -428,155 +427,6 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
           </div>
         )}
 
-        {/* Filter Section - Only show on View All page */}
-        <AnimatePresence>
-          {!hideViewAll && isFilterOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="overflow-hidden"
-            >
-              <motion.div
-                initial={{ y: -20 }}
-                animate={{ y: 0 }}
-                exit={{ y: -20 }}
-                className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {/* Price Range */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Price Range</label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={tempFilters.minPrice}
-                          onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                          className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                        />
-                      </div>
-                      <span className="text-gray-400">-</span>
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={tempFilters.maxPrice}
-                          onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                          className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rating Filter */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Rating</label>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => handleRatingClick(rating)}
-                          className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border transition-all ${
-                            tempFilters.rating === rating.toString()
-                              ? 'bg-blue-50 border-blue-500 text-blue-700'
-                              : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
-                          }`}
-                        >
-                          {rating}
-                          <FaStar className={tempFilters.rating === rating.toString() ? 'text-blue-500' : 'text-yellow-400'} size={12} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sort By */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Sort By</label>
-                    <select
-                      value={tempFilters.sortBy}
-                      onChange={(e) => handleSortChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all appearance-none bg-white"
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                        backgroundPosition: 'right 0.5rem center',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundSize: '1.5em 1.5em',
-                        paddingRight: '2.5rem'
-                      }}
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="price_low">Price: Low to High</option>
-                      <option value="price_high">Price: High to Low</option>
-                      <option value="rating_high">Highest Rated</option>
-                      <option value="most_sold">Most Sold</option>
-                    </select>
-                  </div>
-
-                  {/* Search */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Search</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search products..."
-                        value={tempFilters.search || ''}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, search: e.target.value }))}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                      />
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Filter Actions */}
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                  <button
-                    onClick={() => {
-                      setTempFilters({
-                        minPrice: '',
-                        maxPrice: '',
-                        rating: '',
-                        sortBy: 'newest',
-                        search: ''
-                      });
-                      fetchProducts({});
-                      setIsFilterOpen(false);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors flex items-center gap-2 hover:bg-gray-50 rounded-lg"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Reset All
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleApplyFilter();
-                      setIsFilterOpen(false);
-                    }}
-                    className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                    Apply Filters
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Products Grid */}
         {products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No products found in this category.</p>
@@ -586,7 +436,7 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
           >
             {products.map((product) => (
               <motion.div
@@ -608,14 +458,14 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
 
                   {/* Product Info */}
                   <div className="p-2 flex flex-col flex-grow">
-                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                    <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
                       {product.name}
                     </h3>
 
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-base font-bold">₹{product.price}</span>
-                        <span className="text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+                        <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
+                        <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
                       </div>
                     </div>
 
@@ -624,71 +474,23 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
                         {[...Array(5)].map((_, index) => (
                           <FaStar
                             key={index}
-                            className={`w-3 h-3 ${
+                            className={`w-2 h-2 sm:w-3 sm:h-3 ${
                               index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
                             }`}
                           />
                         ))}
                       </div>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-[10px] sm:text-xs text-gray-600">
                         ({product.reviews?.length || 0})
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-[10px] sm:text-xs">
                       <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
                       </span>
                       <span className="text-gray-500">Stock: {product.stock}</span>
                     </div>
-
-                    {/* Add to Cart Section */}
-                    {product.stock > 0 && (
-                      <div className="mt-2">
-                        {cartItems[product._id] ? (
-                          <div 
-                            className="flex items-center justify-between bg-gray-50 rounded-lg p-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => handleUpdateQuantity(
-                                product._id,
-                                cartItems[product._id].quantity - 1,
-                                product.stock
-                              )}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <FaMinus className="w-3 h-3" />
-                            </button>
-                            <span className="font-medium text-sm">
-                              {cartItems[product._id].quantity}
-                            </span>
-                            <button
-                              onClick={() => handleUpdateQuantity(
-                                product._id,
-                                cartItems[product._id].quantity + 1,
-                                product.stock
-                              )}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <FaPlus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCart(product._id);
-                            }}
-                            disabled={isAddingToCart[product._id]}
-                            className="w-full bg-blue-600 text-white py-1 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm"
-                          >
-                            <FaShoppingCart className="w-3 h-3" />
-                            {isAddingToCart[product._id] ? 'Adding...' : 'Add to Cart'}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               </motion.div>

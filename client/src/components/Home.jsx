@@ -355,7 +355,7 @@ const Home = () => {
       {/* Dynamic Categories Grid */}
       {categories.length > 0 && (
       <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {categories.map((category, index) => (
             <motion.div
                 key={category.id}
@@ -379,12 +379,11 @@ const Home = () => {
                   className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-2">{category.title}</h3>
-                    <p className="text-white/80 text-sm">{category.totalProducts} Products Available</p>
-                  </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3 sm:p-6">
+                <div className="w-full">
+                  <h3 className="text-base sm:text-xl font-semibold text-white text-center">{category.title}</h3>
                 </div>
+              </div>
               </motion.div>
             ))}
           </div>
@@ -395,16 +394,15 @@ const Home = () => {
       {categories.map((category) => (
         <div key={category.id} className="py-1">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2 sm:gap-0">
+            <div className="flex flex-row justify-between items-center mb-2">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{category.title}</h2>
-                <p className="text-gray-600 text-sm">{category.description}</p>
+                <h2 className="text-base font-semibold sm:text-2xl sm:font-bold text-gray-900">{category.title}</h2>
               </div>
               <Link 
                 to={`/products/category/${category.title.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and')}`}
-                className="flex items-center text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap"
+                className="text-sm text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap flex items-center"
               >
-                View All <FaArrowRight className="ml-2" />
+                See All <FaArrowRight className="ml-1 w-3 h-3 sm:ml-2 sm:w-4 sm:h-4" />
               </Link>
             </div>
             <div className="bg-white rounded-xl shadow-sm mb-2">
