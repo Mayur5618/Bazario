@@ -1021,6 +1021,7 @@ const SellerRegistrationScreen = () => {
             country: 'India',
             state: formData.state,
             city: formData.city,
+            profileImage: formData.profilePhoto,
             pincode: formData.pincode,
             userType: 'seller',
             platformType: ['b2c'],

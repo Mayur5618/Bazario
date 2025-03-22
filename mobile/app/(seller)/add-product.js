@@ -475,9 +475,18 @@ const AddProductScreen = () => {
   const getDisplayCategory = () => {
     console.log('User data:', user); // Debug log
     if (!user) return '';
+    
+    // If business type is homemade or empty, return the selected category
+    if (!user.businessType || user.businessType === 'homemade') {
+      return formData.category || '';
+    }
+    
+    // If business type is Other, return customBusinessType
     if (user.businessType === 'Other') {
       return user.customBusinessType || '';
     }
+    
+    // Otherwise return business type
     return user.businessType || '';
   };
 

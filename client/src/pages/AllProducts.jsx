@@ -125,7 +125,7 @@ const AllProducts = () => {
   const [filters, setFilters] = useState({
     priceRange: null,
     ratings: null,
-    category: null,
+    category: new URLSearchParams(location.search).get('category') || null,
     sortBy: null,
     platformType: 'b2c'
   });
@@ -802,6 +802,25 @@ const AllProducts = () => {
         </motion.div>
     );
   };
+
+  // Update active category when URL changes
+  useEffect(() => {
+    const categoryFromUrl = new URLSearchParams(location.search).get('category');
+    if (categoryFromUrl) {
+      setActiveCategory(categoryFromUrl);
+      setFilters(prev => ({
+        ...prev,
+        category: categoryFromUrl
+      }));
+    }
+  }, [location.search]);
+
+  // Fetch products based on category filter
+  useEffect(() => {
+    if (filters.category) {
+      fetchFilteredProducts();
+    }
+  }, [filters.category]);
 
   return (
     <div className="container mx-auto px-4 py-8">

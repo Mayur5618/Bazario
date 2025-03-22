@@ -124,9 +124,9 @@ const RecentlyViewed = () => {
     }
 
     return (
-        <div className="py-4">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Recently Viewed Products</h2>
+        <div className="py-2 sm:py-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 sm:mb-4">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Recently Viewed Products</h2>
                 {products.length > 0 && (
                     <button
                         onClick={async () => {
@@ -141,7 +141,7 @@ const RecentlyViewed = () => {
                                 console.error('Error clearing recently viewed:', error);
                             }
                         }}
-                        className="text-sm text-red-600 hover:text-red-800"
+                        className="text-xs sm:text-sm text-red-600 hover:text-red-800 mt-1 sm:mt-0"
                     >
                         Clear All
                     </button>
@@ -152,41 +152,42 @@ const RecentlyViewed = () => {
                 {showLeftArrow && (
                     <button
                         onClick={() => scroll('left')}
-                        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md"
+                        className="absolute -left-2 sm:-left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 sm:p-2 shadow-md hidden sm:block"
                     >
-                        <FaChevronLeft className="w-5 h-5 text-gray-600" />
+                        <FaChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                     </button>
                 )}
 
                 {showRightArrow && (
                     <button
                         onClick={() => scroll('right')}
-                        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md"
+                        className="absolute -right-2 sm:-right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-1.5 sm:p-2 shadow-md hidden sm:block"
                     >
-                        <FaChevronRight className="w-5 h-5 text-gray-600" />
+                        <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                     </button>
                 )}
 
                 <div 
                     ref={scrollContainerRef}
-                    className="overflow-x-auto hide-scrollbar px-4"
+                    className="overflow-x-auto hide-scrollbar px-0 sm:px-4 -mx-4 sm:mx-0 pb-4 sm:pb-0"
                     style={{
                         scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
+                        msOverflowStyle: 'none',
+                        WebkitOverflowScrolling: 'touch'
                     }}
                 >
                     <motion.div
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
-                        className="flex gap-4"
+                        className="flex gap-2 sm:gap-4 px-2 sm:px-0"
                     >
                         {products.map((item) => (
                             <motion.div
                                 key={`${item.product._id}-${item.viewedAt}`}
                                 variants={productCardVariants}
                                 whileHover="hover"
-                                className="cursor-pointer w-[225px] flex-shrink-0"
+                                className="cursor-pointer w-[130px] sm:w-[200px] md:w-[225px] flex-shrink-0"
                             >
                                 <Link to={`/product/${item.product._id}`}>
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
@@ -197,32 +198,32 @@ const RecentlyViewed = () => {
                                                 className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                             />
                                         </div>
-                                        <div className="p-2 flex flex-col flex-grow">
-                                            <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                                        <div className="p-1.5 sm:p-3 flex flex-col flex-grow">
+                                            <h3 className="text-[11px] sm:text-sm font-medium text-gray-900 mb-0.5 sm:mb-1 line-clamp-2">
                                                 {item.product.name}
                                             </h3>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-base font-bold">₹{item.product.price}</span>
-                                                    <span className="text-xs text-gray-500">per {item.product.unitType || 'piece'}</span>
+                                            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                                                <div className="flex items-baseline gap-0.5 sm:gap-1">
+                                                    <span className="text-xs sm:text-base font-bold">₹{item.product.price}</span>
+                                                    <span className="text-[8px] sm:text-xs text-gray-500">per {item.product.unitType || 'piece'}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 mb-1">
+                                            <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
                                                 <div className="flex">
                                                     {[...Array(5)].map((_, index) => (
                                                         <FaStar
                                                             key={index}
-                                                            className={`w-3 h-3 ${
+                                                            className={`w-2 h-2 sm:w-3 sm:h-3 ${
                                                                 index < (item.product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
                                                             }`}
                                                         />
                                                     ))}
                                                 </div>
-                                                <span className="text-xs text-gray-600">
+                                                <span className="text-[8px] sm:text-xs text-gray-600">
                                                     ({item.product.reviews?.length || 0})
                                                 </span>
                                             </div>
-                                            <div className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center justify-between text-[8px] sm:text-xs">
                                                 <span className={`font-medium ${item.product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                     {item.product.stock > 0 ? 'In Stock' : 'Out of Stock'}
                                                 </span>

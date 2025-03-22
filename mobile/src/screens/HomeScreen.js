@@ -12,11 +12,13 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Animated,
+  Platform
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import axios from '../config/axios';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
@@ -24,11 +26,13 @@ import { useToast } from '../hooks/useToast';
 import { useCart } from '../context/CartContext';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, updateQuantity, removeFromCart } from '../store/cartSlice';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
 // import axios from '../../config/axios';
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 40) / 2; // Adjust the subtracted value to control spacing
-const cardHeight = cardWidth * 1.4; // Proportional height
+const { width, height } = Dimensions.get('window');
+const cardWidth = (width - 40) / 2;
+const cardHeight = cardWidth * 1.4;
 
 const HomeScreen = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -43,6 +47,9 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(true);
+  const fadeAnim = new Animated.Value(0);
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -84,44 +91,78 @@ const HomeScreen = () => {
         }
       });
       setFeaturedProducts(response.data.products);
-      
-      // Sample categories - you can fetch from API if available
-      setCategories([
-        {
-          id: 1,
-          name: 'Fresh Vegetables',
-          image: 'https://i.pinimg.com/736x/1f/8d/cd/1f8dcd9fad685de5025213d4b846848b.jpg',
-        },
-        {
-          id: 2,
-          name: 'Home-Cooked Meals',
-          image: 'https://i.pinimg.com/736x/87/55/50/8755508c64ce14492a4f622ed29762a2.jpg',
-        },
-        {
-          id: 3,
-          name: 'Traditional Pickles',
-          image: 'https://i.pinimg.com/736x/4c/6c/ba/4c6cbae47f19fb1a628624afc83d4406.jpg',
-        },  
-        {
-          id: 4,
-          name: "Seasonal Specials",
-          image: "https://i.pinimg.com/736x/8b/62/58/8b62584beeeb75fe5db7efc1d3dd2545.jpg",
-        },
-      ]);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Update fetchCategories function
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get('/api/products/categories');
+      if (response.data.success) {
+        const uniqueCategories = response.data.categories;
+        
+        // For each category, fetch best rated product
+        const categoriesWithData = await Promise.all(
+          uniqueCategories.map(async (category) => {
+            try {
+              const productsResponse = await axios.get('/api/products', {
+                params: {
+                  category,
+                  sort: 'rating',
+                  limit: 1
+                }
+              });
+
+              if (productsResponse.data.success && productsResponse.data.products.length > 0) {
+                const product = productsResponse.data.products[0];
+                const aiImage = getCategoryImage(category);
+                
+                return {
+                  id: category.toLowerCase().replace(/\s+/g, '-'),
+                  title: category,
+                  description: `Explore our ${category} collection`,
+                  // Always use product image as it's more reliable
+                  image: product.images[0],
+                  totalProducts: productsResponse.data.total,
+                  featuredProduct: {
+                    _id: product._id,
+                    name: product.name,
+                    price: product.price,
+                    rating: product.rating,
+                    reviews: product.reviews?.length || 0,
+                    images: product.images
+                  }
+                };
+              }
+              return null;
+            } catch (err) {
+              console.error(`Error fetching products for ${category}:`, err);
+              return null;
+            }
+          })
+        );
+
+        setCategories(categoriesWithData.filter(cat => cat !== null));
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
+  // Update useEffect to fetch both data and categories
   useEffect(() => {
     fetchData();
+    fetchCategories();
   }, []);
 
+  // Update onRefresh to fetch both data and categories
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    await Promise.all([fetchData(), fetchCategories()]);
     setRefreshing(false);
   };
 
@@ -359,9 +400,280 @@ const HomeScreen = () => {
     }
   };
 
+  // Add getCategoryImage function
+  const getCategoryImage = (category) => {
+    const placeholderImages = {
+      'Home Made Food': 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
+      'Arts & Crafts': 'https://images.unsplash.com/photo-1629196911514-f5934acc6b21?q=80&w=2070&auto=format&fit=crop',
+      'Cakes': 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=2070&auto=format&fit=crop',
+      'Handicrafts': 'https://images.unsplash.com/photo-1528805639423-c9818ad54888?q=80&w=2070&auto=format&fit=crop',
+      'Paintings': 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop',
+    };
+    return placeholderImages[category] || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop';
+  };
+
+  // Auto-play category showcase
+  useEffect(() => {
+    if (autoPlay && categories.length > 0) {
+      const timer = setInterval(() => {
+        setActiveCategory((prev) => (prev + 1) % categories.length);
+        animateTransition();
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [autoPlay, categories.length]);
+
+  const animateTransition = () => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // Trust features data
+  const trustFeatures = [
+    {
+      icon: 'shield-check',
+      title: "Secure Shopping",
+      description: "100% secure payment"
+    },
+    {
+      icon: 'truck-fast',
+      title: "Fast Delivery",
+      description: "Quick delivery to you"
+    },
+    {
+      icon: 'undo',
+      title: "Easy Returns",
+      description: "Hassle-free returns"
+    },
+    {
+      icon: 'headset',
+      title: "24/7 Support",
+      description: "Always here to help"
+    }
+  ];
+
+  const renderCategoryShowcase = () => {
+    if (!categories.length || !categories[activeCategory]) return null;
+
+    const category = categories[activeCategory];
+    
+    return (
+      <Animated.View style={[styles.showcaseContainer, { opacity: fadeAnim }]}>
+        <LinearGradient
+          colors={['rgba(59, 130, 246, 0.8)', 'rgba(124, 58, 237, 0.8)']}
+          style={styles.gradientOverlay}
+        >
+          <Image
+            source={{ uri: category.featuredProduct?.images[0] }}
+            style={styles.showcaseImage}
+            resizeMode="cover"
+          />
+          
+          <View style={styles.showcaseContent}>
+            <Animatable.Text 
+              animation="fadeInLeft" 
+              style={styles.showcaseTitle}
+            >
+              {category.title}
+            </Animatable.Text>
+            
+            <Animatable.Text 
+              animation="fadeInLeft" 
+              delay={200}
+              style={styles.showcaseDescription}
+            >
+              {category.description}
+            </Animatable.Text>
+
+            <Animatable.View 
+              animation="fadeInUp" 
+              delay={400}
+            >
+              <TouchableOpacity
+                style={styles.exploreButton}
+                onPress={() => router.push(`/(app)/category/${category.id}`)}
+              >
+                <Text style={styles.exploreButtonText}>Explore Collection</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="#1F2937" />
+              </TouchableOpacity>
+            </Animatable.View>
+          </View>
+        </LinearGradient>
+
+        {/* Navigation Dots */}
+        <View style={styles.dotsContainer}>
+          {categories.map((_, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => {
+                setActiveCategory(index);
+                animateTransition();
+              }}
+              style={[
+                styles.dot,
+                index === activeCategory && styles.activeDot
+              ]}
+            />
+          ))}
+        </View>
+      </Animated.View>
+    );
+  };
+
+  const renderTrustFeatures = () => (
+    <View style={styles.trustContainer}>
+      <Text style={styles.trustTitle}>Why Choose Us</Text>
+      <View style={styles.trustGrid}>
+        {trustFeatures.map((feature, index) => (
+          <Animatable.View
+            key={index}
+            animation="fadeInUp"
+            delay={index * 100}
+            style={styles.trustCard}
+          >
+            <FontAwesome5 name={feature.icon} size={24} color="#7C3AED" />
+            <Text style={styles.trustCardTitle}>{feature.title}</Text>
+            <Text style={styles.trustCardDescription}>{feature.description}</Text>
+          </Animatable.View>
+        ))}
+      </View>
+    </View>
+  );
+
+  // Add this new function to fetch category products
+  const fetchCategoryProducts = async (categoryTitle) => {
+    try {
+      const response = await axios.get(`/api/products`, {
+        params: {
+          category: categoryTitle, // Using category title instead of ID
+          limit: 4,
+          sort: '-createdAt'
+        }
+      });
+      return response.data.products;
+    } catch (error) {
+      console.error('Error fetching category products:', error);
+      return [];
+    }
+  };
+
+  // Add state for category products
+  const [categoryProducts, setCategoryProducts] = useState({});
+
+  // Update useEffect to fetch category products
+  useEffect(() => {
+    const loadCategoryProducts = async () => {
+      const productsMap = {};
+      for (const category of categories) {
+        const products = await fetchCategoryProducts(category.title);
+        productsMap[category.title] = products;
+      }
+      setCategoryProducts(productsMap);
+    };
+
+    if (categories.length > 0) {
+      loadCategoryProducts();
+    }
+  }, [categories]);
+
+  // Update renderCategoryProducts function
+  const renderCategoryProducts = () => (
+    <View style={styles.categoryProductsContainer}>
+      {categories.map((category) => {
+        const products = categoryProducts[category.title] || [];
+        if (products.length === 0) return null;
+
+        return (
+          <View key={category.id} style={styles.categorySection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{category.title}</Text>
+              <TouchableOpacity onPress={() => router.push(`/(app)/category/${category.id}`)}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.productsGrid}>
+              {products.map((product) => {
+                const cartItem = cartItems?.[product._id];
+                return (
+                  <TouchableOpacity 
+                    key={product._id} 
+                    style={styles.productCard}
+                    onPress={() => router.push(`/(app)/product/${product._id}`)}
+                    activeOpacity={0.9}
+                  >
+                    <Image 
+                      source={{ uri: product.images[0] }}
+                      style={styles.productImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {product.name}
+                      </Text>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.productPrice}>₹{product.price}</Text>
+                        <Text style={styles.unitText}>
+                          per {product.unitSize} {product.unitType}
+                        </Text>
+                      </View>
+                      <View style={styles.productBottom}>
+                        <View style={styles.ratingContainer}>
+                          <Ionicons name="star" size={12} color="#FFB100" />
+                          <Text style={styles.ratingText}>
+                            {product.rating?.toFixed(1) || '0.0'}
+                          </Text>
+                        </View>
+                        {cartItem ? (
+                          <View style={styles.quantityControl}>
+                            <TouchableOpacity 
+                              style={styles.quantityButton}
+                              onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, -1)}
+                            >
+                              <Text style={styles.quantityButtonText}>-</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.quantityText}>{cartItem.quantity}</Text>
+                            <TouchableOpacity 
+                              style={styles.quantityButton}
+                              onPress={() => handleUpdateQuantity(product._id, cartItem.quantity, 1)}
+                            >
+                              <Text style={styles.quantityButtonText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.addButton}
+                            onPress={() => handleAddToCart(product)}
+                          >
+                            <Ionicons name="add" size={16} color="#FFF" />
+                            <Text style={styles.addButtonText}>Add</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
@@ -369,82 +681,87 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>Welcome to</Text>
-          <Text style={styles.brandText}>Bazario</Text>
-        </View>
-
-        {/* Search Bar */}
-        <TouchableOpacity 
-          style={styles.searchContainer}
-          onPress={() => router.push('/(app)/search')}
-        >
-          <View style={styles.searchInputContainer}>
+          <Text style={styles.headerTitle}>Bazario</Text>
+          <TouchableOpacity 
+            style={styles.searchButton}
+            onPress={() => router.push('/(app)/search')}
+          >
             <Ionicons name="search" size={20} color="#666" />
-            <Text style={styles.searchPlaceholder}>Search products...</Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
-        {/* Search Results Dropdown */}
-        {searchResults.length > 0 && (
-          <View style={styles.searchResults}>
-            {searchResults.map((product) => (
-              <TouchableOpacity
-                key={product._id}
-                style={styles.searchResultItem}
-                onPress={() => {
-                  router.push(`/(app)/product/${product._id}`);
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
-              >
-                <View style={styles.searchResultContent}>
-                  {product.images[0] && (
+        {/* Category Showcase */}
+        {renderCategoryShowcase()}
+
+        {/* Shop by Category Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Shop by Category</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563eb" />
+          ) : (
+            <View style={styles.categoriesGrid}>
+              {categories.map((category, index) => (
+                <Animatable.View
+                  key={category.id}
+                  animation="fadeInUp"
+                  delay={index * 100}
+                  style={styles.categoryWrapper}
+                >
+                  <TouchableOpacity
+                    style={styles.categoryCard}
+                    onPress={() => router.push(`/(app)/category/${category.id}`)}
+                    activeOpacity={0.8}
+                  >
                     <Image
-                      source={{ uri: product.images[0] }}
-                      style={styles.searchResultImage}
+                      source={{ uri: category.image }}
+                      style={styles.categoryImage}
+                      resizeMode="cover"
                     />
-                  )}
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{product.name}</Text>
-                    <Text style={styles.searchResultPrice}>₹{product.price}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.seeAllResults}
-              onPress={handleSearch}
-            >
-              <Text style={styles.seeAllResultsText}>See all results</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Loading State */}
-        {isSearching && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#666" />
-          </View>
-        )}
-
-        {/* Categories */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/categories')}>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          {renderCategories()}
+                    <LinearGradient
+                      colors={[
+                        'transparent',
+                        'rgba(0,0,0,0.6)',
+                        'rgba(0,0,0,0.8)',
+                        'rgba(0,0,0,0.9)'
+                      ]}
+                      locations={[0, 0.5, 0.8, 1]}
+                      style={styles.categoryGradient}
+                    >
+                      <Text style={styles.categoryTitle} numberOfLines={2}>
+                        {category.title}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animatable.View>
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* Featured Products */}
-        <View style={styles.section}>
-          {renderFeaturedProducts()}
-        </View>
+        {/* Category Products */}
+        {renderCategoryProducts()}
+
+        {/* Trust Features */}
+        {renderTrustFeatures()}
+
+        {/* Quality Guarantee */}
+        <LinearGradient
+          colors={['#3B82F6', '#7C3AED']}
+          style={styles.guaranteeContainer}
+        >
+          <Text style={styles.guaranteeTitle}>Our Quality Guarantee</Text>
+          <Text style={styles.guaranteeText}>
+            We ensure that every product meets the highest standards of quality. Your satisfaction is our top priority.
+          </Text>
+        </LinearGradient>
       </ScrollView>
     </SafeAreaView>
   );
@@ -453,187 +770,287 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
-    padding: 16,
-    paddingTop: 20,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  brandText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4169E1',
-  },
-  searchContainer: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  searchInputContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#666',
-  },
-  searchResults: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    maxHeight: 300,
-  },
-  searchResultItem: {
-    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  searchResultContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
   },
-  searchResultImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  searchResultInfo: {
-    flex: 1,
-  },
-  searchResultName: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 4,
-  },
-  searchResultPrice: {
-    fontSize: 14,
-    color: '#666',
-  },
-  seeAllResults: {
-    padding: 12,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  seeAllResultsText: {
-    color: '#2563eb',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    padding: 20,
-    alignItems: 'center',
+  searchButton: {
+    padding: 8,
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
-  section: {
-    marginBottom: 24,
-    backgroundColor: '#fff',
+  sectionContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
   },
-  seeAll: {
-    fontSize: 14,
-    color: '#4169E1',
-  },
-  categoriesContainer: {
+  categoriesGrid: {
     flexDirection: 'row',
-    paddingLeft: 16,
-    paddingRight: 8,
-    gap: 12,
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
+  },
+  categoryWrapper: {
+    width: '50%',
+    padding: 6,
   },
   categoryCard: {
-    width: 100,
-    height: 130,
-    backgroundColor: '#fff',
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   categoryImage: {
     width: '100%',
-    height: 85,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    height: '100%',
   },
-  categoryNameContainer: {
-    backgroundColor: '#F0F0F0',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    height: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
+  categoryGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    paddingVertical: 16,
+    justifyContent: 'flex-end',
+    height: '55%',
   },
-  categoryName: {
-    fontSize: 12,
+  categoryTitle: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: '#fff',
     textAlign: 'center',
-    lineHeight: 16,
-  },
-  categorySubtext: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 5,
+    letterSpacing: 0.5,
+    lineHeight: 20,
+    paddingHorizontal: 6,
+    flexWrap: 'wrap',
   },
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center', // Center the products
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
-    gap: 8,
+  },
+  productCard: {
+    width: '48%',
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  productImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  productInfo: {
+    padding: 10,
+    backgroundColor: '#fff',
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 4,
+    height: 20,
+    lineHeight: 20,
+    numberOfLines: 1,
+    ellipsizeMode: 'tail',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2563EB',
+    marginRight: 4,
+  },
+  unitText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  productBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#1F2937',
+    marginLeft: 2,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  addButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 4,
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 16,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  quantityText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginHorizontal: 8,
+  },
+  showcaseContainer: {
+    height: height * 0.45,
+    width: width,
+    position: 'relative',
+  },
+  gradientOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 20,
+  },
+  showcaseImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.6,
+  },
+  showcaseContent: {
+    marginBottom: 40,
+  },
+  showcaseTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  showcaseDescription: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.9,
+    marginBottom: 20,
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignSelf: 'flex-start',
+  },
+  exploreButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginRight: 8,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    width: 24,
+    backgroundColor: '#fff',
+  },
+  featuredSection: {
+    paddingTop: 16,
+    backgroundColor: '#FFF',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#4169E1',
+    fontWeight: '600',
   },
   gridCard: {
     width: cardWidth,
@@ -647,7 +1064,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 0.5,
     borderColor: '#f0f0f0',
-    marginHorizontal: 4, // Add horizontal margin
+    marginHorizontal: 4,
   },
   imageContainer: {
     width: '100%',
@@ -658,14 +1075,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-  },
-  wishlistButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 4,
   },
   gridInfo: {
     padding: 8,
@@ -678,101 +1087,84 @@ const styles = StyleSheet.create({
     height: 18,
     lineHeight: 18,
   },
-  priceRow: {
+  trustContainer: {
+    padding: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  trustTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  trustGrid: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginVertical: 4,
-  },
-  gridPrice: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4169E1',
-    marginRight: 4,
-  },
-  unitText: {
-    fontSize: 10,
-    color: '#666',
-  },
-  ratingRow: {
-    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  trustCard: {
+    width: (width - 60) / 2,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginVertical: 4,
-    backgroundColor:'blue'
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF9E5',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewCount: {
-    fontSize: 9,
-    color: '#666',
-    marginLeft: 2,
-  },
-  addButton: {
-    flexDirection: 'row',
-    backgroundColor: '#4169E1',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    alignItems: 'center',
-    gap: 4,
-  },
-  addButtonText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  quantityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-  },
-  quantityButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityButtonText: {
+  trustCardTitle: {
     fontSize: 16,
-    color: '#4169E1',
     fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  quantityText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1A1A1A',
-    marginHorizontal: 8,
+  trustCardDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
-  featuredSection: {
+  guaranteeContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  guaranteeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  guaranteeText: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.9,
+    textAlign: 'center',
+  },
+  categoryProductsContainer: {
     paddingTop: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
   },
-  seeAllText: {
-    fontSize: 14,
-    color: '#4169E1',
-    fontWeight: '600',
+  categorySection: {
+    marginBottom: 24,
   },
-  bottomRow: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
-  },
-  ratingText: {
-    fontSize: 12,
-    color: '#666',
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
 });
 

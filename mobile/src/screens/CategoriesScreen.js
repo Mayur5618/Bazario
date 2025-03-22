@@ -6,170 +6,128 @@ import {
     ScrollView, 
     TouchableOpacity,
     Image,
+  ActivityIndicator,
     Dimensions,
-    Animated,
-    Platform,
-    ActivityIndicator,
-    Alert
+  RefreshControl
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
-import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import axios from '../config/axios';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
 
 const { width } = Dimensions.get('window');
-const CARD_HEIGHT = 180;
+const cardWidth = (width - 32) / 2;
 
 const CategoriesScreen = () => {
-    const navigation = useNavigation();
-    const [categories, setCategories] = useState([
-        {
-            id: 1,
-            name: 'Home-Cooked Food',
-            icon: '🍱',
-            color: ['#FF6B6B', '#FF9B9B'],
-            description: 'Authentic homemade dishes prepared with love',
-            image: "https://images.unsplash.com/photo-1504674900053-d7d9766dd003?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        },
-        {
-            id: 2, 
-            name: 'Seasonal Foods',
-            icon: '🍂',
-            color: ['#76BA99', '#94B49F'],
-            description: 'Fresh and seasonal specialties',
-            image: "https://images.unsplash.com/photo-1504674900053-d7d9766dd003?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        },
-        {
-            id: 3,
-            name: 'Traditional Pickles',
-            icon: '🥫',
-            color: ['#F9975D', '#FCB677'],
-            description: 'Handcrafted traditional pickles and preserves',
-            image: "https://images.unsplash.com/photo-1504674900053-d7d9766dd003?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        },
-        {
-            id: 4,
-            name: 'Vegetables',
-            icon: '🥬',
-            color: ['#7BC4AA', '#98D8AA'],
-            description: 'Fresh farm vegetables and greens',
-            image: "https://images.unsplash.com/photo-1504674900053-d7d9766dd003?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        }
-    ]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-    const [selectedId, setSelectedId] = useState(null);
-    const scaleAnimation = new Animated.Value(1);
-    const [loading, setLoading] = useState(false);
-
-    const handleCategoryPress = async (category) => {
-        setSelectedId(category.id);
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get('/api/products/categories');
+      if (response.data.success) {
+        const uniqueCategories = response.data.categories;
         
-        // Scale animation
-        Animated.sequence([
-            Animated.timing(scaleAnimation, {
-                toValue: 0.95,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnimation, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            })
-        ]).start();
+        // For each category, fetch best rated product
+        const categoriesWithData = await Promise.all(
+          uniqueCategories.map(async (category) => {
+            try {
+              const productsResponse = await axios.get('/api/products', {
+                params: {
+                  category,
+                  sort: 'rating',
+                  limit: 1
+                }
+              });
 
-        try {
-            // Show loading state
-            setLoading(true);
-
-            // Fetch products for the selected category
-            const response = await axios.get(`http://192.168.1.100:8000/api/products?category=${encodeURIComponent(category.name)}`);
-            
-            if (response.data && response.data.products) {
-                // Navigate to products screen with category data
-                navigation.navigate('Products', {
-                    category: category.name,
-                    products: response.data.products,
-                    categoryColor: category.color[0]
-                });
-            } else {
-                console.error('Invalid response format:', response.data);
-                Alert.alert('Error', 'No products found in this category');
+              if (productsResponse.data.success && productsResponse.data.products.length > 0) {
+                const product = productsResponse.data.products[0];
+                return {
+                  id: category.toLowerCase().replace(/\s+/g, '-'),
+                  title: category,
+                  description: `Explore our ${category} collection`,
+                  image: product.images[0],
+                  totalProducts: productsResponse.data.total
+                };
+              }
+              return null;
+            } catch (err) {
+              console.error(`Error fetching products for ${category}:`, err);
+              return null;
             }
-        } catch (error) {
-            console.error('Error fetching category products:', error.response || error);
-            Alert.alert(
-                'Error',
-                'Failed to load products. Please check your internet connection and try again.'
-            );
+          })
+        );
+
+        setCategories(categoriesWithData.filter(cat => cat !== null));
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
         } finally {
             setLoading(false);
-            setSelectedId(null);
-        }
-    };
+    }
+  };
 
-    const CategoryCard = ({ category }) => {
-        const isSelected = selectedId === category.id;
-        
-        return (
-            <Animated.View
-                style={[
-                    styles.categoryCardContainer,
-                    { transform: [{ scale: isSelected ? scaleAnimation : 1 }] }
-                ]}
-            >
-                <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => handleCategoryPress(category)}
-                    disabled={loading}
-                >
-                    <LinearGradient
-                        colors={category.color}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.categoryCard}
-                    >
-                        <View style={styles.categoryContent}>
-                            <View style={styles.iconContainer}>
-                                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                            </View>
-                            <Text style={styles.categoryName}>{category.name}</Text>
-                            <Text style={styles.categoryDescription}>
-                                {category.description}
-                            </Text>
-                            <View style={styles.arrowContainer}>
-                                {loading && selectedId === category.id ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <MaterialIcons 
-                                        name="arrow-forward" 
-                                        size={24} 
-                                        color="#fff"
-                                    />
-                                )}
-                            </View>
-                        </View>
-                        <Image 
-                            source={{ uri: category.image }}
-                            style={styles.categoryImage}
-                        />
-                    </LinearGradient>
-                </TouchableOpacity>
-            </Animated.View>
-        );
-    };
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchCategories();
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
 
     return (
         <ScrollView 
             style={styles.container}
-            showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
         >
             <Text style={styles.header}>Categories</Text>
             <Text style={styles.subHeader}>Explore our curated collection</Text>
 
             <View style={styles.categoriesGrid}>
-                {categories.map((category) => (
-                    <CategoryCard key={category.id} category={category} />
+        {categories.map((category, index) => (
+          <Animatable.View
+            key={category.id}
+            animation="fadeInUp"
+            delay={index * 100}
+            style={styles.categoryWrapper}
+          >
+            <TouchableOpacity
+              style={styles.categoryCard}
+              onPress={() => router.push(`/(app)/category/${category.id}`)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: category.image }}
+                style={styles.categoryImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                style={styles.gradient}
+              >
+                <Text style={styles.categoryTitle}>{category.title}</Text>
+                <Text style={styles.categoryDescription}>{category.description}</Text>
+                <View style={styles.productsCount}>
+                  <Text style={styles.productsCountText}>
+                    {category.totalProducts} Products
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animatable.View>
                 ))}
             </View>
         </ScrollView>
@@ -180,95 +138,86 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     },
     header: {
-        fontSize: 32,
+    fontSize: 28,
         fontWeight: 'bold',
-        marginBottom: 8,
-        color: '#333',
-        letterSpacing: 0.5,
+    color: '#1F2937',
+    paddingHorizontal: 16,
+    paddingTop: 20,
     },
     subHeader: {
         fontSize: 16,
-        color: '#666',
-        marginBottom: 24,
-        letterSpacing: 0.5,
+    color: '#6B7280',
+    paddingHorizontal: 16,
+    paddingBottom: 20,
     },
     categoriesGrid: {
-        flexDirection: 'column',
-        gap: 16,
-        paddingBottom: 16,
-    },
-    categoryCardContainer: {
-        borderRadius: 16,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 8,
+  },
+  categoryWrapper: {
+    width: '50%',
+    padding: 8,
     },
     categoryCard: {
+    width: '100%',
+    aspectRatio: 1,
         borderRadius: 16,
-        height: CARD_HEIGHT,
         overflow: 'hidden',
-        position: 'relative',
+    backgroundColor: '#f5f5f5',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
     },
-    categoryContent: {
-        flex: 1,
-        padding: 20,
-        zIndex: 2,
-    },
-    iconContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    categoryIcon: {
-        fontSize: 28,
-    },
-    categoryName: {
-        fontSize: 24,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  categoryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    padding: 16,
+    justifyContent: 'flex-end',
+  },
+  categoryTitle: {
+    fontSize: 20,
         fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 8,
-        letterSpacing: 0.5,
+    marginBottom: 4,
     },
     categoryDescription: {
-        fontSize: 14,
+    fontSize: 12,
         color: '#fff',
         opacity: 0.9,
-        width: '60%',
-        lineHeight: 20,
-    },
-    categoryImage: {
-        position: 'absolute',
-        right: -20,
-        bottom: -20,
-        width: width * 0.5,
-        height: CARD_HEIGHT * 1.2,
-        opacity: 0.15,
-    },
-    arrowContainer: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
+    marginBottom: 8,
+  },
+  productsCount: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  productsCountText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '500',
     },
 });
 

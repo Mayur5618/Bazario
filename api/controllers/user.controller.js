@@ -206,6 +206,7 @@ export const sellerSignup = async (req, res) => {
             country, 
             state, 
             city, 
+            profileImage,
             pincode, 
             password,
             shopName,
@@ -221,7 +222,7 @@ export const sellerSignup = async (req, res) => {
 
         // Basic validation
         if (!firstname || !lastname || !mobileno || !address || !country || 
-            !state || !city || !pincode || !password || !shopName || 
+            !state || !city || !profileImage || !pincode || !password || !shopName || 
             !businessType || !aadharNumber) {
             return res.status(400).json({ 
                 success: false, 
@@ -287,6 +288,7 @@ export const sellerSignup = async (req, res) => {
             country,
             state,
             city,
+            profileImage,
             pincode,
             password,
             shopName,
