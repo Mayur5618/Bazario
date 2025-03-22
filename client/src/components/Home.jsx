@@ -434,14 +434,23 @@ const Home = () => {
       </div>
 
       {/* Trust Features Section */}
-      <div className="bg-purple-50 py-8 sm:py-12">
+      <div className="bg-purple-50 py-6 sm:py-12">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
             {trustFeatures.map((feature, index) => (
-              <div key={index} className="flex flex-col items-center text-center p-4 sm:p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                {feature.icon}
-                <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-semibold text-purple-800">{feature.title}</h3>
-                <p className="mt-2 text-sm sm:text-base text-gray-600">{feature.description}</p>
+              <div 
+                key={index} 
+                className="flex flex-col items-center text-center p-3 sm:p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="text-2xl sm:text-4xl text-purple-600">
+                  {feature.icon}
+                </div>
+                <h3 className="mt-2 sm:mt-4 text-sm sm:text-lg font-semibold text-purple-800">
+                  {feature.title}
+                </h3>
+                <p className="mt-1 sm:mt-2 text-xs sm:text-base text-gray-600">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>

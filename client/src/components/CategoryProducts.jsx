@@ -120,11 +120,13 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [currentFilters, setCurrentFilters] = useState({
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
     rating: searchParams.get('rating') || '',
-    sortBy: searchParams.get('sortBy') || 'newest'
+    sortBy: searchParams.get('sortBy') || 'newest',
+    platformType: 'b2c'
   });
   const [cartItems, setCartItems] = useState({});
   const [isAddingToCart, setIsAddingToCart] = useState({});
@@ -135,16 +137,6 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
   // Create a ref to store the current toast ID
   const toastId = React.useRef(null);
   const toastDuration = 2000; // Duration for success messages
-
-  // Add new state for temporary filters
-  const [tempFilters, setTempFilters] = useState({
-    minPrice: searchParams.get('minPrice') || '',
-    maxPrice: searchParams.get('maxPrice') || '',
-    rating: searchParams.get('rating') || '',
-    sortBy: searchParams.get('sortBy') || 'newest'
-  });
-
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const fetchProducts = async (filters = {}) => {
     try {
@@ -201,7 +193,7 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
   useEffect(() => {
     // Fetch products whenever category or URL category changes
     fetchProducts(currentFilters);
-  }, [category, urlCategory, city]);
+  }, [category, urlCategory, city, currentFilters]);
 
   // Fetch cart items
   useEffect(() => {
@@ -386,19 +378,125 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
     }
   };
 
-  // Update the filter handlers to use tempFilters instead of directly fetching
-  const handleRatingClick = (rating) => {
-    const newRating = tempFilters.rating === rating.toString() ? '' : rating.toString();
-    setTempFilters(prev => ({ ...prev, rating: newRating }));
-  };
+  // Add ProductFilter component
+  const ProductFilter = ({ onClose }) => {
+    const [tempFilters, setTempFilters] = useState(currentFilters);
 
-  const handleSortChange = (value) => {
-    setTempFilters(prev => ({ ...prev, sortBy: value }));
-  };
+    const handleApply = () => {
+      setCurrentFilters(tempFilters);
+      onClose();
+    };
 
-  const handleApplyFilter = () => {
-    setCurrentFilters(tempFilters);
-    fetchProducts(tempFilters);
+    const handleReset = () => {
+      const resetFilters = {
+        minPrice: '',
+        maxPrice: '',
+        rating: '',
+        sortBy: 'newest',
+        platformType: 'b2c'
+      };
+      setTempFilters(resetFilters);
+      setCurrentFilters(resetFilters);
+      onClose();
+    };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          exit={{ scale: 0.95 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-lg p-6 w-full max-w-md"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Filter Products</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              ×
+            </button>
+          </div>
+
+          {/* Price Range */}
+          <div className="mb-6">
+            <h3 className="font-medium mb-2">Price Range</h3>
+            <div className="flex gap-4">
+              <input
+                type="number"
+                placeholder="Min Price"
+                value={tempFilters.minPrice}
+                onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                className="w-1/2 p-2 border rounded"
+              />
+              <input
+                type="number"
+                placeholder="Max Price"
+                value={tempFilters.maxPrice}
+                onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                className="w-1/2 p-2 border rounded"
+              />
+            </div>
+          </div>
+
+          {/* Rating */}
+          <div className="mb-6">
+            <h3 className="font-medium mb-2">Minimum Rating</h3>
+            <div className="flex gap-2">
+              {[0, 1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  onClick={() => setTempFilters(prev => ({ ...prev, rating: rating.toString() }))}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full ${
+                    tempFilters.rating === rating.toString()
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  {rating} <FaStar className={rating === 0 ? 'hidden' : ''} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sort By */}
+          <div className="mb-6">
+            <h3 className="font-medium mb-2">Sort By</h3>
+            <select
+              value={tempFilters.sortBy}
+              onChange={(e) => setTempFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+              className="w-full p-2 border rounded"
+            >
+              <option value="newest">Newest</option>
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
+              <option value="rating_high">Highest Rated</option>
+              <option value="most_sold">Most Sold</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button
+              onClick={handleReset}
+              className="flex-1 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleApply}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Apply
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
   };
 
   if (loading) {
@@ -410,94 +508,98 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
   }
 
   return (
-    <div className="py-2 sm:py-4">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
-        {!hideViewAll && (
-          <div className="mb-4">
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all text-sm font-medium text-gray-700"
-            >
-              {isFilterOpen ? <FaTimes className="w-4 h-4" /> : <FaFilter className="w-4 h-4" />}
-              {isFilterOpen ? 'Close Filters' : 'Open Filters'}
-              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                {Object.values(tempFilters).filter(value => value !== '').length} Active
-              </span>
-            </button>
-          </div>
-        )}
-
-        {products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No products found in this category.</p>
-          </div>
-        ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {category ? `${category} Products` : 'All Products'}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
-            {products.map((product) => (
-              <motion.div
-                key={product._id}
-                variants={productCardVariants}
-                whileHover="hover"
-                onClick={() => navigate(`/product/${product._id}`)}
-                className="cursor-pointer"
-              >
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
-                  {/* Product Image */}
-                  <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
+            <FaFilter className="w-4 h-4" />
+            Filter
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showFilterModal && (
+          <ProductFilter onClose={() => setShowFilterModal(false)} />
+        )}
+      </AnimatePresence>
+
+      {products.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No products found in this category.</p>
+        </div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
+        >
+          {products.map((product) => (
+            <motion.div
+              key={product._id}
+              variants={productCardVariants}
+              whileHover="hover"
+              onClick={() => navigate(`/product/${product._id}`)}
+              className="cursor-pointer"
+            >
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+                {/* Product Image */}
+                <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+
+                {/* Product Info */}
+                <div className="p-2 flex flex-col flex-grow">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                    {product.name}
+                  </h3>
+
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
+                      <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+                    </div>
                   </div>
 
-                  {/* Product Info */}
-                  <div className="p-2 flex flex-col flex-grow">
-                    <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
-                      {product.name}
-                    </h3>
-
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
-                        <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
-                      </div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <div className="flex">
+                      {[...Array(5)].map((_, index) => (
+                        <FaStar
+                          key={index}
+                          className={`w-2 h-2 sm:w-3 sm:h-3 ${
+                            index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
                     </div>
+                    <span className="text-[10px] sm:text-xs text-gray-600">
+                      ({product.reviews?.length || 0})
+                    </span>
+                  </div>
 
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, index) => (
-                          <FaStar
-                            key={index}
-                            className={`w-2 h-2 sm:w-3 sm:h-3 ${
-                              index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[10px] sm:text-xs text-gray-600">
-                        ({product.reviews?.length || 0})
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                      <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                      <span className="text-gray-500">Stock: {product.stock}</span>
-                    </div>
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                    <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </span>
+                    <span className="text-gray-500">Stock: {product.stock}</span>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 };

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import "../styles/catelog.css";
 import "../styles/recentlyViewed.css";
 import { addToWishlist, removeFromWishlist, setWishlistItems } from '../store/wishlistSlice';
-import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaStar, FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
 import ProductCard from './ProductCard';
 
 const ProductCatalog = () => {
@@ -355,10 +355,10 @@ const ProductCatalog = () => {
   return (
     <div>
       {/* Category Filters */}
-      <div className="flex flex-wrap gap-2 mb-8 justify-center">
+      <div className="flex flex-nowrap overflow-x-auto gap-2 mb-4 sm:mb-8 pb-2 sm:pb-0 sm:flex-wrap sm:justify-center scrollbar-hide">
         <button
           onClick={() => handleCategoryChange('all')}
-          className={`px-4 py-2 rounded-full transition-all ${
+          className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all whitespace-nowrap text-sm ${
             selectedCategory === 'all'
               ? 'bg-blue-600 text-white'
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -370,7 +370,7 @@ const ProductCatalog = () => {
           <button
             key={category}
             onClick={() => handleCategoryChange(category)}
-            className={`px-4 py-2 rounded-full transition-all ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all whitespace-nowrap text-sm ${
               selectedCategory === category
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -382,15 +382,92 @@ const ProductCatalog = () => {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         {products.map((product) => (
           <motion.div
             key={product._id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="bg-white rounded-lg shadow-sm border border-gray-200"
           >
-            <ProductCard product={product} />
+            <Link to={`/product/${product._id}`} className="block">
+              <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-2 sm:p-3">
+                <h3 className="text-sm font-medium text-gray-900 line-clamp-1">{product.name}</h3>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-base font-bold">₹{product.price}</span>
+                  <span className="text-xs text-gray-500">per {product.unitType || 'kg'}</span>
+                </div>
+                <div className="mt-1 flex items-center gap-1">
+                  <div className="flex">
+                    {[...Array(5)].map((_, index) => (
+                      <FaStar
+                        key={index}
+                        className={`w-3 h-3 ${
+                          index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-600">({product.reviews?.length || 0})</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                  <span className="text-gray-500">Stock: {product.stock}</span>
+                </div>
+              </div>
+            </Link>
+            {product.stock > 0 && (
+              <div className="p-2 sm:p-3 pt-0 sm:pt-0">
+                {cartItemsMap[product._id] ? (
+                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity - 1);
+                      }}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    >
+                      <FaMinus className="w-3 h-3" />
+                    </button>
+                    <span className="font-medium text-sm">{cartItemsMap[product._id].quantity}</span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUpdateQuantity(product._id, cartItemsMap[product._id].quantity + 1);
+                      }}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    >
+                      <FaPlus className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAddToCart(product._id);
+                    }}
+                    disabled={removingItems[product._id] || isWishlistLoading[product._id]}
+                    className="w-full bg-blue-600 text-white py-1.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm"
+                  >
+                    <FaShoppingCart className="w-3 h-3" />
+                    Add to Cart
+                  </button>
+                )}
+              </div>
+            )}
           </motion.div>
         ))}
       </div>

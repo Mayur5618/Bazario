@@ -546,11 +546,12 @@ const AllProducts = () => {
       const queryParams = new URLSearchParams();
       queryParams.append('platformType', 'b2c');
       
-      if (filters.priceRange) {
-        queryParams.append('priceRange', filters.priceRange.join(','));
+      if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
+        queryParams.append('minPrice', filters.minPrice);
+        queryParams.append('maxPrice', filters.maxPrice);
       }
-      if (filters.ratings !== null) {
-        queryParams.append('maxRating', filters.ratings);
+      if (filters.minRating !== null) {
+        queryParams.append('minRating', filters.minRating);
       }
       if (filters.category && filters.category !== 'all') {
         queryParams.append('category', filters.category);
@@ -563,12 +564,13 @@ const AllProducts = () => {
       }
       queryParams.append('page', currentPage);
 
-      console.log('Query params:', queryParams.toString()); // Debug log
+      console.log('Query params:', queryParams.toString());
       const response = await axios.get(`/api/products/filtered?${queryParams}`);
       
       if (response.data.success) {
         setFilteredProducts(response.data.products);
         setTotalPages(response.data.totalPages || 1);
+        setShowFilterModal(false); // Close the filter modal after successful fetch
       }
     } catch (error) {
       console.error('Error fetching filtered products:', error);
@@ -581,8 +583,9 @@ const AllProducts = () => {
   // Filter effect
   useEffect(() => {
     const hasActiveFilters = 
-        filters.priceRange !== null || 
-        filters.ratings !== null || 
+        filters.minPrice !== undefined || 
+        filters.maxPrice !== undefined || 
+        filters.minRating !== null || 
         (filters.category !== null && filters.category !== 'all') || 
         filters.sortBy !== null || 
         searchTerm;
@@ -623,21 +626,19 @@ const AllProducts = () => {
   };
 
   // Update the Filter Modal component
-  const FilterModal = ({ show, onClose, filters, setFilters, categories }) => {
-    // Initialize local filters with current filters and default values for the UI
+  const ProductFilter = ({ initialFilters, onApplyFilter }) => {
     const [localFilters, setLocalFilters] = useState({
-        priceRange: filters.priceRange || [0, 5000], // Default for UI only
-        ratings: filters.ratings || null,
-        category: filters.category || null,
-        sortBy: filters.sortBy || null,
-        platformType: filters.platformType
+        priceRange: initialFilters?.priceRange || [0, 5000],
+        ratings: initialFilters?.ratings || null,
+        category: initialFilters?.category || null,
+        sortBy: initialFilters?.sortBy || null,
+        platformType: initialFilters?.platformType || 'b2c'
     });
 
-    const [priceRange, setPriceRange] = useState(filters.priceRange || [0, 5000]); // Separate state for price slider
+    const [priceRange, setPriceRange] = useState(initialFilters?.priceRange || [0, 5000]);
 
-    // Reset function
     const handleReset = () => {
-        setPriceRange([0, 5000]); // Reset price range slider
+        setPriceRange([0, 5000]);
         setLocalFilters({
             priceRange: null,
             ratings: null,
@@ -645,33 +646,45 @@ const AllProducts = () => {
             sortBy: null,
             platformType: 'b2c'
         });
+        if (typeof onApplyFilter === 'function') {
+            onApplyFilter({
+                platformType: 'b2c'
+            });
+        }
     };
 
-    // Apply function
     const handleApply = () => {
-        const updatedFilters = {
+        if (typeof onApplyFilter !== 'function') {
+            console.error('onApplyFilter is not a function');
+            return;
+        }
+
+        const formattedFilters = {
             platformType: 'b2c'
         };
 
-        // Only include price range if it's different from the default
+        // Only include price range if it's different from default
         if (priceRange[0] !== 0 || priceRange[1] !== 5000) {
-            updatedFilters.priceRange = priceRange;
-        }
-        
-        if (localFilters.ratings !== null) {
-            updatedFilters.ratings = localFilters.ratings;
-        }
-        
-        if (localFilters.category && localFilters.category !== 'all') {
-            updatedFilters.category = localFilters.category;
-        }
-        
-        if (localFilters.sortBy) {
-            updatedFilters.sortBy = localFilters.sortBy;
+            formattedFilters.minPrice = priceRange[0];
+            formattedFilters.maxPrice = priceRange[1];
         }
 
-        setFilters(updatedFilters);
-        onClose();
+        // Add rating if selected
+        if (localFilters.ratings !== null) {
+            formattedFilters.minRating = localFilters.ratings;
+        }
+
+        // Add category if selected and not 'all'
+        if (localFilters.category && localFilters.category !== 'all') {
+            formattedFilters.category = localFilters.category;
+        }
+
+        // Add sort option if selected
+        if (localFilters.sortBy) {
+            formattedFilters.sortBy = localFilters.sortBy;
+        }
+
+        onApplyFilter(formattedFilters);
     };
 
     return (
@@ -680,7 +693,12 @@ const AllProducts = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-            onClick={onClose}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (typeof onApplyFilter === 'function') {
+                    onApplyFilter(null);
+                }
+            }}
         >
             <motion.div
                 initial={{ scale: 0.95 }}
@@ -691,7 +709,7 @@ const AllProducts = () => {
             >
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Filter Products</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                    <button onClick={handleReset} className="text-gray-500 hover:text-gray-700">
                         ×
                     </button>
                 </div>
@@ -1050,12 +1068,21 @@ const AllProducts = () => {
 
         <AnimatePresence>
             {showFilterModal && (
-                <FilterModal
-                    show={showFilterModal}
-                    onClose={() => setShowFilterModal(false)}
-                    filters={filters}
-                    setFilters={setFilters}
-                    categories={categories}
+                <ProductFilter
+                    initialFilters={filters}
+                    onApplyFilter={(newFilters) => {
+                        if (newFilters === null) {
+                            // If clicked outside modal, just close it
+                            setShowFilterModal(false);
+                            return;
+                        }
+                        // Update filters and fetch products
+                        setFilters(prev => ({
+                            ...prev,
+                            ...newFilters
+                        }));
+                        setShowFilterModal(false);
+                    }}
                 />
             )}
         </AnimatePresence>
