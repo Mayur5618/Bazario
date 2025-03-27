@@ -5,7 +5,6 @@ import { SignInSetUp, SignInFailure, logout } from "../store/userSlice";
 import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart, FaSignOutAlt, FaUserEdit } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-// import './styles/header.css';
 import '../styles/header.css';
 import { addToRecentSearches } from '../store/searchSlice';
 import { AnimatePresence, motion } from "framer-motion";
@@ -26,6 +25,7 @@ const Header = () => {
   const timeoutRef = useRef(null);
   const recentSearches = useSelector((state) => state.search.recentSearches);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const showMenu = () => {
     clearTimeout(timeoutRef.current);
@@ -150,26 +150,32 @@ const Header = () => {
       if (
         menuRef.current && 
         !menuRef.current.contains(event.target) && 
+        buttonRef.current &&
         !buttonRef.current.contains(event.target)
       ) {
         setIsMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+    }
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  const toggleMenu = (e) => {
+    e.stopPropagation(); // Stop event propagation
+    setIsMenuOpen(prevState => !prevState);
   };
 
   const handleMenuClick = (action) => {
-    // Keep menu open for a short duration to allow for clicking
-    setTimeout(() => {
-      setIsMenuOpen(false);
-    }, 100);
-    action();
+    setIsMenuOpen(false);
+    if (action) {
+      action();
+    }
   };
 
   // When clicking on a search suggestion
@@ -211,8 +217,8 @@ const Header = () => {
       <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
         {/* Mobile Header */}
         <div className="flex flex-col sm:hidden w-full space-y-2">
+          {/* Top Row with Logo and Icons */}
           <div className="flex items-center justify-between">
-            {/* Logo */}
             <Link to="/" className="text-white text-lg font-bold">
               Bazario
             </Link>
@@ -230,14 +236,14 @@ const Header = () => {
                 </Link>
               )}
 
-              {/* Profile Button */}
-              <div className="relative">
-                <button
-                  ref={buttonRef}
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="relative focus:outline-none profile-button"
-                >
-                  {userData ? (
+              {/* Profile Button or Sign In/Up Buttons */}
+              {userData ? (
+                <div className="relative">
+                  <button
+                    ref={buttonRef}
+                    onClick={toggleMenu}
+                    className="relative focus:outline-none profile-button"
+                  >
                     <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
                       {userData?.profileImage ? (
                         <img
@@ -257,15 +263,28 @@ const Header = () => {
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <FaUser className="text-white w-5 h-5" />
-                  )}
-                </button>
-              </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Link 
+                    to="/login" 
+                    className="text-white hover:text-blue-200 text-xs font-medium px-3 py-1.5 rounded-full border border-white/30"
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    to="/register" 
+                    className="bg-white text-blue-600 px-3 py-1.5 rounded-full text-xs font-medium hover:bg-blue-50"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Search Bar for Mobile */}
+          {/* Search Bar for Mobile - Only show if user is logged in */}
           {userData && (
             <div className="w-full relative" ref={searchRef}>
               <div className="relative">
@@ -285,7 +304,7 @@ const Header = () => {
                       setShowRecentSearches(true);
                     }
                   }}
-                  placeholder={currentPlaceholder}
+                  placeholder="Search products..."
                   className="w-full px-3 py-1.5 rounded-full bg-white text-sm"
                 />
                 <button 
@@ -295,31 +314,6 @@ const Header = () => {
                   <FaSearch className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
-
-              {/* Search Results for Mobile */}
-              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
-                  {searchResults.map((product) => (
-                    <div
-                      key={product._id}
-                      className="flex items-center px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleSuggestionClick(product)}
-                    >
-                      {product.images[0] && (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-8 h-8 object-cover rounded-md mr-2"
-                        />
-                      )}
-                      <div>
-                        <div className="font-medium text-sm text-gray-800">{product.name}</div>
-                        <div className="text-xs text-gray-500">₹{product.price}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -351,7 +345,7 @@ const Header = () => {
                       setShowRecentSearches(true);
                     }
                   }}
-                  placeholder={currentPlaceholder}
+                  placeholder="Search products..."
                   className="w-full px-4 py-2 rounded-full bg-white"
                 />
                 <button 
@@ -361,49 +355,6 @@ const Header = () => {
                   <FaSearch className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
-
-              {/* Search Results Dropdown */}
-              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50">
-                  {searchResults.map((product) => (
-                    <div
-                      key={product._id}
-                      className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleSuggestionClick(product)}
-                    >
-                      {product.images[0] && (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-10 h-10 object-cover rounded-md mr-3"
-                        />
-                      )}
-                      <div>
-                        <div className="font-medium text-gray-800">{product.name}</div>
-                        <div className="text-sm text-gray-500">₹{product.price}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <Link
-                    to={`/all-products?query=${encodeURIComponent(searchTerm)}`}
-                    className="block px-4 py-2 text-center text-blue-500 hover:bg-gray-50 border-t"
-                    onClick={() => {
-                      dispatch(addToRecentSearches(searchTerm)); // Add to recent searches
-                      setSearchTerm("");
-                      setSearchResults([]);
-                    }}
-                  >
-                    See all results
-                  </Link>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {isSearching && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                </div>
-              )}
             </div>
           )}
 
@@ -423,12 +374,12 @@ const Header = () => {
 
             {/* Profile Section */}
             <div className="relative">
-              <button
-                ref={buttonRef}
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="relative focus:outline-none profile-button"
-              >
-                {userData ? (
+              {userData ? (
+                <button
+                  ref={buttonRef}
+                  onClick={toggleMenu}
+                  className="relative focus:outline-none profile-button"
+                >
                   <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
                     {userData?.profileImage ? (
                       <img
@@ -448,38 +399,38 @@ const Header = () => {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="flex items-center space-x-4">
-                    <Link 
-                      to="/login" 
-                      className="text-white hover:text-blue-200 text-sm font-medium"
-                    >
-                      Sign In
-                    </Link>
-                    <Link 
-                      to="/register" 
-                      className="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50"
-                    >
-                      Sign Up
-                    </Link>
-                  </div>
-                )}
-              </button>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link 
+                    to="/login" 
+                    className="text-white hover:text-blue-200 text-sm font-medium"
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    to="/register" 
+                    className="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Profile Dropdown Menu */}
+      {/* Desktop Profile Menu */}
       <AnimatePresence>
-        {isMenuOpen && userData && (
+        {isMenuOpen && userData && window.innerWidth >= 640 && (
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
             ref={menuRef}
-            className="absolute right-2 sm:right-4 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50"
+            className="absolute right-44 top-20 w-48 bg-white rounded-lg shadow-lg py-2 z-50 hidden sm:block"
           >
             <div className="px-4 py-3 border-b border-gray-100">
               <p className="text-sm text-gray-600">Signed in as</p>
@@ -516,6 +467,96 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Profile Menu */}
+      <AnimatePresence>
+        {isMenuOpen && userData && window.innerWidth < 640 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            ref={menuRef}
+            className="fixed top-[6.1rem] right-2 w-40 bg-white rounded-lg shadow-lg py-1 z-[60] block sm:hidden"
+          >
+            <div className="px-3 py-2 border-b border-gray-100">
+              <p className="text-xs text-gray-600">Signed in as</p>
+              <p className="text-xs font-medium text-gray-800 truncate">
+                {userData.firstname}
+              </p>
+            </div>
+
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+              onClick={() => handleMenuClick(() => navigate('/profile'))}
+            >
+              <FaUserEdit className="text-gray-500 w-3 h-3" />
+              <span>Profile</span>
+            </Link>
+
+            <Link 
+              to="/wishlist" 
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+              onClick={() => handleMenuClick(() => navigate('/wishlist'))}
+            >
+              <FaHeart className="text-gray-500 w-3 h-3" />
+              <span>Wishlist</span>
+            </Link>
+
+            <button 
+              onClick={() => handleMenuClick(handleLogout)}
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 hover:bg-gray-50"
+            >
+              <FaSignOutAlt className="text-red-500 w-3 h-3" />
+              <span>Sign Out</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Menu Dropdown */}
+      {isProfileMenuOpen && (
+        <div 
+          className="absolute right-2 sm:right-4 top-14 sm:top-12 w-64 sm:w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
+        >
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-sm font-medium text-gray-900">Signed in as</p>
+            <p className="text-sm text-gray-600 truncate">{userData?.name || 'User'}</p>
+          </div>
+          <div className="py-1">
+            <Link
+              to="/profile"
+              className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => setIsProfileMenuOpen(false)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Profile
+            </Link>
+            <Link
+              to="/wishlist"
+              className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => setIsProfileMenuOpen(false)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Wishlist
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

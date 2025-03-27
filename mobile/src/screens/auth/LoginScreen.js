@@ -209,7 +209,7 @@ const LoginScreen = () => {
 
               <TouchableOpacity 
                 style={styles.businessButton}
-                onPress={() => router.push('/(auth)/agency/login')}
+                onPress={() => router.push('/(auth)/agency/language-selection')}
               >
                 <View style={styles.businessIconContainer}>
                   <Ionicons name="business-outline" size={24} color="#6C63FF" />

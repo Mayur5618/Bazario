@@ -1,4 +1,47 @@
 import axios from '../config/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Review related endpoints
+const getReviewStats = async () => {
+    try {
+        const response = await axios.get('/api/seller/reviews/stats');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching review stats:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Error fetching review statistics'
+        };
+    }
+};
+
+const getLatestReviews = async () => {
+    try {
+        const response = await axios.get('/api/seller/reviews/latest');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching latest reviews:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Error fetching latest reviews'
+        };
+    }
+};
+
+const searchProductReviews = async (query) => {
+    try {
+        const response = await axios.get('/api/seller/reviews/search', {
+            params: { query }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error searching product reviews:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Error searching product reviews'
+        };
+    }
+};
 
 export const sellerApi = {
     // Get dashboard statistics
@@ -8,10 +51,10 @@ export const sellerApi = {
             return response.data;
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);
-            if (error.response) {
+            if (error.response?.data) {
                 throw new Error(error.response.data.message || 'Failed to fetch dashboard statistics');
             }
-            throw new Error('Network error occurred');
+            throw new Error('Network error occurred while fetching dashboard statistics');
         }
     },
 
@@ -139,13 +182,13 @@ export const sellerApi = {
     // Get seller profile
     getProfile: async () => {
         try {
-            const response = await axios.get('/api/seller/profile');
+            // Get seller ID from auth context or storage
+            const sellerId = await AsyncStorage.getItem('userId');
+            const response = await axios.get(`/api/users/sellers/${sellerId}`);
             return response.data;
         } catch (error) {
-            if (error.response) {
-                throw new Error(error.response.data.message || 'Failed to fetch seller profile');
-            }
-            throw new Error('Network error occurred');
+            console.error('Error fetching profile:', error);
+            throw error;
         }
     },
 
@@ -232,5 +275,23 @@ export const sellerApi = {
             }
             throw new Error('Network error occurred');
         }
-    }
+    },
+
+    // Get seller order statistics
+    getOrderStats: async () => {
+        try {
+            const response = await axios.get('/api/orders/seller-stats');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching order stats:', error);
+            if (error.response) {
+                throw new Error(error.response.data.message || 'Failed to fetch order statistics');
+            }
+            throw new Error('Network error occurred');
+        }
+    },
+
+    getReviewStats,
+    getLatestReviews,
+    searchProductReviews
 }; 

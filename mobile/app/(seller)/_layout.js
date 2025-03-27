@@ -3,20 +3,12 @@ import { Stack } from 'expo-router';
 export default function SellerLayout() {
   return (
     <Stack screenOptions={{
-      headerShown: true,
-      headerStyle: {
-        backgroundColor: '#6C63FF',
-      },
-      headerTintColor: '#fff',
-      headerTitleStyle: {
-        fontWeight: 'bold',
-      },
+      headerShown: false,
     }}>
       <Stack.Screen 
         name="dashboard"
         options={{
-          title: 'Seller Dashboard',
-          headerLeft: null, // Disable back button
+          headerShown: false,
         }}
       />
       <Stack.Screen 

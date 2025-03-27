@@ -40,13 +40,17 @@ const languages = [
 
 const LanguageSelectionScreen = () => {
   const router = useRouter();
-  const { changeLanguage } = useLanguage();
+  const { updateLanguage } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState(null);
 
   const handleLanguageSelect = async (language) => {
-    setSelectedLanguage(language.id);
-    await changeLanguage(language.id);
-    router.push('/(auth)/seller/login');
+    try {
+      setSelectedLanguage(language.id);
+      await updateLanguage(language.id);
+      router.replace('/(auth)/seller/login');
+    } catch (error) {
+      console.error('Error updating language:', error);
+    }
   };
 
   return (

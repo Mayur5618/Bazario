@@ -229,68 +229,69 @@ const OrderDetails = () => {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-5">
             <div className="max-w-4xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Order Details</h1>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
+                    <h1 className="text-xl sm:text-2xl font-bold">Order Details</h1>
                     <Link 
                         to="/orders" 
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 text-sm sm:text-base"
                     >
                         ← Back to Orders
                     </Link>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
                         <div>
-                            <h2 className="text-lg font-semibold mb-2">Order Information</h2>
-                            <p className="text-sm text-gray-600">Order ID: {order._id}</p>
-                            <p className="text-sm text-gray-600">
-                                Date: {new Date(order.createdAt).toLocaleDateString()}
+                            <h2 className="text-base sm:text-lg font-semibold mb-2">Order Information</h2>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                                <span className="inline-block w-20 sm:w-24">Order ID:</span> 
+                                <span className="font-medium">{order._id}</span>
                             </p>
-                            <p className="text-sm text-gray-600">
-                                Status: <span className="font-medium capitalize">{order.status}</span>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                                <span className="inline-block w-20 sm:w-24">Date:</span>
+                                <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-600">
+                                <span className="inline-block w-20 sm:w-24">Status:</span>
+                                <span className="font-medium capitalize">{order.status}</span>
                             </p>
                         </div>
-                        <div>
-                            <h2 className="text-lg font-semibold mb-2">Shipping Address</h2>
-                            <p className="text-sm text-gray-600">{order.shippingAddress.fullName}</p>
-                            <p className="text-sm text-gray-600">{order.shippingAddress.street}</p>
-                            <p className="text-sm text-gray-600">
+                        <div className="border-t sm:border-t-0 pt-4 sm:pt-0">
+                            <h2 className="text-base sm:text-lg font-semibold mb-2">Shipping Address</h2>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1">{order.shippingAddress.fullName}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1">{order.shippingAddress.street}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1">
                                 {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pincode}
                             </p>
-                            <p className="text-sm text-gray-600">{order.shippingAddress.country}</p>
+                            <p className="text-xs sm:text-sm text-gray-600">{order.shippingAddress.country}</p>
                         </div>
                     </div>
 
-                    <div className="border-t pt-6">
-                        <h2 className="text-lg font-semibold mb-4">Order Items</h2>
+                    <div className="border-t pt-4 sm:pt-6">
+                        <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Order Items</h2>
                         <div className="space-y-4">
                             {order.items.map((item) => (
                                 <div 
                                     key={item._id} 
-                                    className="flex items-center space-x-4 border-b pb-4"
+                                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border-b pb-4"
                                 >
                                     <img 
                                         src={item.product.images[0]} 
                                         alt={item.product.name}
-                                        className="w-20 h-20 object-cover rounded"
+                                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
                                     />
                                     <div className="flex-1">
-                                        <h3 className="font-medium">{item.product.name}</h3>
-                                        <p className="text-sm text-gray-600">
-                                            Quantity: {item.quantity}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            Price: ₹{item.price.toFixed(2)}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            Seller: {item.seller.firstname} {item.seller.lastname}
-                                        </p>
+                                        <h3 className="text-sm sm:text-base font-medium mb-1">{item.product.name}</h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 text-xs sm:text-sm text-gray-600">
+                                            <p>Quantity: {item.quantity}</p>
+                                            <p>Price: ₹{item.price.toFixed(2)}</p>
+                                            <p className="col-span-2">Seller: {item.seller.firstname} {item.seller.lastname}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-medium">
+                                    <div className="text-right mt-2 sm:mt-0">
+                                        <p className="text-sm sm:text-base font-medium">
                                             ₹{(item.price * item.quantity).toFixed(2)}
                                         </p>
                                     </div>
@@ -299,26 +300,28 @@ const OrderDetails = () => {
                         </div>
                     </div>
 
-                    <div className="border-t pt-6 mt-6">
-                        <div className="flex justify-between text-sm mb-2">
-                            <span>Subtotal</span>
-                            <span>₹{order.subtotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm mb-2">
-                            <span>Shipping</span>
-                            <span>₹{order.shippingCost.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                            <span>Total</span>
-                            <span>₹{order.total.toFixed(2)}</span>
+                    <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6">
+                        <div className="space-y-2 sm:space-y-3">
+                            <div className="flex justify-between text-xs sm:text-sm">
+                                <span className="text-gray-600">Subtotal</span>
+                                <span>₹{order.subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs sm:text-sm">
+                                <span className="text-gray-600">Shipping</span>
+                                <span>₹{order.shippingCost.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-base sm:text-lg font-semibold border-t pt-2">
+                                <span>Total</span>
+                                <span>₹{order.total.toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
 
                     {order.status === 'pending' && (
-                        <div className="mt-6 text-right">
+                        <div className="mt-4 sm:mt-6 text-right">
                             <button
                                 onClick={() => handleCancelOrder(order._id)}
-                                className="px-4 py-2 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50"
+                                className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm text-red-600 border border-red-600 rounded hover:bg-red-50"
                             >
                                 Cancel Order
                             </button>

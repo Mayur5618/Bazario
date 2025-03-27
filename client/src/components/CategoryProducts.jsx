@@ -115,7 +115,7 @@ const loadingDotVariants = {
   }
 };
 
-const CategoryProducts = ({ category, hideViewAll = false, city }) => {
+const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = false }) => {
   const { category: urlCategory } = useParams();
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -389,238 +389,376 @@ const CategoryProducts = ({ category, hideViewAll = false, city }) => {
 
   return (
     <div className="container mx-auto px-4 py-4">
-      <div className="mb-4">
-        <button
-          onClick={() => {
-            setShowFilterModal(!showFilterModal);
-            setTempFilters(currentFilters);
-          }}
-          className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-        >
-          {showFilterModal ? <FaTimes className="w-4 h-4" /> : <FaFilter className="w-4 h-4" />}
-          <span>{showFilterModal ? 'Close Filters' : 'Open Filters'}</span>
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showFilterModal && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              height: { duration: 0.3, ease: "easeInOut" },
-              opacity: { duration: 0.2 }
-            }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white rounded-lg shadow-lg mb-6">
-              <div className="p-4">
-                <div className="flex justify-end items-center mb-2">
-                  <button
-                    onClick={() => {
-                      const resetFilters = {
-                        minPrice: '',
-                        maxPrice: '',
-                        rating: '',
-                        sortBy: 'newest',
-                        platformType: 'b2c'
-                      };
-                      setTempFilters(resetFilters);
-                    }}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                  >
-                    Clear All
-                  </button>
-                </div>
-
-                <h3 className="text-lg font-medium mb-4">Filters</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Price Range */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Price Range</h4>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={tempFilters.minPrice}
-                          onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                          className="w-full pl-7 pr-3 py-2 border rounded text-sm"
-                        />
-                      </div>
-                      <span className="text-gray-400">-</span>
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={tempFilters.maxPrice}
-                          onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                          className="w-full pl-7 pr-3 py-2 border rounded text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rating */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Rating</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {[5, 4, 3, 2, 1].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => setTempFilters(prev => ({
-                            ...prev,
-                            rating: prev.rating === rating.toString() ? '' : rating.toString()
-                          }))}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded ${
-                            tempFilters.rating === rating.toString()
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 hover:bg-gray-200'
-                          }`}
-                        >
-                          <FaStar className="text-yellow-400 w-3 h-3" />
-                          <span>{rating}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sort By */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Sort By</h4>
-                    <select
-                      value={tempFilters.sortBy}
-                      onChange={(e) => setTempFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                      className="w-full p-2 border rounded text-sm"
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="price_low">Price: Low to High</option>
-                      <option value="price_high">Price: High to Low</option>
-                      <option value="rating_high">Highest Rated</option>
-                      <option value="most_sold">Most Sold</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setCurrentFilters(tempFilters);
-                    setShowFilterModal(false);
-                    fetchProducts(tempFilters);
-                  }}
-                  className="w-full mt-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Apply Filters
-                </button>
-              </div>
+          {showFilters && (
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setShowFilterModal(!showFilterModal);
+                  setTempFilters(currentFilters);
+                }}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              >
+                {showFilterModal ? <FaTimes className="w-4 h-4" /> : <FaFilter className="w-4 h-4" />}
+                <span>{showFilterModal ? 'Close Filters' : 'Open Filters'}</span>
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
 
-      {products.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No products found in this category.</p>
-        </div>
-      ) : (
-        <motion.div
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { 
-              opacity: 1,
-              transition: {
-                duration: 0.4,
-                staggerChildren: 0.05
-              }
-            }
-          }}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
-        >
-          {products.map((product) => (
-            <motion.div
-              key={product._id}
-              variants={{
-                hidden: { 
-                  opacity: 0,
-                  y: 20
-                },
-                visible: {
-                  opacity: 1,
-                  y: 0,
-                  transition: {
-                    type: "spring",
-                    damping: 15,
-                    stiffness: 300,
-                    duration: 0.4
-                  }
-                }
-              }}
-              whileHover={{
-                y: -5,
-                transition: {
-                  duration: 0.2
-                }
-              }}
-              onClick={() => navigate(`/product/${product._id}`)}
-              className="cursor-pointer"
-            >
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
-                {/* Product Image */}
-                <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-
-                {/* Product Info */}
-                <div className="p-2 flex flex-col flex-grow">
-                  <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
-                    {product.name}
-                  </h3>
-
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
-                      <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+          <AnimatePresence>
+            {showFilterModal && showFilters && (
+              <>
+                {/* Mobile Filter Modal */}
+                <motion.div 
+                  className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowFilterModal(false)}
+                />
+                <motion.div
+                  className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-xl shadow-lg"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                >
+                  <div className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Filters</h3>
+                      <button
+                        onClick={() => {
+                          const resetFilters = {
+                            minPrice: '',
+                            maxPrice: '',
+                            rating: '',
+                            sortBy: 'newest',
+                            platformType: 'b2c'
+                          };
+                          setTempFilters(resetFilters);
+                          setCurrentFilters(resetFilters);
+                          setShowFilterModal(false);
+                          fetchProducts(resetFilters);
+                        }}
+                        className="flex items-center gap-1 text-blue-600 text-sm hover:text-blue-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset
+                      </button>
                     </div>
-                  </div>
 
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, index) => (
-                          <FaStar
-                            key={index}
-                            className={`w-2 h-2 sm:w-3 sm:h-3 ${
-                              index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+                      {/* Price Range */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Price Range</h4>
+                        <div className="flex gap-2 items-center">
+                          <div className="relative flex-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                            <input
+                              type="number"
+                              placeholder="Min"
+                              value={tempFilters.minPrice}
+                              onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                              className="w-full pl-7 pr-3 py-2 border rounded text-sm"
+                            />
+                          </div>
+                          <span className="text-gray-400">-</span>
+                          <div className="relative flex-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                            <input
+                              type="number"
+                              placeholder="Max"
+                              value={tempFilters.maxPrice}
+                              onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                              className="w-full pl-7 pr-3 py-2 border rounded text-sm"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-[10px] sm:text-xs text-gray-600">
-                        ({product.reviews?.length || 0})
-                      </span>
+
+                      {/* Rating */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Rating</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {[5, 4, 3, 2, 1].map((rating) => (
+                            <button
+                              key={rating}
+                              onClick={() => setTempFilters(prev => ({
+                                ...prev,
+                                rating: prev.rating === rating.toString() ? '' : rating.toString()
+                              }))}
+                              className={`flex items-center gap-1 px-4 py-2 rounded-full ${
+                                tempFilters.rating === rating.toString()
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-100 hover:bg-gray-200'
+                              }`}
+                            >
+                              <FaStar className="text-yellow-400 w-3 h-3" />
+                              <span>{rating}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Sort By */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Sort By</h4>
+                        <select
+                          value={tempFilters.sortBy}
+                          onChange={(e) => setTempFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                          className="w-full p-3 border rounded-lg text-sm bg-gray-50"
+                        >
+                          <option value="newest">Newest First</option>
+                          <option value="price_low">Price: Low to High</option>
+                          <option value="price_high">Price: High to Low</option>
+                          <option value="rating_high">Highest Rated</option>
+                          <option value="most_sold">Most Sold</option>
+                        </select>
+                      </div>
                     </div>
 
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                    <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                    <span className="text-gray-500">Stock: {product.stock}</span>
+                    <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t mt-4">
+                      <button
+                        onClick={() => {
+                          setCurrentFilters(tempFilters);
+                          setShowFilterModal(false);
+                          fetchProducts(tempFilters);
+                        }}
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+
+                {/* Desktop Filter Form - Keeping the existing one */}
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{
+                    height: { duration: 0.3, ease: "easeInOut" },
+                    opacity: { duration: 0.2 }
+                  }}
+                  className="hidden md:block overflow-hidden"
+                >
+                  <div className="bg-white rounded-lg shadow-lg mb-6">
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium">Filters</h3>
+                        <button
+                          onClick={() => {
+                            const resetFilters = {
+                              minPrice: '',
+                              maxPrice: '',
+                              rating: '',
+                              sortBy: 'newest',
+                              platformType: 'b2c'
+                            };
+                            setTempFilters(resetFilters);
+                            setCurrentFilters(resetFilters);
+                            setShowFilterModal(false);
+                            fetchProducts(resetFilters);
+                          }}
+                          className="flex items-center gap-1 text-blue-600 text-sm hover:text-blue-700"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Reset
+                        </button>
+                      </div>
+
+                      <h3 className="text-lg font-medium mb-4">Filters</h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Price Range */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Price Range</h4>
+                          <div className="flex gap-2 items-center">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                              <input
+                                type="number"
+                                placeholder="Min"
+                                value={tempFilters.minPrice}
+                                onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                                className="w-full pl-7 pr-3 py-2 border rounded text-sm"
+                              />
+                            </div>
+                            <span className="text-gray-400">-</span>
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                              <input
+                                type="number"
+                                placeholder="Max"
+                                value={tempFilters.maxPrice}
+                                onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                                className="w-full pl-7 pr-3 py-2 border rounded text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Rating */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Rating</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {[5, 4, 3, 2, 1].map((rating) => (
+                              <button
+                                key={rating}
+                                onClick={() => setTempFilters(prev => ({
+                                  ...prev,
+                                  rating: prev.rating === rating.toString() ? '' : rating.toString()
+                                }))}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded ${
+                                  tempFilters.rating === rating.toString()
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 hover:bg-gray-200'
+                                }`}
+                              >
+                                <FaStar className="text-yellow-400 w-3 h-3" />
+                                <span>{rating}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Sort By */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Sort By</h4>
+                          <select
+                            value={tempFilters.sortBy}
+                            onChange={(e) => setTempFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                            className="w-full p-2 border rounded text-sm"
+                          >
+                            <option value="newest">Newest First</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                            <option value="rating_high">Highest Rated</option>
+                            <option value="most_sold">Most Sold</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setCurrentFilters(tempFilters);
+                          setShowFilterModal(false);
+                          fetchProducts(tempFilters);
+                        }}
+                        className="w-full mt-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {products.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No products found in this category.</p>
+            </div>
+          ) : (
+            <motion.div
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { 
+                opacity: 1,
+                transition: {
+                  duration: 0.4,
+                  staggerChildren: 0.05
+                }
+              }
+            }}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
+            >
+              {products.map((product) => (
+                <motion.div
+                  key={product._id}
+                variants={{
+                  hidden: { 
+                    opacity: 0,
+                    y: 20
+                  },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      type: "spring",
+                      damping: 15,
+                      stiffness: 300,
+                      duration: 0.4
+                    }
+                  }
+                }}
+                whileHover={{
+                  y: -5,
+                  transition: {
+                    duration: 0.2
+                  }
+                }}
+                  onClick={() => navigate(`/product/${product._id}`)}
+                  className="cursor-pointer"
+                >
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+                    {/* Product Image */}
+                    <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-2 flex flex-col flex-grow">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                        {product.name}
+                      </h3>
+
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
+                          <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="flex">
+                          {[...Array(5)].map((_, index) => (
+                            <FaStar
+                              key={index}
+                              className={`w-2 h-2 sm:w-3 sm:h-3 ${
+                                index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[10px] sm:text-xs text-gray-600">
+                          ({product.reviews?.length || 0})
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                        <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                        <span className="text-gray-500">Stock: {product.stock}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
-      )}
+          )}
     </div>
   );
 };

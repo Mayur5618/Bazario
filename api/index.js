@@ -17,6 +17,7 @@ import mobileSearchRoutes from './routes/Mobile_search.routes.js';
 import wishlistRoutes from './routes/wishlist.route.js';
 import sellerRoutes from './routes/seller.route.js';
 import uploadRoutes from './routes/upload.route.js';
+import agencyRoutes from './routes/agencyRoutes.js';
 import './models/seller.model.js'; // Import Seller model to register it
 import recentlyViewedRoutes from './routes/recentlyViewed.js';
 
@@ -60,6 +61,7 @@ app.use('/api/user', shippingAddressRoutes);
 app.use('/api/search', mobileSearchRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/seller', sellerRoutes);
+app.use('/api/agency', agencyRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/recently-viewed', recentlyViewedRoutes);
 

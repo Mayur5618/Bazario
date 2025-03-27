@@ -12,10 +12,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from '../../src/config/axios';
 import { useAuth } from '../../src/context/AuthContext';
+import { sellerApi } from '../../src/api/sellerApi';
 
 const { width } = Dimensions.get('window');
 
@@ -39,10 +40,13 @@ const ProfileScreen = () => {
     totalOrders: 0,
     totalRevenue: 0
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     fetchProfileData();
+    fetchProfile();
   }, []);
 
   const fetchProfileData = async () => {
@@ -74,6 +78,21 @@ const ProfileScreen = () => {
     } catch (error) {
       console.error('Error fetching profile:', error);
       Alert.alert('एरर', 'प्रोफ़ाइल लोड करने में समस्या हुई');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await sellerApi.getProfile();
+      if (response.success) {
+        setProfile(response.seller);
+        setProducts(response.products);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch profile');
     } finally {
       setLoading(false);
     }
@@ -334,6 +353,137 @@ const ProfileScreen = () => {
           {renderField('बायो', profileData.bio, 'bio', 'default', true)}
         </View>
       </View>
+
+      {/* Shop Details */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Shop Details</Text>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="store" size={24} color="#6C63FF" />
+          <View style={styles.detailText}>
+            <Text style={styles.detailLabel}>Shop Name</Text>
+            <Text style={styles.detailValue}>{profile?.shopName || 'Not set'}</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </View>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="phone" size={24} color="#6C63FF" />
+          <View style={styles.detailText}>
+            <Text style={styles.detailLabel}>Phone Number</Text>
+            <Text style={styles.detailValue}>{profile?.phone || 'Not set'}</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </View>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="location-on" size={24} color="#6C63FF" />
+          <View style={styles.detailText}>
+            <Text style={styles.detailLabel}>Address</Text>
+            <Text style={styles.detailValue}>
+              {profile?.address ? 
+                `${profile.address.street}, ${profile.address.city}, ${profile.address.state} ${profile.address.pincode}`
+                : 'Not set'
+              }
+            </Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </View>
+      </View>
+
+      {/* Account Details */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account Details</Text>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="account-balance" size={24} color="#6C63FF" />
+          <View style={styles.detailText}>
+            <Text style={styles.detailLabel}>Bank Account</Text>
+            <Text style={styles.detailValue}>
+              {profile?.bankDetails?.accountNumber 
+                ? `XXXX${profile.bankDetails.accountNumber.slice(-4)}`
+                : 'Not set'
+              }
+            </Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </View>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="credit-card" size={24} color="#6C63FF" />
+          <View style={styles.detailText}>
+            <Text style={styles.detailLabel}>UPI ID</Text>
+            <Text style={styles.detailValue}>{profile?.bankDetails?.upiId || 'Not set'}</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </View>
+      </View>
+
+      {/* Settings */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Settings</Text>
+        <TouchableOpacity 
+          style={styles.settingRow}
+          onPress={() => router.push('/(seller)/edit-profile')}
+        >
+          <MaterialIcons name="edit" size={24} color="#6C63FF" />
+          <Text style={styles.settingText}>Edit Profile</Text>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.settingRow}
+          onPress={() => router.push('/(seller)/change-password')}
+        >
+          <MaterialIcons name="lock" size={24} color="#6C63FF" />
+          <Text style={styles.settingText}>Change Password</Text>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.settingRow}
+          onPress={() => router.push('/(seller)/notifications')}
+        >
+          <MaterialIcons name="notifications" size={24} color="#6C63FF" />
+          <Text style={styles.settingText}>Notifications</Text>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Recent Products */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Products</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.productsScroll}
+        >
+          {products.map((product) => (
+            <TouchableOpacity 
+              key={product._id}
+              style={styles.productCard}
+              onPress={() => router.push(`/(seller)/products/${product._id}`)}
+            >
+              <Image 
+                source={{ uri: product.images[0] }}
+                style={styles.productImage}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName} numberOfLines={1}>
+                  {product.name}
+                </Text>
+                <Text style={styles.productPrice}>₹{product.price}</Text>
+                <View style={styles.productStats}>
+                  <Text style={styles.productStock}>Stock: {product.stock}</Text>
+                  <View style={styles.productRating}>
+                    <MaterialIcons 
+                      name="star" 
+                      size={14} 
+                      color={product.rating > 0 ? "#FFD700" : "#666"}
+                    />
+                    <Text style={styles.ratingText}>
+                      {product.rating > 0 ? product.rating.toFixed(1) : 'NEW'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
     </ScrollView>
   );
 };
@@ -529,6 +679,104 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  detailText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  settingText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1A1A1A',
+    marginLeft: 12,
+  },
+  productsScroll: {
+    marginTop: 12,
+  },
+  productCard: {
+    width: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  productImage: {
+    width: '100%',
+    height: 160,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 14,
+    color: '#6C63FF',
+    fontWeight: 'bold',
+  },
+  productStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  productStock: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  productRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#666666',
+    marginLeft: 4,
   },
 });
 

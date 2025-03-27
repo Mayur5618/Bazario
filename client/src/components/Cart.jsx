@@ -87,28 +87,28 @@ const Cart = () => {
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
         <div className="max-w-3xl mx-auto px-4">
           {/* Back button */}
           <Link 
             to="/" 
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-8"
+            className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6 sm:mb-8 text-sm sm:text-base"
           >
-            <FaArrowLeft className="mr-2" />
+            <FaArrowLeft className="mr-2 w-3 h-3 sm:w-4 sm:h-4" />
             Back to Shopping
           </Link>
 
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 text-center">
             {/* Empty Cart Icon */}
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FaShoppingBasket className="w-12 h-12 text-blue-600" />
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <FaShoppingBasket className="w-8 h-8 sm:w-12 sm:h-12 text-blue-600" />
             </div>
 
             {/* Empty Cart Message */}
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
               Your Cart is Empty
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">
               Looks like you haven't added anything to your cart yet.
               Browse our products and find something you'll love!
             </p>
@@ -116,24 +116,23 @@ const Cart = () => {
             {/* Continue Shopping Button */}
             <Link
               to="/"
-              className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white text-sm sm:text-base font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
             >
               Continue Shopping
             </Link>
 
             {/* Product Suggestions */}
-            <div className="mt-12 border-t pt-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <div className="mt-8 sm:mt-12 border-t pt-6 sm:pt-8">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">
                 Popular Products You Might Like
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 {/* Add 3-4 popular product cards here */}
-                {/* This is just a placeholder structure */}
                 {[1, 2, 3].map((item) => (
-                  <div key={item} className="bg-gray-50 rounded-lg p-4">
+                  <div key={item} className="bg-gray-50 rounded-lg p-3 sm:p-4">
                     <div className="aspect-square bg-gray-200 rounded-lg mb-2 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-2/3" />
                   </div>
                 ))}
               </div>
@@ -210,74 +209,77 @@ const Cart = () => {
   };
 
   return (
-    <div className="min-h-screen container mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold mb-4">Your Basket</h2>
+    <div className="min-h-screen container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Your Basket</h2>
 
       {/* Checkout Summary Bar */}
-      <div className="bg-gray-900 text-white p-4 rounded-lg mb-6 flex justify-between items-center">
+      <div className="bg-gray-900 text-white p-3 sm:p-4 rounded-lg mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
-          <span className="text-lg">Subtotal ({cart.length} items): ₹{cartTotal.toFixed(2)}</span>
-          {/* <div className="text-green-400 text-sm">
-            Savings: ₹{cart.reduce((acc, item) => 
-              acc + ((item.product.originalPrice - item.price) * item.quantity), 0).toFixed(2)}
-          </div> */}
+          <span className="text-base sm:text-lg">Subtotal ({cart.length} items): ₹{cartTotal.toFixed(2)}</span>
         </div>
         <Link
           to="/checkout"
-          className="px-8 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          className="w-full sm:w-auto px-4 sm:px-8 py-2 bg-red-600 text-white text-center rounded hover:bg-red-700 transition-colors text-sm sm:text-base"
         >
           Checkout
         </Link>
       </div>
 
-      {/* Cart Items Table Header */}
-      <div className="grid grid-cols-12 gap-4 mb-4 px-4 py-2 bg-[#f3eff3] rounded-t-lg">
+      {/* Cart Items Table Header - Hide on Mobile */}
+      <div className="hidden sm:grid grid-cols-12 gap-4 mb-4 px-4 py-2 bg-[#f3eff3] rounded-t-lg">
         <div className="col-span-6">Items ({cart.length} items)</div>
         <div className="col-span-3 text-center">Quantity</div>
         <div className="col-span-3 text-right">Sub-total</div>
       </div>
 
       {/* Cart Items */}
-      <div className="border rounded-b-lg">
+      <div className="border rounded-lg sm:rounded-b-lg">
         {cart.map((item, index) => (
           <div
             key={`${item?.product?._id}-${index}`}
-            className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0
+            className={`grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 p-3 sm:p-4 border-b last:border-b-0
               transition-all duration-[1000ms] ease-in-out
               ${removingItems[item?.product?._id] ? 
                 'opacity-0 transform translate-x-full' : 
                 'opacity-100 transform translate-x-0'}`}
           >
             {/* Item Details - Left Section */}
-            <div className="col-span-6 flex gap-4">
+            <div className="sm:col-span-6 flex gap-3 sm:gap-4">
               <img
                 src={item?.product?.images?.[0]}
                 alt={item?.product?.name}
-                className="w-20 h-20 object-cover rounded"
+                className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "/images/fallback.jpg";
                 }}
               />
-              <div className="flex flex-col justify-between">
+              <div className="flex flex-col justify-between flex-1">
                 <Link
                   to={`/product/${item?.product?._id}`}
-                  className="text-lg font-semibold hover:text-blue-600"
+                  className="text-base sm:text-lg font-semibold hover:text-blue-600 line-clamp-2"
                 >
                   {item?.product?.name}
                 </Link>
-                <div className="text-gray-600">₹{(item?.price || 0).toFixed(2)} per {item?.unitType}</div>
+                <div className="text-sm sm:text-base text-gray-600">₹{(item?.price || 0).toFixed(2)} per {item?.unitType}</div>
                 <button
                   onClick={() => handleRemoveFromCart(item?.product?._id)}
-                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 w-fit"
+                  className="text-red-600 hover:text-red-800 text-xs sm:text-sm flex items-center gap-1 w-fit"
                 >
                   Delete
                 </button>
               </div>
             </div>
 
+            {/* Mobile Price Display */}
+            <div className="flex sm:hidden justify-between items-center mt-2">
+              <span className="text-sm font-medium text-gray-500">Price:</span>
+              <span className="text-base font-semibold">₹{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}</span>
+            </div>
+
             {/* Quantity Controls - Middle Section */}
-            <div className="col-span-3 flex items-center justify-center ">
+            <div className="sm:col-span-3 flex items-center sm:justify-center mt-3 sm:mt-0">
+              <span className="text-sm font-medium text-gray-500 mr-3 sm:hidden">Quantity:</span>
               <div className="flex items-center gap-2 border-[1px] border-gray-300 py-[1px] rounded-sm">
                 <button
                   onClick={() => handleUpdateQuantity(
@@ -290,7 +292,7 @@ const Cart = () => {
                 >
                   -
                 </button>
-                <span className="w-12 text-center">{item?.quantity}</span>
+                <span className="w-8 sm:w-12 text-center text-sm sm:text-base">{item?.quantity}</span>
                 <button
                   onClick={() => handleUpdateQuantity(
                     item?.product?._id,
@@ -305,24 +307,29 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* Subtotal - Right Section */}
-            <div className="col-span-3 flex flex-col items-end justify-center">
+            {/* Subtotal - Right Section - Hide on Mobile */}
+            <div className="hidden sm:flex sm:col-span-3 flex-col items-end justify-center">
               <div className="text-lg font-semibold">
                 ₹{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
               </div>
               {item?.quantity >= (item?.product?.stock || 0) && (
-                <p className="text-sm text-red-600">Max stock reached</p>
+                <p className="text-xs sm:text-sm text-red-600">Max stock reached</p>
               )}
             </div>
+
+            {/* Stock Warning - Mobile Only */}
+            {item?.quantity >= (item?.product?.stock || 0) && (
+              <p className="text-xs text-red-600 mt-1 sm:hidden">Max stock reached</p>
+            )}
           </div>
         ))}
       </div>
 
       {/* Continue Shopping Link */}
-      <div className="mt-6 flex justify-start">
+      <div className="mt-4 sm:mt-6 flex justify-start">
         <Link
           to="/"
-          className="px-6 py-2 border rounded hover:bg-gray-100 transition-colors"
+          className="w-full sm:w-auto px-4 sm:px-6 py-2 border rounded text-center text-sm sm:text-base hover:bg-gray-100 transition-colors"
         >
           Continue Shopping
         </Link>

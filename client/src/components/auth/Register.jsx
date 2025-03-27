@@ -370,14 +370,6 @@ const Register = () => {
             ...prev,
             ...locationData
           }));
-
-          toast.success('Location fetched successfully! 📍', {
-            style: {
-              borderRadius: '10px',
-              background: '#333',
-              color: '#fff',
-            },
-          });
         } catch (error) {
           console.error('❌ Error fetching address:', error);
           toast.error('Could not fetch address details. Please enter manually.', {
@@ -429,10 +421,10 @@ const Register = () => {
   const inputClassName = "mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2";
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center py-4 sm:py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="w-full max-w-md space-y-6 bg-white p-6 sm:p-8 rounded-xl shadow-lg">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-2 text-center text-2xl sm:text-3xl font-bold text-gray-900">
             Create Account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -441,18 +433,18 @@ const Register = () => {
         </div>
 
         {serverError && (
-          <div className="bg-red-50 text-red-500 p-4 rounded-md">
+          <div className="bg-red-50 text-red-500 p-3 sm:p-4 rounded-md text-sm">
             {serverError}
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-6 space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
           {/* Step 1 Form Fields */}
           {step === 1 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                     First Name
                   </label>
                   <input
@@ -461,13 +453,13 @@ const Register = () => {
                     id="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className={inputClassName}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
                     Last Name
                   </label>
                   <input
@@ -476,14 +468,14 @@ const Register = () => {
                     id="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className={inputClassName}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="mobile" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
                   Mobile Number
                 </label>
                 <input
@@ -495,13 +487,13 @@ const Register = () => {
                   maxLength="10"
                   pattern="[0-9]*"
                   inputMode="numeric"
-                  className={inputClassName}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -511,7 +503,7 @@ const Register = () => {
                     id="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className={inputClassName}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10"
                     required
                   />
                   <button
@@ -519,13 +511,13 @@ const Register = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    {showPassword ? <FaEyeSlash className="text-gray-500" /> : <FaEye className="text-gray-500" />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -535,7 +527,7 @@ const Register = () => {
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className={inputClassName}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10"
                     required
                   />
                   <button
@@ -543,51 +535,56 @@ const Register = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    {showPassword ? <FaEyeSlash className="text-gray-500" /> : <FaEye className="text-gray-500" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={isLoading}
-                  className={`inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-                    ${isLoading ? 'bg-indigo-600 cursor-not-allowed hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' : 'bg-indigo-600 cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'}`}
-                >
-                  {isLoading ? 'Loading...' : 'Next'}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={isLoading}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed mt-6"
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                    Loading...
+                  </div>
+                ) : (
+                  'Next'
+                )}
+              </button>
             </div>
           )}
 
           {/* Step 2 Form Fields */}
           {step === 2 && (
-            <div className="space-y-6">
-              <div className="flex justify-end">
+            <div className="space-y-4">
+              <div className="flex justify-center mb-4">
                 <button
                   type="button"
                   onClick={getCurrentLocation}
                   disabled={isLocationLoading}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="group relative w-full flex items-center justify-center px-4 py-3 text-sm font-medium bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-600 rounded-xl transition-all duration-300 hover:shadow-md border border-indigo-100"
                 >
                   {isLocationLoading ? (
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 border-2 border-t-2 border-indigo-600 rounded-full animate-spin mr-2"></div>
-                      Loading...
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-t-2 border-indigo-600 rounded-full animate-spin"></div>
+                      <span>Fetching your location...</span>
                     </div>
                   ) : (
-                    <>
-                      <FaLocationArrow className="mr-2" />
-                      Use Current Location
-                    </>
+                    <div className="relative flex items-center gap-2">
+                      <div className="absolute -inset-0.5 bg-blue-50 rounded-full opacity-50 group-hover:animate-ping"></div>
+                      <FaLocationArrow className="relative text-lg text-indigo-600 animate-bounce" />
+                      <span className="relative">Quick Address Fill</span>
+                    </div>
                   )}
                 </button>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Address
                 </label>
                 {showAddressTextarea ? (
@@ -598,9 +595,7 @@ const Register = () => {
                     onFocus={() => setShowAddressTextarea(true)}
                     rows="3"
                     style={{ minHeight: '80px', resize: 'none' }}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.address ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 ) : (
                   <input
@@ -613,17 +608,14 @@ const Register = () => {
                         setShowAddressTextarea(true);
                       }
                     }}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.address ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 )}
-                {errors.address && <ErrorMessage error={errors.address} />}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Country
                   </label>
                   <input
@@ -631,11 +623,11 @@ const Register = () => {
                     name="country"
                     value={formData.country}
                     onChange={handleChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     State
                   </label>
                   <input
@@ -643,14 +635,14 @@ const Register = () => {
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     City
                   </label>
                   <input
@@ -658,11 +650,11 @@ const Register = () => {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Pincode
                   </label>
                   <input
@@ -670,24 +662,22 @@ const Register = () => {
                     name="pincode"
                     value={formData.pincode}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md border ${
-                      errors.pincode ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2`}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 mt-6">
                 <button
                   type="button"
                   onClick={handlePrevStep}
-                  className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="w-full sm:w-auto flex justify-center py-2.5 px-6 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="w-full sm:w-auto flex justify-center py-2.5 px-6 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Register
                 </button>
@@ -696,7 +686,7 @@ const Register = () => {
           )}
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
             <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">

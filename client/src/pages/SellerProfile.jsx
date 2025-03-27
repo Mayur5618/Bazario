@@ -46,115 +46,169 @@ const SellerProfile = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header with Navigation */}
-            
-
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Seller Info Card */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                    <div className="flex items-start gap-8">
-                        {/* Profile Image */}
-                        <div className="relative">
-                            <img 
-                                src={seller.profileImage || '/default-shop.png'} 
-                                alt={seller.shopName}
-                                className="w-48 h-48 rounded-lg object-cover"
-                            />
-                           
-                        </div>
-
-                        {/* Business Info */}
-                        <div className="flex-1">
-                            <div className="mb-6">
-                                <div className="relative mb-6">
-                                    <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent pb-2">
+                {/* Mobile View */}
+                <div className="block md:hidden">
+                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                        {/* Header Banner */}
+                        <div className="h-24 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+                        
+                        <div className="px-4 pb-6 -mt-12">
+                            {/* Profile Section */}
+                            <div className="flex flex-col items-center">
+                                {/* Profile Image */}
+                                <div className="w-24 h-24 rounded-xl border-4 border-white shadow-md overflow-hidden bg-white">
+                                    <img 
+                                        src={seller.profileImage || '/default-shop.png'} 
+                                        alt={seller.shopName}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                
+                                {/* Shop Info */}
+                                <div className="mt-3 text-center">
+                                    <h1 className="text-xl font-bold text-gray-900">
                                         {seller.shopName}
                                     </h1>
-                                    <div className="h-1 w-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mt-2"></div>
-                                </div>
-                                <div className="flex items-center mb-4">
-                                    <FaStore className="text-blue-600 text-xl mr-3" />
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-700">Business Type</h3>
-                                        <p className="text-gray-600">{seller.businessType}</p>
+                                    <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+                                        <div className="flex items-center text-gray-600">
+                                            <FaStore className="text-blue-600 w-4 h-4 mr-1.5" />
+                                            <span className="text-sm">{seller.businessType || 'Business'}</span>
+                                        </div>
+                                        <div className="flex items-center text-gray-600">
+                                            <FaMapMarkerAlt className="text-red-500 w-4 h-4 mr-1.5" />
+                                            <span className="text-sm">{seller.city}, {seller.state}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center">
-                                    <FaMapMarkerAlt className="text-red-500 text-xl mr-3" />
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-700">Location</h3>
-                                        <p className="text-gray-600">{seller.city}, {seller.state}</p>
+                            </div>
+
+                            {/* Stats Section */}
+                            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-100">
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-gray-900">{seller.productsCount || 0}</div>
+                                    <div className="text-xs text-gray-500">Products</div>
+                                </div>
+                                <div className="text-center border-x border-gray-100">
+                                    <div className="text-lg font-bold text-gray-900">
+                                        {seller.averageRating || 'N/A'}
                                     </div>
+                                    <div className="text-xs text-gray-500">Rating</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-gray-900">{seller.ordersCount || 0}</div>
+                                    <div className="text-xs text-gray-500">Orders</div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-3 gap-8">
-                            <div className="text-center">
-                                <div className="text-4xl font-bold text-blue-600">{seller.productsCount || 0}</div>
-                                <div className="text-gray-600 mt-1">Products</div>
+                {/* Desktop View - Original Code */}
+                <div className="hidden md:block">
+                    <div className="bg-white rounded-lg shadow p-8">
+                        <div className="flex gap-8">
+                            {/* Left Side - Profile Image */}
+                            <div>
+                                <img 
+                                    src={seller.profileImage || '/default-shop.png'} 
+                                    alt={seller.shopName}
+                                    className="w-40 h-40 object-contain border border-black rounded-sm"
+                                />
                             </div>
-                            <div className="text-center">
-                                <div className="text-4xl font-bold text-green-600">
-                                    {seller.averageRating || 'N/A'}
+                            
+                            {/* Right Side - Shop Info */}
+                            <div className="flex-1">
+                                {/* Shop Name */}
+                                <h1 className="text-2xl font-bold text-blue-600">
+                                    {seller.shopName}
+                                </h1>
+                                <div className="h-0.5 w-24 bg-blue-600 mt-1 mb-6"></div>
+
+                                {/* Business Type */}
+                                <div className="flex items-center mb-4">
+                                    <FaStore className="text-blue-600 w-5 h-5" />
+                                    <div className="ml-3">
+                                        <div className="text-gray-600">Business Type</div>
+                                        <div className="text-gray-900">{seller.businessType || 'other'}</div>
+                                    </div>
                                 </div>
-                                <div className="text-gray-600 mt-1">Rating</div>
+
+                                {/* Location */}
+                                <div className="flex items-center">
+                                    <FaMapMarkerAlt className="text-red-500 w-5 h-5" />
+                                    <div className="ml-3">
+                                        <div className="text-gray-600">Location</div>
+                                        <div className="text-gray-900">{seller.city}, {seller.state}</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-center">
-                                <div className="text-4xl font-bold text-purple-600">{seller.ordersCount || 0}</div>
-                                <div className="text-gray-600 mt-1">Orders</div>
+
+                            {/* Stats - Right Aligned */}
+                            <div className="flex gap-8">
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-blue-600">4</div>
+                                    <div className="text-gray-600">Products</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-green-600">N/A</div>
+                                    <div className="text-gray-600">Rating</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-purple-600">4</div>
+                                    <div className="text-gray-600">Orders</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Products Section */}
-                <div>
-                    <h2 className="text-2xl font-bold mb-6 flex items-center">
-                        <FaShoppingBag className="text-blue-600 mr-2" />
-                        Products
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="mt-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full">
+                            <FaShoppingBag className="text-blue-600 w-4 h-4" />
+                            <h2 className="text-lg font-bold text-gray-900">Products</h2>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {products.map(product => (
                             <div 
                                 key={product._id} 
-                                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                                className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group"
                                 onClick={() => navigate(`/product/${product._id}`)}
                             >
-                                <div className="aspect-w-16 aspect-h-12 bg-gray-50 relative">
+                                <div className="relative w-full pt-[100%] bg-gray-50 rounded-t-xl overflow-hidden border-b border-gray-200">
                                     <img 
-                                        src={product.youtubeLink ? 
-                                            `https://img.youtube.com/vi/${getYoutubeVideoId(product.youtubeLink)}/hqdefault.jpg` 
-                                            : product.images[0]} 
+                                        src={product.images[0]}
                                         alt={product.name}
-                                        className="w-full h-full object-contain p-4"
+                                        className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                                     />
-                                    {product.youtubeLink && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
-                                            <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center">
-                                                <FaPlay className="text-white text-xl ml-1" />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                                 <div className="p-4">
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{product.name}</h3>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-2xl font-bold text-blue-600">₹{product.price}</span>
-                                        {product.rating ? (
-                                            <div className="flex items-center bg-yellow-50 px-2 py-1 rounded">
-                                                <FaStar className="text-yellow-400 mr-1" />
-                                                <span>{product.rating.toFixed(1)}</span>
+                                    <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">
+                                        {product.name}
+                                    </h3>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-lg font-bold text-blue-600">₹{product.price}</div>
+                                            <div className="flex items-center text-sm text-gray-500 mt-1">
+                                                <FaBox className="w-3.5 h-3.5 mr-1" />
+                                                <span>{product.stock} in stock</span>
                                             </div>
-                                        ) : (
-                                            <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded text-sm">New</span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center text-gray-600">
-                                        <FaBox className="mr-2" />
-                                        <span>{product.stock} in stock</span>
+                                        </div>
+                                        <div>
+                                            {product.rating ? (
+                                                <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full border border-yellow-100">
+                                                    <FaStar className="text-yellow-400 w-3.5 h-3.5" />
+                                                    <span className="ml-1 text-sm font-medium">{product.rating.toFixed(1)}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="bg-blue-50 text-blue-600 text-sm font-medium px-2 py-1 rounded-full border border-blue-100">New</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

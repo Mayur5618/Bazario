@@ -1,26 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LanguageContext = createContext();
-
-export const useLanguage = () => {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
-};
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState('en');
 
   useEffect(() => {
-    loadLanguage();
+    // Load saved language when app starts
+    loadSavedLanguage();
   }, []);
 
-  const loadLanguage = async () => {
+  const loadSavedLanguage = async () => {
     try {
-      const savedLanguage = await AsyncStorage.getItem('userLanguage');
+      const savedLanguage = await AsyncStorage.getItem('selectedLanguage');
       if (savedLanguage) {
         setLanguage(savedLanguage);
       }
@@ -29,20 +22,28 @@ export const LanguageProvider = ({ children }) => {
     }
   };
 
-  const changeLanguage = async (newLanguage) => {
+  const updateLanguage = async (newLanguage) => {
     try {
-      await AsyncStorage.setItem('userLanguage', newLanguage);
+      await AsyncStorage.setItem('selectedLanguage', newLanguage);
       setLanguage(newLanguage);
     } catch (error) {
-      console.error('Error saving language:', error);
+      console.error('Error updating language:', error);
     }
   };
 
   return (
-    <LanguageContext.Provider value={{ language, changeLanguage }}>
+    <LanguageContext.Provider value={{ language, updateLanguage }}>
       {children}
     </LanguageContext.Provider>
   );
+};
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
 };
 
 export default LanguageContext; 

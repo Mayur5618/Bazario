@@ -8,7 +8,8 @@ import {
     getSellerOrders,
     updateOrderStatus,
     getBuyerOrdersWithDetails,
-    getCustomerOrderHistory
+    getCustomerOrderHistory,
+    getSellerOrderStats
 } from '../controllers/order.controller.js';
 import Order from '../models/order.model.js';
 import Review from '../models/review.model.js';
@@ -24,6 +25,7 @@ router.get('/my-orders-details', getBuyerOrdersWithDetails);
 
 // Seller routes - Move this BEFORE the :id route
 router.get('/seller-orders', getSellerOrders);
+router.get('/seller-stats', getSellerOrderStats);
 router.put('/update-status/:id', updateOrderStatus);
 
 // Customer history route

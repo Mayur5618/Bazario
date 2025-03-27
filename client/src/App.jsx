@@ -62,7 +62,7 @@ const App = () => {
               <Route path="/products" element={<AllProducts />} />
               <Route path="/sellers/:sellerId" element={<SellerProfile />} />
               <Route path="/seller/:sellerId" element={<SellerProfile />} />
-              <Route path="/products/category/:category" element={<CategoryProducts />} />
+              <Route path="/products/category/:category" element={<CategoryProducts showFilters={true} />} />
               
               {/* Protected Routes */}
               <Route path="/profile" element={

@@ -370,7 +370,7 @@ export const getProduct = async (req, res) => {
             category: product.category,
             _id: { $ne: product._id } // Exclude current product
         })
-        .limit(4) // Limit to 4 related products
+        .limit(10) // Changed from 5 to 10 related products
         .select('name images price stock rating reviews'); // Select only needed fields
 
         // Add productsCount to seller object

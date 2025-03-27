@@ -413,6 +413,7 @@ const Home = () => {
                 description={category.description}
                 city={userData?.city}
                 hideViewAll={true}
+                showFilters={false}
               />
             </div>
           </div>

@@ -777,3 +777,80 @@ export const getCustomerOrderHistory = async (req, res) => {
         });
     }
 };
+
+// Get seller order statistics
+export const getSellerOrderStats = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+        
+        // Get orders for last 6 months
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const orders = await Order.find({
+            'items.seller': sellerId,
+            createdAt: { $gte: sixMonthsAgo }
+        });
+
+        // Calculate statistics
+        const stats = {
+            totalOrders: orders.length,
+            pendingOrders: orders.filter(o => o.status === 'pending').length,
+            completedOrders: orders.filter(o => o.status === 'completed' || o.status === 'delivered').length,
+            cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+            totalRevenue: orders.reduce((total, order) => {
+                const sellerItems = order.items.filter(item => 
+                    item.seller.toString() === sellerId.toString()
+                );
+                return total + sellerItems.reduce((sum, item) => sum + item.subtotal, 0);
+            }, 0),
+            monthlyData: []
+        };
+
+        // Get monthly data
+        for (let i = 0; i < 6; i++) {
+            const monthStart = new Date();
+            monthStart.setMonth(monthStart.getMonth() - i);
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
+
+            const monthEnd = new Date(monthStart);
+            monthEnd.setMonth(monthEnd.getMonth() + 1);
+            monthEnd.setDate(0);
+            monthEnd.setHours(23, 59, 59, 999);
+
+            const monthlyOrders = orders.filter(order => 
+                order.createdAt >= monthStart && order.createdAt <= monthEnd
+            );
+
+            stats.monthlyData.unshift({
+                month: monthStart.toLocaleString('default', { month: 'short' }),
+                year: monthStart.getFullYear(),
+                totalOrders: monthlyOrders.length,
+                revenue: monthlyOrders.reduce((total, order) => {
+                    const sellerItems = order.items.filter(item => 
+                        item.seller.toString() === sellerId.toString()
+                    );
+                    return total + sellerItems.reduce((sum, item) => sum + item.subtotal, 0);
+                }, 0),
+                ordersByStatus: {
+                    pending: monthlyOrders.filter(o => o.status === 'pending').length,
+                    completed: monthlyOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length,
+                    cancelled: monthlyOrders.filter(o => o.status === 'cancelled').length
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            stats
+        });
+
+    } catch (error) {
+        console.error('Error fetching order stats:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error fetching order statistics'
+        });
+    }
+};

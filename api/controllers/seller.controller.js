@@ -7,7 +7,7 @@ import Agency from '../models/agency.model.js';
 import { getCoordinatesFromAddress } from '../utils/geocoding.js';
 import Review from '../models/review.model.js';
 
-export const getSellerDashboardStats = async (req, res) => {
+export const getDashboardStats = async (req, res) => {
     try {
         const sellerId = req.user._id;
 
@@ -40,13 +40,33 @@ export const getSellerDashboardStats = async (req, res) => {
             return total;
         }, 0);
 
+        // Calculate seller's average rating
+        const products = await Product.find({ seller: sellerId });
+        let totalRating = 0;
+        let totalReviews = 0;
+
+        products.forEach(product => {
+            // Add rating (even if it's 0)
+            totalRating += product.rating || 0;
+            
+            // Count total reviews
+            if (product.numReviews) {
+                totalReviews += product.numReviews;
+            }
+        });
+
+        // Calculate average rating considering all products
+        const sellerRating = products.length > 0 ? Number(totalRating / products.length).toFixed(1) : 'New';
+
         res.status(200).json({
             success: true,
             stats: {
                 totalProducts,
                 totalOrders,
                 pendingOrders,
-                revenue
+                revenue,
+                sellerRating,
+                totalReviews
             }
         });
 
@@ -56,60 +76,6 @@ export const getSellerDashboardStats = async (req, res) => {
             success: false,
             message: 'Error fetching dashboard statistics',
             error: error.message
-        });
-    }
-};
-
-export const getDashboardStats = async (req, res) => {
-    try {
-        const sellerId = req.user._id;
-
-        // Get total products
-        const totalProducts = await Product.countDocuments({ seller: sellerId });
-
-        // Get total orders and calculate revenue
-        const orders = await Order.find({ 
-            'items.seller': sellerId 
-        });
-
-        const totalOrders = orders.length;
-
-        // Get pending orders
-        const pendingOrders = await Order.countDocuments({ 
-            'items.seller': sellerId,
-            status: 'pending'
-        });
-
-        // Calculate total revenue
-        const revenue = orders.reduce((total, order) => {
-            // Only include revenue from completed orders
-            if (order.status === 'completed' || order.status === 'delivered') {
-                const sellerItems = order.items.filter(item => 
-                    item.seller.toString() === sellerId.toString()
-                );
-                const orderTotal = sellerItems.reduce((sum, item) => 
-                    sum + (item.price * item.quantity), 0
-                );
-                return total + orderTotal;
-            }
-            return total;
-        }, 0);
-
-        res.status(200).json({
-            success: true,
-            stats: {
-                totalProducts,
-                totalOrders,
-                pendingOrders,
-                revenue
-            }
-        });
-
-    } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching dashboard statistics'
         });
     }
 };
@@ -143,16 +109,45 @@ export const getPendingOrders = async (req, res) => {
 export const getSellerProducts = async (req, res) => {
     try {
         const sellerId = req.params.sellerId || req.user._id;
-        const { sort = '-createdAt', limit = 20 } = req.query;
+        const { sort = '-createdAt', limit } = req.query;
         
-        const products = await Product.find({ seller: sellerId })
+        // Create base query
+        let query = Product.find({ seller: sellerId })
             .sort(sort)
-            .limit(parseInt(limit))
             .select('name price images stock rating numReviews');
+
+        // Apply limit only if specified
+        if (limit) {
+            query = query.limit(parseInt(limit));
+        }
+
+        // Execute query
+        const products = await query;
+
+        // Fetch latest review and pending orders for each product
+        const productsWithDetails = await Promise.all(products.map(async (product) => {
+            // Get latest review
+            const latestReview = await Review.findOne({ product: product._id })
+                .sort('-createdAt')
+                .select('rating comment userName createdAt');
+
+            // Get pending orders count
+            const pendingOrders = await Order.countDocuments({
+                'items.product': product._id,
+                'items.seller': sellerId,
+                status: { $in: ['pending', 'confirmed', 'processing'] }
+            });
+
+            return {
+                ...product.toObject(),
+                latestReview,
+                pendingOrders
+            };
+        }));
 
         res.json({
             success: true,
-            products
+            products: productsWithDetails
         });
 
     } catch (error) {
@@ -381,6 +376,106 @@ export const getSellerById = async (req, res) => {
             success: false,
             message: 'Error fetching seller details',
             error: error.message
+        });
+    }
+};
+
+export const getReviewStats = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+        const twentyEightDaysAgo = new Date();
+        twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
+
+        // Get seller's products
+        const products = await Product.find({ seller: sellerId });
+        const productIds = products.map(p => p._id);
+
+        // Get reviews for these products in last 28 days
+        const reviews = await Review.find({
+            product: { $in: productIds },
+            createdAt: { $gte: twentyEightDaysAgo }
+        });
+
+        // Calculate stats
+        const stats = {
+            totalReviews28Days: reviews.length,
+            repliedReviews: reviews.filter(r => r.replies && r.replies.length > 0).length,
+            pendingReplies: reviews.filter(r => !r.replies || r.replies.length === 0).length
+        };
+
+        res.status(200).json({
+            success: true,
+            stats
+        });
+
+    } catch (error) {
+        console.error('Error fetching review stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching review statistics'
+        });
+    }
+};
+
+export const getLatestReviews = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+        const limit = 3; // Get only latest 3 reviews
+
+        // Get seller's products
+        const products = await Product.find({ seller: sellerId });
+        const productIds = products.map(p => p._id);
+
+        // Get latest reviews for these products
+        const reviews = await Review.find({ product: { $in: productIds } })
+            .populate('buyer', 'firstname lastname profileImage')
+            .populate('product', 'name images')
+            .sort({ createdAt: -1 })
+            .limit(limit);
+
+        res.status(200).json({
+            success: true,
+            reviews
+        });
+
+    } catch (error) {
+        console.error('Error fetching latest reviews:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching latest reviews'
+        });
+    }
+};
+
+export const searchProductReviews = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+        const { query } = req.query;
+
+        // First find products matching the search query
+        const products = await Product.find({
+            seller: sellerId,
+            name: { $regex: query, $options: 'i' }
+        });
+
+        const productIds = products.map(p => p._id);
+
+        // Then get reviews for these products
+        const reviews = await Review.find({ product: { $in: productIds } })
+            .populate('buyer', 'firstname lastname profileImage')
+            .populate('product', 'name images')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            reviews
+        });
+
+    } catch (error) {
+        console.error('Error searching product reviews:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error searching product reviews'
         });
     }
 };

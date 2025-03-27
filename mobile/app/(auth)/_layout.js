@@ -35,6 +35,12 @@ export default function AuthLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen 
+        name="agency/registration"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 } 
