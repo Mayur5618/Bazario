@@ -8,28 +8,23 @@ const router = express.Router();
 
 
 // Review routes
-router.post('/products/:productId/reviews', protect, createReview);
-router.get('/products/:productId/reviews', getProductReviews);
-router.post('/reviews/:reviewId/reply', protect, addReplyToReview);
-router.post('/reviews/:reviewId/vote', protect, voteReview);
-
-router.get('/products/:productId/reviews/paginated', getProductReviewsPaginated);
-router.get('/reviews/:reviewId', getReviewById);
-router.post('/reviews/:reviewId/like', protect, toggleLike);
-router.delete('/:reviewId', protect, deleteReview);
-router.patch('/:reviewId', protect,updateReview);
-router.get('/user/product/:productId', protect, checkUserReview);
-
-// Update review
-router.put('/:reviewId', protect, updateReview);
-
-// Delete review
-router.delete('/:reviewId', protect, deleteReview);
-
-// Toggle like
-router.post('/:reviewId/like', protect, toggleLike);
-
-// Get reviews for a product (public route - no auth needed)
+router.post('/products/:productId', protect, createReview);
 router.get('/products/:productId', getProductReviews);
+
+// Reply route
+router.post('/:reviewId/reply', protect, addReplyToReview);
+
+// Other review interactions
+router.post('/:reviewId/vote', protect, voteReview);
+router.post('/:reviewId/like', protect, toggleLike);
+router.get('/:reviewId', getReviewById);
+router.put('/:reviewId', protect, updateReview);
+router.delete('/:reviewId', protect, deleteReview);
+
+// Check user review eligibility
+router.get('/check/:productId', protect, checkUserReview);
+
+// Get paginated reviews
+router.get('/products/:productId/paginated', getProductReviewsPaginated);
 
 export default router;

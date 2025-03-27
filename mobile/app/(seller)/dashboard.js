@@ -19,6 +19,7 @@ import { BlurView } from 'expo-blur';
 import ProductsTab from '../../src/components/ProductsTab';
 import OrdersTab from './OrdersTab';
 import ReviewsTab from './ReviewsTab';
+import ProfileTab from './profile';
 
 const { width } = Dimensions.get('window');
 const cardWidth = width - 40; // Full width cards with padding
@@ -328,7 +329,7 @@ const SellerDashboard = () => {
         return (
           <ScrollView style={styles.container}>
             {renderHeader()}
-            <Text style={styles.comingSoon}>Profile Tab Coming Soon</Text>
+            <ProfileTab />
           </ScrollView>
         );
       default:
@@ -401,7 +402,7 @@ const SellerDashboard = () => {
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => {
-            router.push('/(seller)/profile');
+            setActiveTab('profile');
           }}
         >
           <Ionicons
@@ -434,9 +435,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    position: 'absolute',
+    right: 16,
+    top: 8,
+    zIndex: 1,
   },
   nameText: {
     fontSize: 20,

@@ -6,6 +6,7 @@ import Buyer from '../models/buyer.model.js';
 import Agency from '../models/agency.model.js';
 import { getCoordinatesFromAddress } from '../utils/geocoding.js';
 import Review from '../models/review.model.js';
+import jwt from 'jsonwebtoken';
 
 export const getDashboardStats = async (req, res) => {
     try {
@@ -476,6 +477,81 @@ export const searchProductReviews = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error searching product reviews'
+        });
+    }
+};
+
+export const sellerSignin = async (req, res) => {
+    try {
+        const { mobileno, password } = req.body;
+
+        if (!mobileno || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide mobile number and password'
+            });
+        }
+
+        const mobilenoString = mobileno.toString();
+
+        // Find seller by mobile number
+        const seller = await Seller.findOne({ mobileno: mobilenoString });
+
+        if (!seller) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid mobile number or password'
+            });
+        }
+
+        // Verify password
+        const isPasswordValid = await seller.matchPassword(password);
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid mobile number or password'
+            });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { 
+                id: seller._id, 
+                userType: 'seller' 
+            },
+            'your-temporary-secret-key',
+            { expiresIn: '24h' }
+        );
+
+        // Send response with cookie
+        res.status(200)
+           .cookie('access_token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 24 * 60 * 60 * 1000,
+           })
+           .json({
+                success: true,
+                data: {
+                    _id: seller._id,
+                    firstname: seller.firstname,
+                    lastname: seller.lastname,
+                    mobileno: seller.mobileno,
+                    userType: 'seller',
+                    platformType: seller.platformType,
+                    profileImage: seller.profileImage,
+                    shopName: seller.shopName,
+                    businessType: seller.businessType
+                }
+           });
+
+    } catch (error) {
+        console.error('Seller signin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error during signin',
+            error: error.message
         });
     }
 };

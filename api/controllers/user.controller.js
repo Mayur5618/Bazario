@@ -612,7 +612,7 @@ export const getSellerData = async (req, res) => {
     
     // Find seller and populate necessary fields
     const seller = await Seller.findById(sellerId)
-      .select('firstname lastname shopName profileImage businessType city state createdAt rating');
+      .select('firstname lastname shopName profileImage businessType city state createdAt rating mobileno address pincode');
     
     if (!seller) {
       return res.status(404).json({ 

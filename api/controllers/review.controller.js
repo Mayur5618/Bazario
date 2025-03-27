@@ -135,38 +135,60 @@ export const addReplyToReview = async (req, res) => {
     try {
         const { comment } = req.body;
         const { reviewId } = req.params;
-        const userId = req.user._id;
-        const userType = req.user.userType; // 'buyer' or 'seller'
+        const sellerId = req.user._id;
 
-        const review = await Review.findById(reviewId);
-        if (!review) {
-            return res.status(404).json({
+        // Validate comment
+        if (!comment || comment.trim().length === 0) {
+            return res.status(400).json({
                 success: false,
-                message: 'Review not found'
+                message: 'जवाब लिखना ज़रूरी है'
             });
         }
 
+        const review = await Review.findById(reviewId)
+            .populate('product', 'seller');
+
+        if (!review) {
+            return res.status(404).json({
+                success: false,
+                message: 'रिव्यू नहीं मिला'
+            });
+        }
+
+        // Check if the seller owns the product being reviewed
+        if (review.product.seller.toString() !== sellerId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'आप इस रिव्यू का जवाब नहीं दे सकते'
+            });
+        }
+
+        // Add the reply
         review.replies.push({
-            user: userId,
-            comment,
-            userType
+            user: sellerId,
+            comment: comment,
+            userType: 'seller'
         });
 
         await review.save();
 
+        // Populate the updated review with necessary fields
         const updatedReview = await Review.findById(reviewId)
-            .populate('buyer', 'firstname lastname')
-            .populate('replies.user', 'firstname lastname');
+            .populate('buyer', 'firstname lastname profileImage')
+            .populate('product', 'name images')
+            .populate('replies.user', 'firstname lastname shopName');
 
         res.status(200).json({
             success: true,
+            message: 'जवाब सफलतापूर्वक जोड़ा गया',
             review: updatedReview
         });
 
     } catch (error) {
+        console.error('Error in addReplyToReview:', error);
         res.status(500).json({
             success: false,
-            message: 'Error adding reply',
+            message: 'जवाब देने में समस्या हुई',
             error: error.message
         });
     }

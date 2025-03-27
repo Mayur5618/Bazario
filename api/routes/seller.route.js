@@ -5,11 +5,15 @@ import {
     getSellerProducts,
     getReviewStats,
     getLatestReviews,
-    searchProductReviews 
+    searchProductReviews,
+    sellerSignin
 } from '../controllers/seller.controller.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Auth
+router.post('/signin', sellerSignin);
 
 // Dashboard
 router.get('/dashboard-stats', verifyToken, getDashboardStats);

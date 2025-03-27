@@ -61,7 +61,7 @@ export const sellerApi = {
     // Get product details
     getProductDetails: async (productId) => {
         try {
-            const response = await axios.get(`/api/seller/products/${productId}`);
+            const response = await axios.get(`/api/products/${productId}`);
             return response.data;
         } catch (error) {
             console.error('Error fetching product details:', error);
@@ -182,13 +182,14 @@ export const sellerApi = {
     // Get seller profile
     getProfile: async () => {
         try {
-            // Get seller ID from auth context or storage
-            const sellerId = await AsyncStorage.getItem('userId');
-            const response = await axios.get(`/api/users/sellers/${sellerId}`);
+            const response = await axios.get('/api/seller/profile');
             return response.data;
         } catch (error) {
             console.error('Error fetching profile:', error);
-            throw error;
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error fetching profile'
+            };
         }
     },
 
@@ -242,10 +243,10 @@ export const sellerApi = {
             return response.data;
         } catch (error) {
             console.error('Error replying to review:', error);
-            if (error.response) {
-                throw new Error(error.response.data.message || 'Failed to reply to review');
-            }
-            throw new Error('Network error occurred');
+            throw {
+                message: error.response?.data?.message || 'जवाब देने में समस्या हुई',
+                error: error
+            };
         }
     },
 

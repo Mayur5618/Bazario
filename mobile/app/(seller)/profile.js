@@ -29,24 +29,20 @@ const ProfileScreen = () => {
     name: '',
     shopName: '',
     phone: '',
-    email: '',
     address: '',
     city: '',
     state: '',
     pincode: '',
     profileImage: null,
-    bio: '',
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0
   });
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
     fetchProfileData();
-    fetchProfile();
   }, []);
 
   const fetchProfileData = async () => {
@@ -63,36 +59,22 @@ const ProfileScreen = () => {
           name: `${seller.firstname} ${seller.lastname}` || '',
           shopName: seller.shopName || '',
           phone: seller.mobileno || '',
-          email: seller.email || '',
           address: seller.address || '',
           city: seller.city || '',
           state: seller.state || '',
           pincode: seller.pincode || '',
           profileImage: seller.profileImage || null,
-          bio: seller.bio || '',
           totalProducts: stats.totalProducts || 0,
           totalOrders: stats.totalOrders || 0,
           totalRevenue: stats.revenue || 0
         });
+
+        // Set products from seller response
+        setProducts(response.data.products || []);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
       Alert.alert('एरर', 'प्रोफ़ाइल लोड करने में समस्या हुई');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await sellerApi.getProfile();
-      if (response.success) {
-        setProfile(response.seller);
-        setProducts(response.products);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to fetch profile');
     } finally {
       setLoading(false);
     }
@@ -168,7 +150,22 @@ const ProfileScreen = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/users/sellers/${user?._id}`, profileData);
+      // Split the full name into firstname and lastname
+      const [firstname = '', lastname = ''] = profileData.name.split(' ');
+      
+      const updateData = {
+        firstname,
+        lastname,
+        shopName: profileData.shopName,
+        mobileno: profileData.phone,
+        address: profileData.address,
+        city: profileData.city,
+        state: profileData.state,
+        pincode: profileData.pincode
+      };
+
+      const response = await axios.put(`/api/users/sellers/${user?._id}`, updateData);
+      
       if (response.data) {
         Alert.alert('सफल', 'प्रोफ़ाइल अपडेट हो गया है');
         setIsEditing(false);
@@ -250,32 +247,6 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>मेरी प्रोफ़ाइल</Text>
-        <TouchableOpacity 
-          onPress={() => {
-            if (isEditing) {
-              handleSave();
-            } else {
-              setIsEditing(true);
-            }
-          }}
-          style={[styles.editButton, isEditing && styles.saveButton]}
-        >
-          <Ionicons 
-            name={isEditing ? "checkmark" : "create-outline"} 
-            size={20} 
-            color="#FFF" 
-          />
-          <Text style={styles.editButtonText}>
-            {isEditing ? 'सेव करें' : 'एडिट करें'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
           <TouchableOpacity onPress={handleImagePick} style={styles.imageWrapper}>
@@ -303,6 +274,27 @@ const ProfileScreen = () => {
             {isEditing ? (imageLoading ? 'अपलोड हो रहा है...' : 'टैप करके फोटो बदलें') : 'प्रोफाइल फोटो'}
           </Text>
         </View>
+
+        {/* Edit Button */}
+        <TouchableOpacity 
+          onPress={() => {
+            if (isEditing) {
+              handleSave();
+            } else {
+              setIsEditing(true);
+            }
+          }}
+          style={[styles.editButton, isEditing && styles.saveButton]}
+        >
+          <Ionicons 
+            name={isEditing ? "checkmark" : "create-outline"} 
+            size={20} 
+            color="#FFF" 
+          />
+          <Text style={styles.editButtonText}>
+            {isEditing ? 'सेव करें' : 'एडिट करें'}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
@@ -337,7 +329,6 @@ const ProfileScreen = () => {
           {renderField('नाम', profileData.name, 'name')}
           {renderField('दुकान का नाम', profileData.shopName, 'shopName')}
           {renderField('फ़ोन नंबर', profileData.phone, 'phone', 'phone-pad')}
-          {renderField('ईमेल', profileData.email, 'email', 'email-address')}
         </View>
 
         <Text style={styles.sectionTitle}>पता</Text>
@@ -347,100 +338,6 @@ const ProfileScreen = () => {
           {renderField('राज्य', profileData.state, 'state')}
           {renderField('पिन कोड', profileData.pincode, 'pincode', 'numeric')}
         </View>
-
-        <Text style={styles.sectionTitle}>अतिरिक्त जानकारी</Text>
-        <View style={styles.form}>
-          {renderField('बायो', profileData.bio, 'bio', 'default', true)}
-        </View>
-      </View>
-
-      {/* Shop Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Shop Details</Text>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="store" size={24} color="#6C63FF" />
-          <View style={styles.detailText}>
-            <Text style={styles.detailLabel}>Shop Name</Text>
-            <Text style={styles.detailValue}>{profile?.shopName || 'Not set'}</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </View>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="phone" size={24} color="#6C63FF" />
-          <View style={styles.detailText}>
-            <Text style={styles.detailLabel}>Phone Number</Text>
-            <Text style={styles.detailValue}>{profile?.phone || 'Not set'}</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </View>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="location-on" size={24} color="#6C63FF" />
-          <View style={styles.detailText}>
-            <Text style={styles.detailLabel}>Address</Text>
-            <Text style={styles.detailValue}>
-              {profile?.address ? 
-                `${profile.address.street}, ${profile.address.city}, ${profile.address.state} ${profile.address.pincode}`
-                : 'Not set'
-              }
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </View>
-      </View>
-
-      {/* Account Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Details</Text>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="account-balance" size={24} color="#6C63FF" />
-          <View style={styles.detailText}>
-            <Text style={styles.detailLabel}>Bank Account</Text>
-            <Text style={styles.detailValue}>
-              {profile?.bankDetails?.accountNumber 
-                ? `XXXX${profile.bankDetails.accountNumber.slice(-4)}`
-                : 'Not set'
-              }
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </View>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="credit-card" size={24} color="#6C63FF" />
-          <View style={styles.detailText}>
-            <Text style={styles.detailLabel}>UPI ID</Text>
-            <Text style={styles.detailValue}>{profile?.bankDetails?.upiId || 'Not set'}</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </View>
-      </View>
-
-      {/* Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <TouchableOpacity 
-          style={styles.settingRow}
-          onPress={() => router.push('/(seller)/edit-profile')}
-        >
-          <MaterialIcons name="edit" size={24} color="#6C63FF" />
-          <Text style={styles.settingText}>Edit Profile</Text>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.settingRow}
-          onPress={() => router.push('/(seller)/change-password')}
-        >
-          <MaterialIcons name="lock" size={24} color="#6C63FF" />
-          <Text style={styles.settingText}>Change Password</Text>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.settingRow}
-          onPress={() => router.push('/(seller)/notifications')}
-        >
-          <MaterialIcons name="notifications" size={24} color="#6C63FF" />
-          <Text style={styles.settingText}>Notifications</Text>
-          <MaterialIcons name="chevron-right" size={24} color="#666" />
-        </TouchableOpacity>
       </View>
 
       {/* Recent Products */}
@@ -455,7 +352,7 @@ const ProfileScreen = () => {
             <TouchableOpacity 
               key={product._id}
               style={styles.productCard}
-              onPress={() => router.push(`/(seller)/products/${product._id}`)}
+              onPress={() => router.push(`/(seller)/product-details/${product._id}`)}
             >
               <Image 
                 source={{ uri: product.images[0] }}
@@ -512,22 +409,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-  },
-  editButton: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  saveButton: {
-    backgroundColor: '#4CAF50',
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-    marginLeft: 4,
   },
   profileSection: {
     backgroundColor: '#FFFFFF',
@@ -692,39 +573,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  detailText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  settingText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1A1A1A',
-    marginLeft: 12,
-  },
   productsScroll: {
     marginTop: 12,
   },
@@ -778,6 +626,23 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginLeft: 4,
   },
+  editButton: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
 });
 
-export default ProfileScreen; 
+export default ProfileScreen;

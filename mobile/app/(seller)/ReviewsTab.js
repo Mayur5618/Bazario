@@ -8,7 +8,9 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Modal,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../../src/api/sellerApi';
@@ -23,6 +25,10 @@ const ReviewsTab = () => {
     pendingReplies: 0
   });
   const [reviews, setReviews] = useState([]);
+  const [replyModalVisible, setReplyModalVisible] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
 
   useEffect(() => {
     fetchReviewsData();
@@ -66,6 +72,46 @@ const ReviewsTab = () => {
       console.error('Error searching reviews:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReplyPress = (review) => {
+    setSelectedReview(review);
+    setReplyText('');
+    setReplyModalVisible(true);
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyText.trim()) {
+      Alert.alert('त्रुटि', 'कृपया जवाब लिखें');
+      return;
+    }
+
+    try {
+      setReplying(true);
+      const response = await sellerApi.replyToReview(selectedReview._id, replyText.trim());
+      
+      if (response.success) {
+        // Update the reviews list with the new reply
+        const updatedReviews = reviews.map(review => 
+          review._id === selectedReview._id ? response.review : review
+        );
+        setReviews(updatedReviews);
+        
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          repliedReviews: prev.repliedReviews + 1,
+          pendingReplies: prev.pendingReplies - 1
+        }));
+
+        setReplyModalVisible(false);
+        Alert.alert('सफल', 'आपका जवाब सफलतापूर्वक जोड़ा गया है');
+      }
+    } catch (error) {
+      Alert.alert('त्रुटि', error.message || 'जवाब देने में समस्या हुई');
+    } finally {
+      setReplying(false);
     }
   };
 
@@ -120,7 +166,10 @@ const ReviewsTab = () => {
           <Text style={styles.replyText}>{review.replies[0].comment}</Text>
         </View>
       ) : (
-        <TouchableOpacity style={styles.replyButton}>
+        <TouchableOpacity 
+          style={styles.replyButton}
+          onPress={() => handleReplyPress(review)}
+        >
           <Text style={styles.replyButtonText}>जवाब दें</Text>
         </TouchableOpacity>
       )}
@@ -128,60 +177,104 @@ const ReviewsTab = () => {
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
-          <Text style={styles.statValue}>{stats.totalReviews28Days}</Text>
-          <Text style={styles.statLabel}>पिछले 28 दिनों{'\n'}के रिव्यू</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
+            <Text style={styles.statValue}>{stats.totalReviews28Days}</Text>
+            <Text style={styles.statLabel}>पिछले 28 दिनों{'\n'}के रिव्यू</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
+            <Text style={styles.statValue}>{stats.repliedReviews}</Text>
+            <Text style={styles.statLabel}>जवाब दिए{'\n'}गए रिव्यू</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
+            <Text style={styles.statValue}>{stats.pendingReplies}</Text>
+            <Text style={styles.statLabel}>बिना जवाब{'\n'}के रिव्यू</Text>
+          </View>
         </View>
-        <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
-          <Text style={styles.statValue}>{stats.repliedReviews}</Text>
-          <Text style={styles.statLabel}>जवाब दिए{'\n'}गए रिव्यू</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
-          <Text style={styles.statValue}>{stats.pendingReplies}</Text>
-          <Text style={styles.statLabel}>बिना जवाब{'\n'}के रिव्यू</Text>
-        </View>
-      </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="प्रोडक्ट का नाम खोजें..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Ionicons name="search" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Reviews List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C63FF" />
-          <Text style={styles.loadingText}>रिव्यू लोड हो रहे हैं...</Text>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="प्रोडक्ट का नाम खोजें..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Ionicons name="search" size={24} color="#FFF" />
+          </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.reviewsList}>
-          {reviews.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="chatbubble-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyStateText}>कोई रिव्यू नहीं मिला</Text>
+
+        {/* Reviews List */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6C63FF" />
+            <Text style={styles.loadingText}>रिव्यू लोड हो रहे हैं...</Text>
+          </View>
+        ) : (
+          <View style={styles.reviewsList}>
+            {reviews.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="chatbubble-outline" size={64} color="#CCC" />
+                <Text style={styles.emptyStateText}>कोई रिव्यू नहीं मिला</Text>
+              </View>
+            ) : (
+              reviews.map(review => renderReviewCard(review))
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      <Modal
+        visible={replyModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReplyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>रिव्यू का जवाब दें</Text>
+              <TouchableOpacity 
+                onPress={() => setReplyModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
-          ) : (
-            reviews.map(review => renderReviewCard(review))
-          )}
+
+            <TextInput
+              style={styles.replyInput}
+              placeholder="अपना जवाब लिखें..."
+              value={replyText}
+              onChangeText={setReplyText}
+              multiline
+              textAlignVertical="top"
+            />
+
+            <TouchableOpacity 
+              style={[styles.submitButton, replying && styles.submitButtonDisabled]}
+              onPress={handleSubmitReply}
+              disabled={replying}
+            >
+              {replying ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>जवाब भेजें</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
-    </ScrollView>
+      </Modal>
+    </>
   );
 };
 
@@ -349,6 +442,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  closeButton: {
+    padding: 5,
+  },
+  replyInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 15,
+    minHeight: 120,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  submitButton: {
+    backgroundColor: '#6C63FF',
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#A5A5A5',
+  },
+  submitButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
