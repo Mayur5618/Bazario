@@ -4,7 +4,7 @@ export const reviewApi = {
   // Check if user can review
   checkUserReview: async (productId) => {
     try {
-      const response = await axios.get(`/api/reviews/user/product/${productId}`);
+      const response = await axios.get(`/api/reviews/check/${productId}`);
       return response.data;
     } catch (error) {
       console.error('Check review eligibility error:', error);
@@ -75,10 +75,10 @@ export const reviewApi = {
     }
   },
 
-  // Get product reviews
+  // Get paginated reviews
   getProductReviews: async (productId, page = 1, limit = 10) => {
     try {
-      const response = await axios.get(`/api/reviews/products/${productId}/reviews/paginated?page=${page}&limit=${limit}`);
+      const response = await axios.get(`/api/reviews/products/${productId}/paginated?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
       console.error('Get reviews error:', error);

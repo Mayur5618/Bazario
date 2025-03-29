@@ -14,7 +14,10 @@ import {
   getBulkProducts,
   getFilteredProducts,
   getCategories,
-  uploadProductImages
+  uploadProductImages,
+  getProductsByCategoryAndSubcategory,
+  getProductsByCategory,
+  getProductsBySubcategory
 } from "../controllers/product.controller.js";
 import { 
   createReview, 
@@ -32,6 +35,7 @@ const router = express.Router();
 router.get("/", getProducts);
 router.get("/filtered", getFilteredProducts);
 router.get("/categories", getCategories);
+router.get("/category/:category", getProductsByCategory);
 router.get("/:id", getProduct);
 
 // Review routes
@@ -54,7 +58,6 @@ router.put(
   "/:id",
   verifyToken,
   sellerOrAgency,
-  checkPlatformAccess((req) => req.body.platformType),
   updateProduct
 );
 
@@ -110,5 +113,11 @@ router.post(
   verifyToken,
   uploadProductImages
 );
+
+// Get products by category with subcategories
+router.get('/category/:category', getProductsByCategoryAndSubcategory);
+
+// Get products by subcategory
+router.get('/category/:category/subcategory/:subcategory', getProductsBySubcategory);
 
 export default router;

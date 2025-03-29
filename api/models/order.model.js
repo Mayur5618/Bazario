@@ -90,6 +90,36 @@ const orderSchema = new mongoose.Schema({
         }
     },
 
+    // Billing address (if different from shipping)
+    billingAddress: {
+        fullName: String,
+        email: String,
+        phone: String,
+        street: String,
+        city: String,
+        state: String,
+        pincode: String,
+        country: String,
+        sameAsShipping: {
+            type: Boolean,
+            default: true
+        }
+    },
+
+    // Additional order details
+    estimatedDeliveryDate: {
+        type: Date
+    },
+    deliveryInstructions: String,
+    orderNotes: String,
+    giftWrapping: {
+        required: {
+            type: Boolean,
+            default: false
+        },
+        message: String
+    },
+
     // Order totals
     subtotal: {
         type: Number,

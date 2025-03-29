@@ -26,6 +26,9 @@ const OrderSuccessScreen = () => {
     }).start();
   }, []);
 
+  // Format order ID for display
+  const displayOrderId = orderId ? `ORD-${orderId.slice(-6)}` : 'N/A';
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
@@ -45,7 +48,7 @@ const OrderSuccessScreen = () => {
 
         <View style={styles.orderIdContainer}>
           <Text style={styles.orderIdLabel}>Order ID:</Text>
-          <Text style={styles.orderId}>{orderId}</Text>
+          <Text style={styles.orderId}>{displayOrderId}</Text>
         </View>
 
         <View style={styles.buttonsContainer}>

@@ -20,6 +20,7 @@ import uploadRoutes from './routes/upload.route.js';
 import agencyRoutes from './routes/agencyRoutes.js';
 import './models/seller.model.js'; // Import Seller model to register it
 import recentlyViewedRoutes from './routes/recentlyViewed.js';
+import buyerRoutes from './routes/buyer.route.js';
 
 mongoose
   .connect("mongodb://localhost:27017/Purity-Path")
@@ -57,13 +58,14 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/otp', otpRoutes);
-app.use('/api/user', shippingAddressRoutes);
+app.use('/api', shippingAddressRoutes);
 app.use('/api/search', mobileSearchRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/agency', agencyRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/recently-viewed', recentlyViewedRoutes);
+app.use('/api/buyer', buyerRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);

@@ -43,5 +43,18 @@ export const productApi = {
       console.error('Get products by category error:', error);
       throw error;
     }
+  },
+
+  // Get products by category with subcategory grouping
+  getProductsByCategoryAndSubcategory: async (category, city) => {
+    try {
+      const response = await axios.get(`/api/products/category/${category}`, {
+        params: { city }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get products by category and subcategory error:', error);
+      throw error;
+    }
   }
 }; 

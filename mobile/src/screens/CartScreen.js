@@ -9,12 +9,15 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+
+const { width, height } = Dimensions.get('window');
 
 const CartScreen = () => {
   const router = useRouter();
@@ -102,15 +105,27 @@ const CartScreen = () => {
 
   if (cartItemsArray.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.messageText}>Your cart is empty</Text>
-        <TouchableOpacity
-          style={styles.shopButton}
-          onPress={() => router.push('/(app)')}
-        >
-          <Text style={styles.shopButtonText}>Start Shopping</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+        
+        <View style={styles.emptyCartContainer}>
+          <View style={styles.emptyCartContent}>
+            <Ionicons name="cart-outline" size={80} color="#4169E1" style={styles.emptyCartIcon} />
+            
+            <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
+            <Text style={styles.emptyCartMessage}>
+              Looks like you haven't made your choice yet...
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.startShoppingButton}
+              onPress={() => router.push('/(app)')}
+            >
+              <Text style={styles.startShoppingButtonText}>Start Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -329,6 +344,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyCartContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  emptyCartContent: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    width: '100%',
+  },
+  emptyCartIcon: {
+    marginBottom: 20,
+  },
+  emptyCartTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyCartMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  startShoppingButton: {
+    backgroundColor: '#4169E1',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 25,
+    width: '80%',
+    alignItems: 'center',
+  },
+  startShoppingButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

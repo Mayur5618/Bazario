@@ -18,19 +18,29 @@ export const getShippingAddresses = async (req, res) => {
 
 export const addShippingAddress = async (req, res) => {
   try {
-    const { name, street, city, state, pincode, phone } = req.body;
+    const { name, email, street, city, state, pincode, phone } = req.body;
 
     // Validate required fields
-    if (!name || !street || !city || !state || !pincode || !phone) {
+    if (!name || !email || !street || !city || !state || !pincode || !phone) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
       });
     }
 
+    // Validate email format
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address'
+      });
+    }
+
     const newAddress = new ShippingAddress({
       user: req.user._id,
       name,
+      email,
       street,
       city,
       state,
@@ -49,7 +59,7 @@ export const addShippingAddress = async (req, res) => {
     console.error('Error in addShippingAddress:', error);
     res.status(500).json({
       success: false,
-      message: 'Error adding shipping address'
+      message: error.message || 'Error adding shipping address'
     });
   }
 };

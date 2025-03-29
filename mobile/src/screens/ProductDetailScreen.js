@@ -371,6 +371,7 @@ const ProductDetailScreen = () => {
   const [reviewText, setReviewText] = useState('');
   const [reviewImages, setReviewImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [buyerCity, setBuyerCity] = useState('');
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
 
@@ -393,6 +394,21 @@ const ProductDetailScreen = () => {
   const [openSection, setOpenSection] = useState('');
 
   const imageScrollViewRef = useRef(null);
+
+  const fetchBuyerCity = async () => {
+    try {
+      const response = await axios.get('/api/buyer/city');
+      if (response.data.success) {
+        setBuyerCity(response.data.city);
+      }
+    } catch (error) {
+      console.error('Error fetching buyer city:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchBuyerCity();
+  }, []);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -467,7 +483,7 @@ const ProductDetailScreen = () => {
 
   useEffect(() => {
     fetchProductDetails();
-  }, [id]);
+  }, [id, buyerCity]);
 
   useEffect(() => {
     if (cartItems && id) {
@@ -483,7 +499,11 @@ const ProductDetailScreen = () => {
 
   const fetchProductDetails = async () => {
     try {
-      const response = await axios.get(`/api/products/${id}`);
+      const response = await axios.get(`/api/products/${id}`, {
+        params: {
+          city: buyerCity // Add buyer city to params
+        }
+      });
       setProduct(response.data.product);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -574,13 +594,17 @@ const ProductDetailScreen = () => {
       setCartItem({ quantity: 1 });
       Toast.show({
         type: 'success',
-        text1: 'Added to cart successfully'
+        text1: 'Added to cart successfully',
+        visibilityTime: 1800,
+        position: 'top'
       });
     } catch (error) {
       console.error('Error adding to cart:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to add to cart'
+        text1: 'Failed to add to cart',
+        visibilityTime: 1800,
+        position: 'top'
       });
     }
   };
@@ -596,7 +620,9 @@ const ProductDetailScreen = () => {
       }
       Toast.show({
         type: 'success',
-        text1: newQuantity === 0 ? 'Removed from cart' : 'Updated quantity'
+        text1: newQuantity === 0 ? 'Removed from cart' : 'Updated quantity',
+        visibilityTime: 1800,
+        position: 'top'
       });
     } catch (error) {
       console.error('Error updating cart:', error);
@@ -625,13 +651,17 @@ const ProductDetailScreen = () => {
         await removeFromWishlist(id);
         Toast.show({
           type: 'success',
-          text1: 'Removed from wishlist'
+          text1: 'Removed from wishlist',
+          visibilityTime: 1800,
+          position: 'top'
         });
       } else {
         await addToWishlist(id);
         Toast.show({
           type: 'success',
-          text1: 'Added to wishlist'
+          text1: 'Added to wishlist',
+          visibilityTime: 1800,
+          position: 'top'
         });
       }
     } catch (error) {

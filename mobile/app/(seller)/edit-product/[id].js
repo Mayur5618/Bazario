@@ -16,12 +16,13 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { sellerApi } from '../../../src/api/sellerApi';
 import axios from '../../../src/config/axios';
 import { Picker } from '@react-native-picker/picker';
+import { useLanguage } from '../../../src/context/LanguageContext';
+import { translations } from '../../../src/translations/addProduct';
 
 const categories = [
-  'Homemade Snacks',
+  'Home-Made',
   'Organic Vegetables & Fruits',
   'Handmade Pottery & Cookware',
   'Microgreens & Herbs',
@@ -49,6 +50,7 @@ const unitTypes = [
 const EditProductScreen = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { language } = useLanguage();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,6 +76,8 @@ const EditProductScreen = () => {
   const [currentTag, setCurrentTag] = useState('');
   const [tagInputRef, setTagInputRef] = useState(null);
   const [youtubeThumb, setYoutubeThumb] = useState(null);
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+  const [showSubcategorySuggestions, setShowSubcategorySuggestions] = useState(false);
 
   useEffect(() => {
     fetchProductDetails();
@@ -82,14 +86,14 @@ const EditProductScreen = () => {
   const fetchProductDetails = async () => {
     try {
       setLoading(true);
-      const response = await sellerApi.getProductDetails(id);
-      if (response.success) {
+      const response = await axios.get(`/api/products/${id}`);
+      if (response.data?.success) {
         const productData = {
-          ...response.product,
-          price: String(response.product.price),
-          stock: String(response.product.stock),
-          unitSize: String(response.product.unitSize || '1'),
-          subUnitPrices: response.product.subUnitPrices || {
+          ...response.data.product,
+          price: String(response.data.product.price),
+          stock: String(response.data.product.stock),
+          unitSize: String(response.data.product.unitSize || '1'),
+          subUnitPrices: response.data.product.subUnitPrices || {
             '250g': '',
             '500g': '',
           }
@@ -163,12 +167,13 @@ const EditProductScreen = () => {
   const calculateSubUnitPrices = (mainPrice, mainUnit) => {
     if (mainUnit === 'kg' && mainPrice) {
       const pricePerGram = parseFloat(mainPrice) / 1000;
+      const prices = {
+        '250g': (pricePerGram * 250).toFixed(2),
+        '500g': (pricePerGram * 500).toFixed(2)
+      };
       setFormData(prev => ({
         ...prev,
-        subUnitPrices: {
-          '250g': (pricePerGram * 250).toFixed(2),
-          '500g': (pricePerGram * 500).toFixed(2)
-        }
+        subUnitPrices: prices
       }));
     }
   };
@@ -268,17 +273,25 @@ const EditProductScreen = () => {
   const handleUpdateProduct = async () => {
     try {
       setSaving(true);
-      const productData = {
-        ...formData,
+      
+      const updateData = {
+        name: formData.name,
+        description: formData.description || '',
         price: parseFloat(formData.price),
+        category: formData.category,
+        subcategory: formData.subcategory,
         stock: parseInt(formData.stock),
+        images: formData.images || [],
+        youtubeLink: formData.youtubeLink || '',
         unitSize: parseFloat(formData.unitSize),
-        subUnitPrices: Object.fromEntries(
-          Object.entries(formData.subUnitPrices).filter(([_, value]) => value !== '')
-        )
+        unitType: formData.unitType,
+        subUnitPrices: formData.subUnitPrices || {},
+        availableLocations: formData.availableLocations || []
       };
 
-      const response = await axios.put(`/api/seller/products/${id}`, productData);
+      console.log('Updating product with data:', updateData);
+
+      const response = await axios.put(`/api/products/${id}`, updateData);
 
       if (response.data?.success) {
         Alert.alert(
@@ -289,11 +302,11 @@ const EditProductScreen = () => {
               text: 'ठीक है',
               onPress: () => {
                 if (router.canGoBack()) {
-                  router.back({
-                    params: {
-                      shouldRefresh: true
-                    }
-                  });
+                  // First navigate back to product page
+                  router.back();
+                  
+                  // Then force a reload by replacing the current route
+                  router.replace(`/(seller)/product-details/${id}`);
                 }
               }
             }
@@ -304,7 +317,7 @@ const EditProductScreen = () => {
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      Alert.alert('एरर', 'प्रोडक्ट अपडेट करने में समस्या हुई');
+      Alert.alert('एरर', error.response?.data?.message || 'प्रोडक्ट अपडेट करने में समस्या हुई');
     } finally {
       setSaving(false);
       setShowConfirmation(false);
@@ -332,6 +345,72 @@ const EditProductScreen = () => {
     }));
   };
 
+  const getSubcategories = (category) => {
+    const subcategories = {
+      'Home-Made': ['Namkeen', 'Sweets', 'Cakes', 'Papad'],
+      'Organic Vegetables & Fruits': ['Vegetables', 'Fruits', 'Leafy Greens', 'Root Vegetables'],
+      'Handmade Pottery & Cookware': ['Pots', 'Pans', 'Plates', 'Bowls'],
+      'Microgreens & Herbs': ['Microgreens', 'Herbs', 'Sprouts'],
+      'Natural & Handmade Soaps': ['Body Soaps', 'Face Soaps', 'Handmade Soaps'],
+      'Preservative-Free Pickles': ['Vegetable Pickles', 'Fruit Pickles', 'Mixed Pickles'],
+      'Pure Honey & Natural Sweeteners': ['Honey', 'Jaggery', 'Natural Syrups'],
+      'Handmade Beauty & Wellness Products': ['Skincare', 'Haircare', 'Wellness'],
+      'Eco-Friendly & Recycled Products': ['Home Decor', 'Accessories', 'Stationery'],
+      'Creative & Artistic Products': ['Art', 'Crafts', 'Decor']
+    };
+    return subcategories[category] || [];
+  };
+
+  const getCategoryLabel = (category) => {
+    const categoryTranslations = {
+      'Home-Made': {
+        en: 'Home-Made',
+        hi: 'घरेलू',
+        mr: 'घरगुती',
+        gu: 'ઘરેલું'
+      },
+      'Organic Vegetables & Fruits': {
+        en: 'Organic Vegetables & Fruits',
+        hi: 'जैविक सब्जियां और फल',
+        mr: 'जैविक भाजी आणि फळे',
+        gu: 'જૈવિક શાકભાજી અને ફળો'
+      }
+      // ... existing translations ...
+    };
+    return categoryTranslations[category]?.[language] || category;
+  };
+
+  const getSubcategoryLabel = (subcategory) => {
+    const subcategoryTranslations = {
+      'Namkeen': {
+        en: 'Namkeen',
+        hi: 'नमकीन',
+        mr: 'नमकीन',
+        gu: 'નમકીન'
+      },
+      'Sweets': {
+        en: 'Sweets',
+        hi: 'मिठाई',
+        mr: 'मिठाई',
+        gu: 'મીઠાઈ'
+      },
+      'Cakes': {
+        en: 'Cakes',
+        hi: 'केक',
+        mr: 'केक',
+        gu: 'કેક'
+      },
+      'Papad': {
+        en: 'Papad',
+        hi: 'पापड़',
+        mr: 'पापड',
+        gu: 'પાપડ'
+      }
+      // ... existing translations ...
+    };
+    return subcategoryTranslations[subcategory]?.[language] || subcategory;
+  };
+
   const renderStep1 = () => (
     <View>
       <Text style={styles.stepTitle}>चरण 1: बेसिक जानकारी</Text>
@@ -342,85 +421,112 @@ const EditProductScreen = () => {
           style={styles.input}
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-          placeholder="उदाहरण: मसाला डोसा"
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>श्रेणी चुनें *</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryScrollView}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryChip,
-                formData.category === category && styles.categoryChipSelected
-              ]}
-              onPress={() => setFormData(prev => ({ ...prev, category }))}
-            >
-              <Text 
-                style={[
-                  styles.categoryChipText,
-                  formData.category === category && styles.categoryChipTextSelected
-                ]}
-              >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <Text style={styles.label}>श्रेणी *</Text>
+        <View style={styles.categoryContainer}>
+          <TextInput
+            style={styles.input}
+            value={formData.category}
+            onChangeText={(text) => {
+              setFormData(prev => ({ ...prev, category: text }));
+              setShowCategorySuggestions(true);
+            }}
+            onFocus={() => setShowCategorySuggestions(true)}
+            placeholder="श्रेणी चुनें या टाइप करें"
+          />
+          
+          {showCategorySuggestions && (
+            <View style={styles.suggestionsDropdown}>
+              <ScrollView style={styles.suggestionsList} nestedScrollEnabled={true}>
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.suggestionItem,
+                      formData.category === category && styles.suggestionItemSelected
+                    ]}
+                    onPress={() => {
+                      setFormData(prev => ({ ...prev, category }));
+                      setShowCategorySuggestions(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.suggestionText,
+                      formData.category === category && styles.suggestionTextSelected
+                    ]}>
+                      {getCategoryLabel(category)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>विवरण</Text>
+        <Text style={styles.label}>उपश्रेणी *</Text>
+        <View style={styles.subcategoryContainer}>
+          <TextInput
+            style={styles.input}
+            value={formData.subcategory}
+            onChangeText={(text) => {
+              setFormData(prev => ({ ...prev, subcategory: text }));
+              if (text.length === 0) {
+                setShowSubcategorySuggestions(true);
+              } else {
+                setShowSubcategorySuggestions(false);
+              }
+            }}
+            onFocus={() => {
+              if (!formData.subcategory) {
+                setShowSubcategorySuggestions(true);
+              }
+            }}
+            placeholder="उपश्रेणी चुनें या टाइप करें"
+          />
+
+          {showSubcategorySuggestions && formData.category && (
+            <View style={styles.suggestionsDropdown}>
+              <ScrollView style={styles.suggestionsList} nestedScrollEnabled={true}>
+                {getSubcategories(formData.category).map((subcategory) => (
+                  <TouchableOpacity
+                    key={subcategory}
+                    style={[
+                      styles.suggestionItem,
+                      formData.subcategory === subcategory && styles.suggestionItemSelected
+                    ]}
+                    onPress={() => {
+                      setFormData(prev => ({ ...prev, subcategory }));
+                      setShowSubcategorySuggestions(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.suggestionText,
+                      formData.subcategory === subcategory && styles.suggestionTextSelected
+                    ]}>
+                      {getSubcategoryLabel(subcategory)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>विवरण (वैकल्पिक)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={formData.description}
           onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-          placeholder="प्रोडक्ट का विवरण लिखें"
           multiline
           numberOfLines={4}
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>टैग्स (वैकल्पिक)</Text>
-        <View style={styles.tagInputContainer}>
-          <TextInput
-            ref={ref => setTagInputRef(ref)}
-            style={styles.tagInput}
-            value={currentTag}
-            onChangeText={setCurrentTag}
-            placeholder="#टमाटर"
-            onSubmitEditing={handleAddTag}
-            returnKeyType="done"
-          />
-          <TouchableOpacity 
-            style={styles.addTagButton} 
-            onPress={handleAddTag}
-          >
-            <Ionicons name="add-circle" size={24} color="#6C63FF" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.tagsContainer}>
-          {formData.tags.map((tag, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.tagChip}
-              onPress={() => handleRemoveTag(tag)}
-            >
-              <Text style={styles.tagChipText}>{tag}</Text>
-              <View style={styles.tagRemoveButton}>
-                <Ionicons name="close-circle" size={20} color="#FF4444" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
     </View>
   );
@@ -509,11 +615,11 @@ const EditProductScreen = () => {
             }}
             style={styles.picker}
           >
-            {unitTypes.map(unit => (
+            {unitTypes.map((type) => (
               <Picker.Item 
-                key={unit.value}
-                label={unit.label} 
-                value={unit.value}
+                key={type.value}
+                label={type.label}
+                value={type.value}
               />
             ))}
           </Picker>
@@ -522,20 +628,35 @@ const EditProductScreen = () => {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>मुख्य कीमत (₹) *</Text>
-        <View style={styles.priceInputWrapper}>
-          <TextInput
-            style={[styles.input, styles.priceInput]}
-            value={formData.price}
-            onChangeText={(text) => {
-              setFormData(prev => ({ ...prev, price: text }));
-              calculateSubUnitPrices(text, formData.unitType);
-            }}
-            keyboardType="numeric"
-            placeholder="प्रति किलोग्राम की कीमत"
-          />
-          <Text style={styles.unitTypeLabelInside}>₹/{formData.unitType}</Text>
-        </View>
+        <TextInput
+          style={styles.input}
+          value={formData.price}
+          onChangeText={(text) => {
+            setFormData(prev => ({ ...prev, price: text }));
+            calculateSubUnitPrices(text, formData.unitType);
+          }}
+          keyboardType="numeric"
+        />
+        <Text style={styles.unitLabel}>
+          ₹ / {unitTypes.find(t => t.value === formData.unitType)?.label || formData.unitType}
+        </Text>
       </View>
+
+      {formData.unitType === 'kg' && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Price for other quantities:</Text>
+          <View style={styles.otherQuantities}>
+            <View style={styles.quantityRow}>
+              <Text style={styles.quantityLabel}>250g:</Text>
+              <Text style={styles.quantityPrice}>₹{(parseFloat(formData.price) / 4).toFixed(2)}</Text>
+            </View>
+            <View style={styles.quantityRow}>
+              <Text style={styles.quantityLabel}>500g:</Text>
+              <Text style={styles.quantityPrice}>₹{(parseFloat(formData.price) / 2).toFixed(2)}</Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>स्टॉक *</Text>
@@ -544,44 +665,8 @@ const EditProductScreen = () => {
           value={formData.stock}
           onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text }))}
           keyboardType="numeric"
-          placeholder="कितने kg उपलब्ध है"
         />
       </View>
-
-      {formData.unitType === 'kg' && (
-        <View>
-          <Text style={styles.subtitle}>छोटी मात्रा की कीमत</Text>
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>250g की कीमत</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.subUnitPrices['250g']}
-                onChangeText={(text) => setFormData(prev => ({
-                  ...prev,
-                  subUnitPrices: { ...prev.subUnitPrices, '250g': text }
-                }))}
-                keyboardType="numeric"
-                placeholder="0.00"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>500g की कीमत</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.subUnitPrices['500g']}
-                onChangeText={(text) => setFormData(prev => ({
-                  ...prev,
-                  subUnitPrices: { ...prev.subUnitPrices, '500g': text }
-                }))}
-                keyboardType="numeric"
-                placeholder="0.00"
-              />
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 
@@ -948,7 +1033,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#F8F9FA',
-    marginRight: 8,
+    marginRight: 5,
   },
   confirmButton: {
     backgroundColor: '#6C63FF',
@@ -1122,6 +1207,75 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 8,
     marginBottom: 8,
+  },
+  unitLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  otherQuantities: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 8,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  quantityLabel: {
+    fontSize: 14,
+    color: '#333',
+  },
+  quantityPrice: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  categoryContainer: {
+    position: 'relative',
+  },
+  subcategoryContainer: {
+    position: 'relative',
+  },
+  suggestionsDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginTop: 4,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  suggestionItemSelected: {
+    backgroundColor: '#F0F0FF',
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  suggestionTextSelected: {
+    color: '#6C63FF',
+    fontWeight: '500',
   },
 });
 

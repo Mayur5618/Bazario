@@ -4,14 +4,14 @@ import { View } from 'react-native';
 
 export default function AppLayout() {
   const pathname = usePathname();
-  const hideTabsOn = ['/checkout', '/product/[id]'];
+  const hideTabsOn = ['/checkout', '/product/[id]', '/account/add-address', '/account/shipping-addresses'];
   const shouldShowTabs = !hideTabsOn.some(path => pathname.includes(path));
 
   return (
     <View style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          headerShown: false,
+          headerShown: true,
           animation: 'slide_from_right'
         }}
       >
@@ -21,47 +21,90 @@ export default function AppLayout() {
             headerShown: false
           }}
         />
-        <Stack.Screen name="home" />
-        <Stack.Screen name="cart" />
+        <Stack.Screen 
+          name="home" 
+          options={{
+            headerShown: false
+          }}
+        />
+        <Stack.Screen name="cart" 
+         options={{
+          headerShown: true
+        }} />
         <Stack.Screen name="checkout" 
-        />
-        <Stack.Screen name="categories" />
-        <Stack.Screen name="account" />
+         options={{
+          headerShown: false
+        }}/>
+        <Stack.Screen name="categories" 
+         options={{
+          headerShown: false
+        }}/>
         <Stack.Screen 
-          name="account/shipping-address" 
+          name="account" 
           options={{
+            headerShown: false
+          }}
+        />
+        <Stack.Screen name="account/wishlist"
+         options={{
+          headerShown: false
+        }} />
+        <Stack.Screen name="search" 
+         options={{
+          headerShown: false
+        }}/>
+        <Stack.Screen name="settings" 
+         options={{
+          headerShown: false
+        }}/>
+        <Stack.Screen name="orders" 
+         options={{
+          headerShown: false
+        }}/>
+        <Stack.Screen 
+          name="category/[id]"
+          options={({ route }) => ({
             headerShown: true,
-            title: 'Shipping Address',
-            headerStyle: {
-              backgroundColor: '#fff',
+            title: route.params.id,
+            headerTitleStyle: {
+              fontWeight: '600',
+              fontSize: 18
             },
-            headerShadowVisible: false,
-          }}
+            headerShadowVisible: true,
+            headerStyle: {
+              backgroundColor: '#fff'
+            }
+          })}
         />
-        <Stack.Screen name="account/wishlist" />
-        <Stack.Screen name="search" />
-        <Stack.Screen name="settings" />
-        {/* <Stack.Screen name="orders/index" />
-        <Stack.Screen name="orders/[id]" />
         <Stack.Screen 
           name="product/[id]"
           options={{
-            presentation: 'modal'
-          }}
-        /> */}
-          <Stack.Screen name="orders" />
-        <Stack.Screen 
-          name="product/[id]"
-          options={{
-            presentation: 'modal'
+            presentation: 'modal',
+            headerShown: false
           }}
         />
         <Stack.Screen 
           name="product/edit-review"
           options={{
-            headerShown: true,
-            title: 'Edit Review',
-            animation: 'slide_from_right'
+            headerShown: false
+          }}
+        />
+        <Stack.Screen 
+          name="account/add-address"
+          options={{
+            title: 'Add New Address',
+            headerTitleStyle: {
+              fontWeight: '600',
+            }
+          }}
+        />
+        <Stack.Screen 
+          name="account/shipping-addresses"
+          options={{
+            title: 'Shipping Addresses',
+            headerTitleStyle: {
+              fontWeight: '600',
+            }
           }}
         />
       </Stack>

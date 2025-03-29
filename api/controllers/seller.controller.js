@@ -542,7 +542,8 @@ export const sellerSignin = async (req, res) => {
                     platformType: seller.platformType,
                     profileImage: seller.profileImage,
                     shopName: seller.shopName,
-                    businessType: seller.businessType
+                    businessType: seller.businessType,
+                    token: token
                 }
            });
 

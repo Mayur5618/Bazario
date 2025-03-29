@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -47,9 +47,10 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const fadeAnim = new Animated.Value(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const flatListRef = useRef(null);
+  const [buyerCity, setBuyerCity] = useState('');
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -122,10 +123,9 @@ const HomeScreen = () => {
                 const aiImage = getCategoryImage(category);
                 
                 return {
-                  id: category.toLowerCase().replace(/\s+/g, '-'),
-                  title: category,
-                  description: `Explore our ${category} collection`,
-                  // Always use product image as it's more reliable
+                  id: category,
+                  name: category,
+                  description: '',
                   image: product.images[0],
                   totalProducts: productsResponse.data.total,
                   featuredProduct: {
@@ -339,7 +339,7 @@ const HomeScreen = () => {
           key={category.id} 
           style={styles.categoryCard}
           activeOpacity={0.7}
-          onPress={() => router.push(`/(app)/category/${category.id}`)}
+          onPress={() => router.push(`/(app)/category/${encodeURIComponent(category.name)}`)}
         >
           <Image 
             source={{ uri: category.image }}
@@ -400,58 +400,226 @@ const HomeScreen = () => {
     }
   };
 
-  // Add getCategoryImage function
+  // Update getCategoryImage function with AI-generated backgrounds
   const getCategoryImage = (category) => {
-    const placeholderImages = {
-      'Home Made Food': 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
-      'Arts & Crafts': 'https://images.unsplash.com/photo-1629196911514-f5934acc6b21?q=80&w=2070&auto=format&fit=crop',
-      'Cakes': 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=2070&auto=format&fit=crop',
-      'Handicrafts': 'https://images.unsplash.com/photo-1528805639423-c9818ad54888?q=80&w=2070&auto=format&fit=crop',
-      'Paintings': 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop',
+    // Get current date to use as seed for image selection
+    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Multiple image options for each category that will rotate daily
+    const categoryImages = {
+      'Home Made Food': [
+        'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1493770348161-369560ae357d?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=2070&auto=format&fit=crop'
+      ],
+      'Creative & Artistic Products': [
+        'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2070&auto=format&fit=crop'
+      ],
+      'Cakes': [
+        'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=2089&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1562777717-dc6984f65a63?q=80&w=2070&auto=format&fit=crop'
+      ],
+      'Handicrafts': [
+        'https://images.unsplash.com/photo-1528805639423-c9818ad54888?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1590422749897-47c47673ba0b?q=80&w=2070&auto=format&fit=crop'
+      ],
+      'Paintings': [
+        'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop'
+      ]
     };
-    return placeholderImages[category] || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop';
+
+    // Get image array for the category
+    const images = categoryImages[category] || [
+      'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=2070&auto=format&fit=crop'
+    ];
+
+    // Use the date string to select an image
+    const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+    const imageIndex = dayOfYear % images.length;
+    
+    return images[imageIndex];
   };
 
-  // Auto-play category showcase
+  // Update auto-slide effect with slower transition
   useEffect(() => {
-    if (autoPlay && categories.length > 0) {
-      const timer = setInterval(() => {
-        setActiveCategory((prev) => (prev + 1) % categories.length);
-        animateTransition();
-      }, 5000);
-      return () => clearInterval(timer);
-    }
-  }, [autoPlay, categories.length]);
+    const autoPlayInterval = setInterval(() => {
+      if (flatListRef.current && categories.length > 0) {
+        const nextIndex = (currentIndex + 1) % categories.length;
+        flatListRef.current.scrollToIndex({
+          index: nextIndex,
+          animated: true,
+          viewPosition: 0,
+          viewOffset: 0,
+        });
+        setCurrentIndex(nextIndex);
+      }
+    }, 5000); // Changed from 3000 to 5000 for slower transitions
 
-  const animateTransition = () => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    return () => clearInterval(autoPlayInterval);
+  }, [currentIndex, categories.length]);
+
+  const renderCategoryShowcase = () => {
+    if (!categories.length) return null;
+
+    return (
+      <View style={styles.carouselContainer}>
+        <Animated.FlatList
+          ref={flatListRef}
+          data={categories}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true }
+          )}
+          onMomentumScrollEnd={(event) => {
+            const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+            setCurrentIndex(newIndex);
+          }}
+          renderItem={({ item, index }) => (
+            <View style={styles.carouselSlide}>
+              <Image
+                source={{ uri: getCategoryImage(item.name) }}
+                style={styles.carouselBackground}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)']}
+                locations={[0, 0.6, 1]}
+                style={styles.gradientOverlay}
+              >
+                <View style={styles.carouselContentWrapper}>
+                  <View style={styles.carouselTextContent}>
+                    <Animatable.Text 
+                      animation="fadeInDown"
+                      duration={800}
+                      delay={300}
+                      useNativeDriver
+                      iterationCount={1}
+                      key={`title-${currentIndex}`}
+                      style={styles.carouselTitle}
+                    >
+                      {item.name}
+                    </Animatable.Text>
+                    
+                    <Animatable.View
+                      animation="fadeInUp"
+                      duration={800}
+                      delay={500}
+                      useNativeDriver
+                      iterationCount={1}
+                      key={`button-${currentIndex}`}
+                    >
+                      <TouchableOpacity
+                        style={styles.exploreButton}
+                        onPress={() => router.push(`/(app)/category/${encodeURIComponent(item.name)}`)}
+                      >
+                        <LinearGradient
+                          colors={['#4F46E5', '#7C3AED']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.exploreButtonGradient}
+                        >
+                          <Text style={styles.exploreButtonText}>Explore Now</Text>
+                          <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animatable.View>
+                  </View>
+
+                  {item.featuredProduct && (
+                    <Animatable.View
+                      animation="fadeInRight"
+                      duration={800}
+                      delay={400}
+                      useNativeDriver
+                      iterationCount={1}
+                      key={`product-${currentIndex}`}
+                      style={styles.featuredProductPreview}
+                    >
+                      <Image
+                        source={{ uri: item.featuredProduct.images[0] }}
+                        style={styles.featuredProductImage}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient
+                        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)']}
+                        style={styles.productGradient}
+                      />
+                    </Animatable.View>
+                  )}
+                </View>
+              </LinearGradient>
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+          decelerationRate={0.85}
+          snapToInterval={width}
+          snapToAlignment="center"
+          scrollEventThrottle={16}
+        />
+
+        <View style={styles.indicatorContainer}>
+          {categories.map((_, index) => {
+            const inputRange = [
+              (index - 1) * width,
+              index * width,
+              (index + 1) * width
+            ];
+
+            const scale = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.8, 1.4, 0.8],
+              extrapolate: 'clamp',
+            });
+
+            const opacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.4, 1, 0.4],
+              extrapolate: 'clamp',
+            });
+
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.indicator,
+                  {
+                    opacity,
+                    transform: [{ scale }],
+                    backgroundColor: currentIndex === index ? '#fff' : 'rgba(255,255,255,0.5)'
+                  }
+                ]}
+              />
+            );
+          })}
+        </View>
+      </View>
+    );
   };
 
-  // Trust features data
+  // Trust features data with corrected icon names
   const trustFeatures = [
     {
-      icon: 'shield-check',
+      icon: 'shield',
       title: "Secure Shopping",
       description: "100% secure payment"
     },
     {
-      icon: 'truck-fast',
+      icon: 'truck',
       title: "Fast Delivery",
       description: "Quick delivery to you"
     },
     {
-      icon: 'undo',
+      icon: 'refresh',
       title: "Easy Returns",
       description: "Hassle-free returns"
     },
@@ -461,74 +629,6 @@ const HomeScreen = () => {
       description: "Always here to help"
     }
   ];
-
-  const renderCategoryShowcase = () => {
-    if (!categories.length || !categories[activeCategory]) return null;
-
-    const category = categories[activeCategory];
-    
-    return (
-      <Animated.View style={[styles.showcaseContainer, { opacity: fadeAnim }]}>
-        <LinearGradient
-          colors={['rgba(59, 130, 246, 0.8)', 'rgba(124, 58, 237, 0.8)']}
-          style={styles.gradientOverlay}
-        >
-          <Image
-            source={{ uri: category.featuredProduct?.images[0] }}
-            style={styles.showcaseImage}
-            resizeMode="cover"
-          />
-          
-          <View style={styles.showcaseContent}>
-            <Animatable.Text 
-              animation="fadeInLeft" 
-              style={styles.showcaseTitle}
-            >
-              {category.title}
-            </Animatable.Text>
-            
-            <Animatable.Text 
-              animation="fadeInLeft" 
-              delay={200}
-              style={styles.showcaseDescription}
-            >
-              {category.description}
-            </Animatable.Text>
-
-            <Animatable.View 
-              animation="fadeInUp" 
-              delay={400}
-            >
-              <TouchableOpacity
-                style={styles.exploreButton}
-                onPress={() => router.push(`/(app)/category/${category.id}`)}
-              >
-                <Text style={styles.exploreButtonText}>Explore Collection</Text>
-                <MaterialIcons name="arrow-forward" size={20} color="#1F2937" />
-              </TouchableOpacity>
-            </Animatable.View>
-          </View>
-        </LinearGradient>
-
-        {/* Navigation Dots */}
-        <View style={styles.dotsContainer}>
-          {categories.map((_, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => {
-                setActiveCategory(index);
-                animateTransition();
-              }}
-              style={[
-                styles.dot,
-                index === activeCategory && styles.activeDot
-              ]}
-            />
-          ))}
-        </View>
-      </Animated.View>
-    );
-  };
 
   const renderTrustFeatures = () => (
     <View style={styles.trustContainer}>
@@ -550,14 +650,35 @@ const HomeScreen = () => {
     </View>
   );
 
-  // Add this new function to fetch category products
+  // Add state for category products
+  const [categoryProducts, setCategoryProducts] = useState({});
+
+  // Add function to fetch buyer city
+  const fetchBuyerCity = async () => {
+    try {
+      const response = await axios.get('/api/buyer/city');
+      if (response.data.success) {
+        setBuyerCity(response.data.city);
+      }
+    } catch (error) {
+      console.error('Error fetching buyer city:', error);
+    }
+  };
+
+  // Update useEffect to fetch buyer city
+  useEffect(() => {
+    fetchBuyerCity();
+  }, []);
+
+  // Update fetchCategoryProducts function
   const fetchCategoryProducts = async (categoryTitle) => {
     try {
       const response = await axios.get(`/api/products`, {
         params: {
-          category: categoryTitle, // Using category title instead of ID
+          category: categoryTitle,
           limit: 4,
-          sort: '-createdAt'
+          sort: '-createdAt',
+          buyerCity: buyerCity // Add buyer city to params
         }
       });
       return response.data.products;
@@ -567,16 +688,15 @@ const HomeScreen = () => {
     }
   };
 
-  // Add state for category products
-  const [categoryProducts, setCategoryProducts] = useState({});
-
-  // Update useEffect to fetch category products
+  // Update useEffect to fetch category products when buyerCity changes
   useEffect(() => {
     const loadCategoryProducts = async () => {
+      if (!buyerCity) return; // Only fetch if we have buyer's city
+      
       const productsMap = {};
       for (const category of categories) {
-        const products = await fetchCategoryProducts(category.title);
-        productsMap[category.title] = products;
+        const products = await fetchCategoryProducts(category.name);
+        productsMap[category.name] = products;
       }
       setCategoryProducts(productsMap);
     };
@@ -584,20 +704,20 @@ const HomeScreen = () => {
     if (categories.length > 0) {
       loadCategoryProducts();
     }
-  }, [categories]);
+  }, [categories, buyerCity]); // Add buyerCity to dependencies
 
   // Update renderCategoryProducts function
   const renderCategoryProducts = () => (
     <View style={styles.categoryProductsContainer}>
       {categories.map((category) => {
-        const products = categoryProducts[category.title] || [];
+        const products = categoryProducts[category.name] || [];
         if (products.length === 0) return null;
 
         return (
           <View key={category.id} style={styles.categorySection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{category.title}</Text>
-              <TouchableOpacity onPress={() => router.push(`/(app)/category/${category.id}`)}>
+              <Text style={styles.sectionTitle}>{category.name}</Text>
+              <TouchableOpacity onPress={() => router.push(`/(app)/category/${encodeURIComponent(category.name)}`)}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -717,7 +837,7 @@ const HomeScreen = () => {
                 >
                   <TouchableOpacity
                     style={styles.categoryCard}
-                    onPress={() => router.push(`/(app)/category/${category.id}`)}
+                    onPress={() => router.push(`/(app)/category/${encodeURIComponent(category.name)}`)}
                     activeOpacity={0.8}
                   >
                     <Image
@@ -736,7 +856,7 @@ const HomeScreen = () => {
                       style={styles.categoryGradient}
                     >
                       <Text style={styles.categoryTitle} numberOfLines={2}>
-                        {category.title}
+                        {category.name}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -807,7 +927,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
   },
@@ -850,15 +970,15 @@ const styles = StyleSheet.create({
     height: '55%',
   },
   categoryTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 5,
-    letterSpacing: 0.5,
-    lineHeight: 20,
+    letterSpacing: 0.3,
+    lineHeight: 18,
     paddingHorizontal: 6,
     flexWrap: 'wrap',
   },
@@ -1165,6 +1285,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  carouselContainer: {
+    height: height * 0.35,
+    position: 'relative',
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  carouselSlide: {
+    width: width,
+    height: height * 0.35,
+    position: 'relative',
+  },
+  carouselBackground: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    opacity: 0.75,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '100%',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  carouselContentWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  carouselTextContent: {
+    flex: 1,
+    marginRight: 16,
+  },
+  carouselTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 12,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  exploreButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  exploreButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  exploreButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  featuredProductPreview: {
+    width: width * 0.32,
+    height: width * 0.32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  featuredProductImage: {
+    width: '100%',
+    height: '100%',
+  },
+  productGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '50%',
+  },
+  indicatorContainer: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  indicator: {
+    height: 6,
+    width: 6,
+    borderRadius: 3,
+    marginHorizontal: 3,
+    backgroundColor: '#fff',
   },
 });
 

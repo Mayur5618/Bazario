@@ -17,6 +17,7 @@ export const createProduct = async (req, res) => {
             description,
             price,
             category,
+            subcategory,
             stock,
             images,
             tags,
@@ -29,7 +30,7 @@ export const createProduct = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!name || !price || !category || !stock || !unitType || !availableLocations) {
+        if (!name || !price || !category || !subcategory || !stock || !unitType || !availableLocations) {
             console.log('Missing required fields:', { name, price, category, stock, unitType, availableLocations });
             return res.status(400).json({ success: false, message: "All fields including available locations are required." });
         }
@@ -116,6 +117,7 @@ export const createProduct = async (req, res) => {
             description: description || '',
             price: Number(price),
             category,
+            subcategory,
             stock: Number(stock),
             images: images || [],
             tags: tags || [],
@@ -165,14 +167,11 @@ export const createProduct = async (req, res) => {
 //PUT /api/products/:id
 export const updateProduct = async (req, res) => {
     try {
-        if (Object.keys(req.body).length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide data to update'
-            });
-        }
+        const { id } = req.params;
+        const updates = req.body;
 
-        const product = await Product.findById(req.params.id);
+        // Find product
+        const product = await Product.findById(id);
         
         if (!product) {
             return res.status(404).json({
@@ -181,6 +180,7 @@ export const updateProduct = async (req, res) => {
             });
         }
 
+        // Check ownership
         if (product.seller.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -188,41 +188,11 @@ export const updateProduct = async (req, res) => {
             });
         }
 
-        if (req.body.platformType && req.body.platformType !== product.platformType) {
-            return res.status(400).json({
-                success: false,
-                message: 'Platform type cannot be changed after creation'
-            });
-        }
-
-        let hasChanges = false;
-        const updates = { ...req.body };
-        
-        for (const [key, value] of Object.entries(updates)) {
-            const currentValue = product[key]?.toString();
-            const newValue = value?.toString();
-            
-            if (currentValue !== newValue) {
-                hasChanges = true;
-                console.log(`Change detected in ${key}: ${currentValue} -> ${newValue}`);
-                break;
-            }
-        }
-
-        if (!hasChanges) {
-            return res.status(400).json({
-                success: false,
-                message: 'No changes detected. The data you provided is the same as existing data.'
-            });
-        }
-
+        // Update the product
         const updatedProduct = await Product.findByIdAndUpdate(
-            req.params.id,
+            id,
             { $set: updates },
-            { 
-                new: true, 
-                runValidators: true 
-            }
+            { new: true }
         );
 
         res.json({
@@ -233,22 +203,6 @@ export const updateProduct = async (req, res) => {
 
     } catch (error) {
         console.error('Update product error:', error);
-        
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation Error',
-                errors: Object.values(error.errors).map(err => err.message)
-            });
-        }
-
-        if (error.name === 'CastError') {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid product ID format'
-            });
-        }
-
         res.status(500).json({
             success: false,
             message: 'Error updating product',
@@ -294,47 +248,100 @@ export const deleteProduct =  async (req, res) => {
 export const getProducts = async (req, res) => {
     try {
         const { 
+            page = 1, 
             limit = 10, 
-            sort = '-createdAt',
-            category,
+            category, 
+            subcategory, 
+            minPrice, 
+            maxPrice, 
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
             search,
-            city
+            platformType,
+            buyerCity
         } = req.query;
 
-        let query = {};
+        console.log('Received query params:', { category, buyerCity }); // Debug log
 
-        // Add category filter if provided
-        if (category) {
-            query.category = category;
+        const query = {};
+
+        // Add category filter if provided (case-insensitive)
+        if (category && category !== 'undefined' && category !== 'null') {
+            query.category = { 
+                $regex: new RegExp(`^${category}$`, 'i')
+            };
+            console.log('Added category filter:', query.category);
         }
 
-        // Add search filter if provided
-        if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        // Add location filter if city is provided
-        if (city) {
-            query.availableLocations = { 
-                $regex: new RegExp(city, 'i')
+        // Add subcategory filter if provided (case-insensitive)
+        if (subcategory && subcategory !== 'undefined' && subcategory !== 'null') {
+            query.subcategory = { 
+                $regex: new RegExp(`^${subcategory}$`, 'i')
             };
         }
 
+        // Add price range filter if provided
+        if ((minPrice && minPrice !== 'undefined') || (maxPrice && maxPrice !== 'undefined')) {
+            query.price = {};
+            if (minPrice) query.price.$gte = Number(minPrice);
+            if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+
+        // Add platform type filter if provided
+        if (platformType && platformType !== 'undefined' && platformType !== 'null') {
+            query.platformType = platformType;
+        }
+
+        // Add search filter if provided (case-insensitive)
+        if (search && search !== 'undefined' && search !== 'null') {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { tags: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Add city-based filtering if buyer's city is provided (case-insensitive)
+        if (buyerCity && buyerCity !== 'undefined' && buyerCity !== 'null') {
+            query.availableLocations = { 
+                $elemMatch: { 
+                    $regex: new RegExp(buyerCity, 'i') 
+                }
+            };
+            console.log('Added city filter:', query.availableLocations);
+        }
+
+        console.log('Final query:', JSON.stringify(query, null, 2));
+
+        // Calculate pagination
+        const skip = (Number(page) - 1) * Number(limit);
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        // Execute query with pagination and sorting
         const products = await Product.find(query)
-            .sort(sort)
-            .limit(parseInt(limit))
-            .populate('seller', 'firstname lastname shopName profileImage');
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(Number(limit))
+            .populate('seller', 'name email city userType');
+
+        console.log(`Found ${products.length} products`);
+
+        // Get total count for pagination
+        const total = await Product.countDocuments(query);
 
         res.json({
             success: true,
-            products
+            products,
+            pagination: {
+                total,
+                page: Number(page),
+                pages: Math.ceil(total / Number(limit))
+            }
         });
 
     } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Get products error:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching products',
@@ -347,6 +354,7 @@ export const getProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
     try {
         const { id } = req.params;
+        const { city: buyerCity } = req.query; // Get buyer's city from query params
         
         const product = await Product.findById(id)
             .populate({
@@ -365,13 +373,24 @@ export const getProduct = async (req, res) => {
         // Get seller's total products count
         const productsCount = await Product.countDocuments({ seller: product.seller._id });
 
-        // Fetch related products from same category
-        const relatedProducts = await Product.find({
+        // Fetch related products from same category and available in buyer's city
+        const relatedProductsQuery = {
             category: product.category,
             _id: { $ne: product._id } // Exclude current product
-        })
-        .limit(10) // Changed from 5 to 10 related products
-        .select('name images price stock rating reviews'); // Select only needed fields
+        };
+
+        // Only add city filter if buyerCity is provided
+        if (buyerCity) {
+            relatedProductsQuery.availableLocations = {
+                $elemMatch: { 
+                    $regex: new RegExp(buyerCity, 'i')
+                }
+            };
+        }
+
+        const relatedProducts = await Product.find(relatedProductsQuery)
+            .limit(10) // Changed from 5 to 10 related products
+            .select('name images price stock rating reviews availableLocations'); // Added availableLocations
 
         // Add productsCount to seller object
         const productWithSellerInfo = {
@@ -455,7 +474,9 @@ export const getFilteredProducts = async (req, res) => {
         // Add location filter if city is provided
         if (city) {
             filter.availableLocations = { 
-                $regex: new RegExp(city, 'i')
+                $elemMatch: { 
+                    $regex: new RegExp(city, 'i')
+                }
             };
         }
 
@@ -612,25 +633,71 @@ export const getFilteredProducts = async (req, res) => {
 export const getProductsByCategory = async (req, res) => {
     try {
         const { category } = req.params;
-        const { platformType = 'b2c', limit = 8 } = req.query;
+        const { city } = req.query;
 
-        const products = await Product.find({
-            category: { $regex: new RegExp(category, 'i') },
-            platformType: { $in: [platformType] }
-        })
-        .limit(parseInt(limit))
-        .populate('seller', 'firstname lastname')
-        .populate('reviews');
+        if (!category || !city) {
+            return res.status(400).json({
+                success: false,
+                message: "Category and city are required"
+            });
+        }
 
-        res.status(200).json({
+        // First get all subcategories for this category where at least one product has the buyer's city
+        const subcategoriesWithProducts = await Product.aggregate([
+            {
+                $match: {
+                    category: category,
+                    availableLocations: { $regex: new RegExp(city, 'i') }
+                }
+            },
+            {
+                $group: {
+                    _id: "$subcategory",
+                    products: {
+                        $push: {
+                            _id: "$_id",
+                            name: "$name",
+                            description: "$description",
+                            price: "$price",
+                            images: "$images",
+                            stock: "$stock",
+                            rating: "$rating",
+                            numReviews: "$numReviews",
+                            unitSize: "$unitSize",
+                            unitType: "$unitType",
+                            availableLocations: "$availableLocations"
+                        }
+                    },
+                    totalProducts: { $sum: 1 }
+                }
+            },
+            {
+                $match: {
+                    _id: { $ne: null } // Filter out null subcategories
+                }
+            }
+        ]);
+
+        const response = {
             success: true,
-            products
-        });
+            category,
+            city,
+            totalSubcategories: subcategoriesWithProducts.length,
+            totalProducts: subcategoriesWithProducts.reduce((acc, sub) => acc + sub.totalProducts, 0),
+            subcategories: subcategoriesWithProducts.map(sub => ({
+                subcategory: sub._id,
+                products: sub.products,
+                totalProducts: sub.totalProducts
+            }))
+        };
+
+        res.status(200).json(response);
     } catch (error) {
-        console.error('Error fetching products by category:', error);
+        console.error('Error in getProductsByCategory:', error);
         res.status(500).json({
             success: false,
-            message: 'Error fetching products by category'
+            message: "Error fetching products by category",
+            error: error.message
         });
     }
 };
@@ -679,6 +746,219 @@ export const uploadProductImages = async (req, res) => {
             message: error.message || 'Failed to upload image'
         });
     }
+};
+
+// Get products by category with subcategory grouping
+export const getProductsByCategoryAndSubcategory = async (req, res) => {
+    try {
+        const { category } = req.params;
+        const { city } = req.query;
+
+        console.log('Fetching products for category:', category, 'city:', city);
+
+        if (!category) {
+            return res.status(400).json({
+                success: false,
+                message: 'Category is required'
+            });
+        }
+
+        // Base query
+        let query = {
+            category: { $regex: new RegExp(category, 'i') },
+            stock: { $gt: 0 } // Only show products with stock > 0
+        };
+
+        // Add city filter if provided
+        if (city) {
+            query.availableLocations = {
+                $elemMatch: {
+                    $regex: new RegExp(city, 'i')
+                }
+            };
+        }
+
+        // Fetch products and group by subcategory
+        const products = await Product.aggregate([
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'sellers',
+                    localField: 'seller',
+                    foreignField: '_id',
+                    as: 'sellerInfo'
+                }
+            },
+            {
+                $unwind: '$sellerInfo'
+            },
+            {
+                $group: {
+                    _id: '$subcategory',
+                    products: { 
+                        $push: {
+                            _id: '$_id',
+                            name: '$name',
+                            description: '$description',
+                            price: '$price',
+                            images: '$images',
+                            stock: '$stock',
+                            rating: '$rating',
+                            numReviews: '$numReviews',
+                            unitSize: '$unitSize',
+                            unitType: '$unitType',
+                            availableLocations: '$availableLocations',
+                            seller: {
+                                _id: '$sellerInfo._id',
+                                name: '$sellerInfo.name',
+                                city: '$sellerInfo.city'
+                            },
+                            tags: '$tags',
+                            youtubeLink: '$youtubeLink'
+                        }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    subcategory: '$_id',
+                    products: 1,
+                    count: 1,
+                    _id: 0
+                }
+            },
+            { $sort: { subcategory: 1 } }
+        ]);
+
+        if (!products || products.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No products found for category: ${category}${city ? ` in ${city}` : ''}`
+            });
+        }
+
+        console.log(`Found ${products.length} subcategories for category: ${category}`);
+
+        res.status(200).json({
+            success: true,
+            category,
+            city: city || null,
+            totalSubcategories: products.length,
+            totalProducts: products.reduce((acc, curr) => acc + curr.count, 0),
+            subcategories: products
+        });
+
+    } catch (error) {
+        console.error('Error in getProductsByCategoryAndSubcategory:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching products by category and subcategory',
+            error: error.message
+        });
+    }
+};
+
+// Get buyer's city from auth token
+export const getBuyerCity = async (req, res) => {
+    try {
+        // Check if user is authenticated
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not authenticated'
+            });
+        }
+
+        // Get city from user's address
+        const city = req.user?.address?.city || '';
+
+        console.log('Returning buyer city:', city);
+
+        res.json({
+            success: true,
+            city
+        });
+
+    } catch (error) {
+        console.error('Get buyer city error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching buyer city',
+            error: error.message
+        });
+    }
+};
+
+export const getProductsBySubcategory = async (req, res) => {
+  try {
+    const { category, subcategory } = req.params;
+    const { city, page = 1, limit = 10, sortBy = 'createdAt', order = 'desc' } = req.query;
+
+    if (!category || !subcategory || !city) {
+      return res.status(400).json({
+        success: false,
+        message: "Category, subcategory and city are required"
+      });
+    }
+
+    // Calculate skip for pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Create sort object
+    const sortObject = {};
+    sortObject[sortBy] = order === 'desc' ? -1 : 1;
+
+    // Find products matching criteria
+    const products = await Product.find({
+      category: category,
+      subcategory: subcategory,
+      availableLocations: { $regex: new RegExp(city, 'i') }
+    })
+    .sort(sortObject)
+    .skip(skip)
+    .limit(parseInt(limit))
+    .select('name description price images stock rating numReviews unitSize unitType availableLocations');
+
+    // Get total count for pagination
+    const total = await Product.countDocuments({
+      category: category,
+      subcategory: subcategory,
+      availableLocations: { $regex: new RegExp(city, 'i') }
+    });
+
+    const response = {
+      success: true,
+      category,
+      subcategory,
+      city,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalProducts: total,
+      products: products.map(product => ({
+        _id: product._id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        images: product.images,
+        stock: product.stock,
+        rating: product.rating,
+        numReviews: product.numReviews,
+        unitSize: product.unitSize,
+        unitType: product.unitType,
+        availableLocations: product.availableLocations
+      }))
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error in getProductsBySubcategory:', error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching products by subcategory",
+      error: error.message
+    });
+  }
 };
 
 export default router;

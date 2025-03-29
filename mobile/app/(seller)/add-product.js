@@ -23,7 +23,7 @@ import { translations } from '../../src/translations/addProduct';
 import { useAuth } from '../../src/context/AuthContext';
 
 const categories = [
-  'Homemade Snacks',
+  'Home-Made',
   'Organic Vegetables & Fruits',
   'Handmade Pottery & Cookware',
   'Microgreens & Herbs',
@@ -34,6 +34,22 @@ const categories = [
   'Eco-Friendly & Recycled Products',
   'Creative & Artistic Products'
 ];
+
+const getSubcategories = (category) => {
+  const subcategories = {
+    'Home-Made': ['Namkeen', 'Sweets','Cakes','Papad'],
+    'Organic Vegetables & Fruits': ['Vegetables', 'Fruits', 'Leafy Greens', 'Root Vegetables'],
+    'Handmade Pottery & Cookware': ['Pots', 'Pans', 'Plates', 'Bowls'],
+    'Microgreens & Herbs': ['Microgreens', 'Herbs', 'Sprouts'],
+    'Natural & Handmade Soaps': ['Body Soaps', 'Face Soaps', 'Handmade Soaps'],
+    'Preservative-Free Pickles': ['Vegetable Pickles', 'Fruit Pickles', 'Mixed Pickles'],
+    'Pure Honey & Natural Sweeteners': ['Honey', 'Jaggery', 'Natural Syrups'],
+    'Handmade Beauty & Wellness Products': ['Skincare', 'Haircare', 'Wellness'],
+    'Eco-Friendly & Recycled Products': ['Home Decor', 'Accessories', 'Stationery'],
+    'Creative & Artistic Products': ['Art', 'Crafts', 'Decor']
+  };
+  return subcategories[category] || [];
+};
 
 const unitTypes = [
   { value: 'kg', label: 'kg' },
@@ -58,7 +74,8 @@ const AddProductScreen = () => {
     name: '',
     description: '',
     price: '',
-    category: user?.customBusinessType || '',
+    category: '',
+    subcategory: '',
     stock: '',
     images: [],
     tags: [],
@@ -86,6 +103,11 @@ const AddProductScreen = () => {
   const [tagInputRef, setTagInputRef] = useState(null);
   const [currentLocation, setCurrentLocation] = useState('');
   const [locationInputRef, setLocationInputRef] = useState(null);
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+  const [showCustomSubcategoryInput, setShowCustomSubcategoryInput] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [customSubcategoryInput, setCustomSubcategoryInput] = useState('');
+  const [showSubcategorySuggestions, setShowSubcategorySuggestions] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -306,6 +328,14 @@ const AddProductScreen = () => {
           Alert.alert('ज़रूरी', 'कृपया प्रोडक्ट का नाम भरें');
           return false;
         }
+        if (!formData.category) {
+          Alert.alert('ज़रूरी', 'कृपया श्रेणी चुनें');
+          return false;
+        }
+        if (!formData.subcategory) {
+          Alert.alert('ज़रूरी', 'कृपया उपश्रेणी दर्ज करें');
+          return false;
+        }
         return true;
       case 2:
         if (selectedImages.length === 0) {
@@ -357,6 +387,12 @@ const AddProductScreen = () => {
   };
 
   const handleSubmit = async () => {
+    if (!formData.subcategory) {
+      Alert.alert('एरर', 'कृपया उपश्रेणी दर्ज करें');
+      setStep(1); // Go back to step 1 where subcategory input is
+      return;
+    }
+
     setLoading(true);
     try {
       console.log('Starting product submission...');
@@ -398,6 +434,7 @@ const AddProductScreen = () => {
         description: formData.description || '',
         price: Number(formData.price),
         category: getDisplayCategory() || 'General Products',
+        subcategory: formData.subcategory, // Adding subcategory field
         stock: Number(formData.stock),
         images: imageUrls,
         tags: formData.tags,
@@ -490,6 +527,300 @@ const AddProductScreen = () => {
     return user.businessType || '';
   };
 
+  const getCategoryLabel = (category) => {
+    const categoryTranslations = {
+      'Home-Made': {
+        en: 'Home-Made',
+        hi: 'घरेलू',
+        mr: 'घरगुती',
+        gu: 'ઘરેલું'
+      },
+      'Organic Vegetables & Fruits': {
+        en: 'Organic Vegetables & Fruits',
+        hi: 'जैविक सब्जियां और फल',
+        mr: 'जैविक भाजी आणि फळे',
+        gu: 'જૈવિક શાકભાજી અને ફળો'
+      },
+      'Handmade Pottery & Cookware': {
+        en: 'Handmade Pottery & Cookware',
+        hi: 'हाथ से बने मिट्टी के बर्तन',
+        mr: 'हस्तनिर्मित मातीचे भांडे',
+        gu: 'હાથથી બનાવેલા માટીના વાસણ'
+      },
+      'Microgreens & Herbs': {
+        en: 'Microgreens & Herbs',
+        hi: 'माइक्रोग्रीन्स और जड़ी बूटी',
+        mr: 'मायक्रोग्रीन्स आणि औषधी वनस्पती',
+        gu: 'માઇક્રોગ્રીન્સ અને ઔષધીય વનસ્પતિ'
+      },
+      'Natural & Handmade Soaps': {
+        en: 'Natural & Handmade Soaps',
+        hi: 'प्राकृतिक और हाथ से बने साबुन',
+        mr: 'नैसर्गिक आणि हस्तनिर्मित साबण',
+        gu: 'કુદરતી અને હાથથી બનાવેલા સાબુ'
+      },
+      'Preservative-Free Pickles': {
+        en: 'Preservative-Free Pickles',
+        hi: 'प्रिजर्वेटिव मुक्त अचार',
+        mr: 'प्रिझर्व्हेटिव्ह मुक्त लोणचे',
+        gu: 'પ્રિઝર્વેટિવ મુક્ત અથાણા'
+      },
+      'Pure Honey & Natural Sweeteners': {
+        en: 'Pure Honey & Natural Sweeteners',
+        hi: 'शुद्ध शहद और प्राकृतिक मिठास',
+        mr: 'शुद्ध मध आणि नैसर्गिक गोड पदार्थ',
+        gu: 'શુદ્ધ મધ અને કુદરતી મીઠાસ'
+      },
+      'Handmade Beauty & Wellness Products': {
+        en: 'Handmade Beauty & Wellness Products',
+        hi: 'हाथ से बने सौंदर्य और स्वास्थ्य उत्पाद',
+        mr: 'हस्तनिर्मित सौंदर्य आणि आरोग्य उत्पादने',
+        gu: 'હાથથી બનાવેલા સૌંદર્ય અને આરોગ્ય ઉત્પાદનો'
+      },
+      'Eco-Friendly & Recycled Products': {
+        en: 'Eco-Friendly & Recycled Products',
+        hi: 'पर्यावरण के अनुकूल और पुनर्चक्रित उत्पाद',
+        mr: 'पर्यावरणास अनुकूल आणि पुनर्वापरित उत्पादने',
+        gu: 'પર્યાવરણ અનુકૂળ અને પુનઃચક્રિત ઉત્પાદનો'
+      },
+      'Creative & Artistic Products': {
+        en: 'Creative & Artistic Products',
+        hi: 'रचनात्मक और कलात्मक उत्पाद',
+        mr: 'सर्जनशील आणि कलात्मक उत्पादने',
+        gu: 'સર્જનાત્મક અને કલાત્મક ઉત્પાદનો'
+      },
+      'Other': {
+        en: 'Other',
+        hi: 'अन्य',
+        mr: 'इतर',
+        gu: 'અન્ય'
+      }
+    };
+    return categoryTranslations[category]?.[language] || category;
+  };
+
+  const getSubcategoryLabel = (subcategory) => {
+    const subcategoryTranslations = {
+      'Namkeen': {
+        en: 'Namkeen',
+        hi: 'नमकीन',
+        mr: 'नमकीन',
+        gu: 'નમકીન'
+      },
+      'Sweets': {
+        en: 'Sweets',
+        hi: 'मिठाई',
+        mr: 'मिठाई',
+        gu: 'મીઠાઈ'
+      },
+      'Cakes': {
+        en: 'Cakes',
+        hi: 'केक',
+        mr: 'केक',
+        gu: 'કેક'
+      },
+      'Papad': {
+        en: 'Papad',
+        hi: 'पापड़',
+        mr: 'पापड',
+        gu: 'પાપડ'
+      },
+      'Chips': {
+        en: 'Chips',
+        hi: 'चिप्स',
+        mr: 'चिप्स',
+        gu: 'ચિપ્સ'
+      },
+      'Other Snacks': {
+        en: 'Other Snacks',
+        hi: 'अन्य नाश्ता',
+        mr: 'इतर नाश्ता',
+        gu: 'અન્ય નાસ્તો'
+      },
+      'Vegetables': {
+        en: 'Vegetables',
+        hi: 'सब्जियां',
+        mr: 'भाजी',
+        gu: 'શાકભાજી'
+      },
+      'Fruits': {
+        en: 'Fruits',
+        hi: 'फल',
+        mr: 'फळे',
+        gu: 'ફળો'
+      },
+      'Leafy Greens': {
+        en: 'Leafy Greens',
+        hi: 'पत्तेदार सब्जियां',
+        mr: 'पालेभाजी',
+        gu: 'પાંદડાદાર શાકભાજી'
+      },
+      'Root Vegetables': {
+        en: 'Root Vegetables',
+        hi: 'जड़ वाली सब्जियां',
+        mr: 'मुळे भाजी',
+        gu: 'મૂળ શાકભાજી'
+      },
+      'Pots': {
+        en: 'Pots',
+        hi: 'बर्तन',
+        mr: 'भांडी',
+        gu: 'વાસણ'
+      },
+      'Pans': {
+        en: 'Pans',
+        hi: 'कड़ाही',
+        mr: 'कढई',
+        gu: 'કઢાઈ'
+      },
+      'Plates': {
+        en: 'Plates',
+        hi: 'प्लेट',
+        mr: 'प्लेट',
+        gu: 'પ્લેટ'
+      },
+      'Bowls': {
+        en: 'Bowls',
+        hi: 'कटोरे',
+        mr: 'वाटी',
+        gu: 'વાટી'
+      },
+      'Microgreens': {
+        en: 'Microgreens',
+        hi: 'माइक्रोग्रीन्स',
+        mr: 'मायक्रोग्रीन्स',
+        gu: 'માઇક્રોગ્રીન્સ'
+      },
+      'Herbs': {
+        en: 'Herbs',
+        hi: 'जड़ी बूटी',
+        mr: 'औषधी वनस्पती',
+        gu: 'ઔષધીય વનસ્પતિ'
+      },
+      'Sprouts': {
+        en: 'Sprouts',
+        hi: 'अंकुरित',
+        mr: 'अंकुरित',
+        gu: 'અંકુરિત'
+      },
+      'Body Soaps': {
+        en: 'Body Soaps',
+        hi: 'बॉडी साबुन',
+        mr: 'बॉडी साबण',
+        gu: 'બોડી સાબુ'
+      },
+      'Face Soaps': {
+        en: 'Face Soaps',
+        hi: 'फेस साबुन',
+        mr: 'फेस साबण',
+        gu: 'ફેસ સાબુ'
+      },
+      'Handmade Soaps': {
+        en: 'Handmade Soaps',
+        hi: 'हाथ से बने साबुन',
+        mr: 'हस्तनिर्मित साबण',
+        gu: 'હાથથી બનાવેલા સાબુ'
+      },
+      'Vegetable Pickles': {
+        en: 'Vegetable Pickles',
+        hi: 'सब्जी का अचार',
+        mr: 'भाजीचे लोणचे',
+        gu: 'શાકભાજીનો અથાણો'
+      },
+      'Fruit Pickles': {
+        en: 'Fruit Pickles',
+        hi: 'फल का अचार',
+        mr: 'फळांचे लोणचे',
+        gu: 'ફળોનો અથાણો'
+      },
+      'Mixed Pickles': {
+        en: 'Mixed Pickles',
+        hi: 'मिश्रित अचार',
+        mr: 'मिश्रित लोणचे',
+        gu: 'મિશ્ર અથાણો'
+      },
+      'Honey': {
+        en: 'Honey',
+        hi: 'शहद',
+        mr: 'मध',
+        gu: 'મધ'
+      },
+      'Jaggery': {
+        en: 'Jaggery',
+        hi: 'गुड़',
+        mr: 'गूळ',
+        gu: 'ગોળ'
+      },
+      'Natural Syrups': {
+        en: 'Natural Syrups',
+        hi: 'प्राकृतिक सिरप',
+        mr: 'नैसर्गिक सिरप',
+        gu: 'કુદરતી સિરપ'
+      },
+      'Skincare': {
+        en: 'Skincare',
+        hi: 'त्वचा देखभाल',
+        mr: 'त्वचेची काळजी',
+        gu: 'ત્વચા સંભાળ'
+      },
+      'Haircare': {
+        en: 'Haircare',
+        hi: 'बाल देखभाल',
+        mr: 'केसांची काळजी',
+        gu: 'વાળની સંભાળ'
+      },
+      'Wellness': {
+        en: 'Wellness',
+        hi: 'स्वास्थ्य',
+        mr: 'आरोग्य',
+        gu: 'આરોગ્ય'
+      },
+      'Home Decor': {
+        en: 'Home Decor',
+        hi: 'घर की सजावट',
+        mr: 'घराची सजावट',
+        gu: 'ઘરની સજાવટ'
+      },
+      'Accessories': {
+        en: 'Accessories',
+        hi: 'सामान',
+        mr: 'सामान',
+        gu: 'સામાન'
+      },
+      'Stationery': {
+        en: 'Stationery',
+        hi: 'स्टेशनरी',
+        mr: 'स्टेशनरी',
+        gu: 'સ્ટેશનરી'
+      },
+      'Art': {
+        en: 'Art',
+        hi: 'कला',
+        mr: 'कला',
+        gu: 'કલા'
+      },
+      'Crafts': {
+        en: 'Crafts',
+        hi: 'शिल्प',
+        mr: 'हस्तकला',
+        gu: 'હસ્તકલા'
+      },
+      'Decor': {
+        en: 'Decor',
+        hi: 'सजावट',
+        mr: 'सजावट',
+        gu: 'સજાવટ'
+      },
+      'Other': {
+        en: 'Other',
+        hi: 'अन्य',
+        mr: 'इतर',
+        gu: 'અન્ય'
+      }
+    };
+    return subcategoryTranslations[subcategory]?.[language] || subcategory;
+  };
+
   const renderStep1 = () => (
     <View>
       <Text style={styles.stepTitle}>{t.steps[1]}</Text>
@@ -502,6 +833,106 @@ const AddProductScreen = () => {
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
           placeholder={t.fields.productName.placeholder}
         />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>श्रेणी *</Text>
+        {showCustomCategoryInput ? (
+          <View>
+            <TextInput
+              style={styles.input}
+              value={customCategoryInput}
+              onChangeText={setCustomCategoryInput}
+              placeholder="अपनी श्रेणी दर्ज करें"
+              onSubmitEditing={() => {
+                if (customCategoryInput.trim()) {
+                  setFormData(prev => ({ ...prev, category: customCategoryInput.trim() }));
+                  setShowCustomCategoryInput(false);
+                  setCustomCategoryInput('');
+                }
+              }}
+            />
+          </View>
+        ) : (
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.category}
+              onValueChange={(value) => {
+                if (value === 'Other') {
+                  setShowCustomCategoryInput(true);
+                } else {
+                  setFormData(prev => ({ ...prev, category: value }));
+                }
+              }}
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+            >
+              <Picker.Item label="श्रेणी चुनें" value="" />
+              {categories.map((category) => (
+                <Picker.Item 
+                  key={category} 
+                  label={getCategoryLabel(category)} 
+                  value={category} 
+                />
+              ))}
+              <Picker.Item label={getCategoryLabel('Other')} value="Other" />
+            </Picker>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>उपश्रेणी *</Text>
+        <View style={styles.subcategoryContainer}>
+          <View style={styles.subcategoryInputWrapper}>
+            <TextInput
+              style={styles.subcategoryInput}
+              value={formData.subcategory}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, subcategory: text }));
+                // Hide suggestions when user starts typing
+                if (text.length > 0) {
+                  setShowSubcategorySuggestions(false);
+                }
+              }}
+              placeholder="उपश्रेणी दर्ज करें या चुनें"
+              placeholderTextColor="#666"
+              onFocus={() => {
+                // Only show suggestions if no text is entered
+                if (!formData.subcategory) {
+                  setShowSubcategorySuggestions(true);
+                }
+              }}
+            />
+          </View>
+
+          {showSubcategorySuggestions && formData.category && !formData.subcategory && (
+            <View style={styles.suggestionsDropdown}>
+              <ScrollView style={styles.suggestionsList} nestedScrollEnabled={true}>
+                {getSubcategories(formData.category).map((subcategory) => (
+                  <TouchableOpacity
+                    key={subcategory}
+                    style={[
+                      styles.suggestionItem,
+                      formData.subcategory === subcategory && styles.suggestionItemSelected
+                    ]}
+                    onPress={() => {
+                      setFormData(prev => ({ ...prev, subcategory }));
+                      setShowSubcategorySuggestions(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.suggestionText,
+                      formData.subcategory === subcategory && styles.suggestionTextSelected
+                    ]}>
+                      {getSubcategoryLabel(subcategory)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.inputGroup}>
@@ -1163,14 +1594,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: 12,
   },
-  imageNumber: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    color: '#FFFFFF',
-    padding: 4,
-    borderRadius: 4,
+  productImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
   },
   removeImageButton: {
     position: 'absolute',
@@ -1492,6 +1919,118 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 8,
+  },
+  cancelButton: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  subcategoryContainer: {
+    marginTop: 8,
+  },
+  subcategoryTitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  subcategoryScrollView: {
+    flexGrow: 0,
+  },
+  subcategoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F0F0FF',
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  subcategoryChipSelected: {
+    backgroundColor: '#6C63FF',
+    borderColor: '#6C63FF',
+  },
+  subcategoryChipText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  selectedSubcategory: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  selectedSubcategoryText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  subcategoryInputContainer: {
+    marginTop: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    overflow: 'hidden',
+  },
+  subcategoryInput: {
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+    width: '100%',
+  },
+  subcategoryInputWrapper: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    overflow: 'hidden',
+  },
+  dropdownIcon: {
+    padding: 12,
+  },
+  suggestionsDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginTop: 4,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  suggestionItemSelected: {
+    backgroundColor: '#F0F0FF',
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  suggestionTextSelected: {
+    color: '#6C63FF',
+    fontWeight: '500',
   },
 });
 

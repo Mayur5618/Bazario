@@ -22,14 +22,34 @@ export default function RootLayout() {
                   <LanguageProvider>
                     <Stack 
                       screenOptions={{ 
-                        headerShown: false,
+                        headerShown: true,
                         animation: 'slide_from_right'
                       }}
                     >
-                      <Stack.Screen name="index" />
-                      <Stack.Screen name="(auth)" />
-                      <Stack.Screen name="(app)" />
-                      <Stack.Screen name="(seller)" />
+                      <Stack.Screen 
+                        name="index" 
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen 
+                        name="(auth)" 
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen 
+                        name="(app)" 
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen 
+                        name="(seller)" 
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
                     </Stack>
                     <Toast />
                   </LanguageProvider>

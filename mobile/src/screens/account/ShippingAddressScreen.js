@@ -1,43 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-root-toast';
 import { userApi } from '../../api/userApi';
 
 const ShippingAddressScreen = () => {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    street: '',
-    city: '',
-    state: '',
-    pincode: '',
-    phone: ''
-  });
-
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
-
   const fetchAddresses = async () => {
+    setLoading(true);
     try {
       const response = await userApi.getShippingAddresses();
       setAddresses(response.addresses);
     } catch (error) {
-      Toast.show(error.message, {
+      Toast.show(error.message || 'Error fetching addresses', {
         duration: Toast.durations.LONG,
         position: Toast.positions.BOTTOM,
       });
@@ -46,25 +33,22 @@ const ShippingAddressScreen = () => {
     }
   };
 
-  const handleAddAddress = async () => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchAddresses();
+    }, [])
+  );
+
+  const handleDeleteAddress = async (addressId) => {
     try {
-      await userApi.addShippingAddress(formData);
-      Toast.show('Address added successfully', {
+      await userApi.deleteShippingAddress(addressId);
+      Toast.show('Address deleted successfully', {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
       });
-      setShowForm(false);
       fetchAddresses();
-      setFormData({
-        name: '',
-        street: '',
-        city: '',
-        state: '',
-        pincode: '',
-        phone: ''
-      });
     } catch (error) {
-      Toast.show(error.message, {
+      Toast.show(error.message || 'Error deleting address', {
         duration: Toast.durations.LONG,
         position: Toast.positions.BOTTOM,
       });
@@ -81,85 +65,40 @@ const ShippingAddressScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Address List */}
-      {addresses.map((address, index) => (
-        <View key={index} style={styles.addressCard}>
-          <Text style={styles.name}>{address.name}</Text>
-          <Text style={styles.addressText}>{address.street}</Text>
-          <Text style={styles.addressText}>
-            {address.city}, {address.state} {address.pincode}
-          </Text>
-          <Text style={styles.phone}>Phone: {address.phone}</Text>
-        </View>
-      ))}
-
       {/* Add New Address Button */}
-      {!showForm && (
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowForm(true)}
-        >
-          <MaterialIcons name="add" size={24} color="#fff" />
-          <Text style={styles.addButtonText}>Add New Address</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => router.push('/account/add-address')}
+      >
+        <MaterialIcons name="add" size={24} color="#fff" />
+        <Text style={styles.addButtonText}>Add New Address</Text>
+      </TouchableOpacity>
 
-      {/* Add Address Form */}
-      {showForm && (
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={formData.name}
-            onChangeText={(text) => setFormData({...formData, name: text})}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Street Address"
-            value={formData.street}
-            onChangeText={(text) => setFormData({...formData, street: text})}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="City"
-            value={formData.city}
-            onChangeText={(text) => setFormData({...formData, city: text})}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="State"
-            value={formData.state}
-            onChangeText={(text) => setFormData({...formData, state: text})}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Pincode"
-            value={formData.pincode}
-            keyboardType="numeric"
-            onChangeText={(text) => setFormData({...formData, pincode: text})}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number"
-            value={formData.phone}
-            keyboardType="phone-pad"
-            onChangeText={(text) => setFormData({...formData, phone: text})}
-          />
-          <View style={styles.buttonRow}>
+      {/* Address List */}
+      {addresses.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No addresses found</Text>
+          <Text style={styles.emptySubText}>Add a new address to get started</Text>
+        </View>
+      ) : (
+        addresses.map((address) => (
+          <View key={address._id} style={styles.addressCard}>
+            <View style={styles.addressContent}>
+              <Text style={styles.name}>{address.name}</Text>
+              <Text style={styles.addressText}>{address.street}</Text>
+              <Text style={styles.addressText}>
+                {address.city}, {address.state} {address.pincode}
+              </Text>
+              <Text style={styles.phone}>Phone: {address.phone}</Text>
+            </View>
             <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]}
-              onPress={() => setShowForm(false)}
+              style={styles.deleteButton}
+              onPress={() => handleDeleteAddress(address._id)}
             >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.saveButton]}
-              onPress={handleAddAddress}
-            >
-              <Text style={[styles.buttonText, styles.saveButtonText]}>Save Address</Text>
+              <MaterialIcons name="delete" size={24} color="#EF4444" />
             </TouchableOpacity>
           </View>
-        </View>
+        ))
       )}
     </ScrollView>
   );
@@ -176,12 +115,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  addButton: {
+    backgroundColor: '#3B82F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
   addressCard: {
     backgroundColor: '#fff',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
     elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  addressContent: {
+    flex: 1,
   },
   name: {
     fontSize: 16,
@@ -199,61 +177,8 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginTop: 4,
   },
-  addButton: {
-    backgroundColor: '#3B82F6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  form: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 14,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  button: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
-  saveButton: {
-    backgroundColor: '#3B82F6',
-    marginLeft: 8,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#4B5563',
-  },
-  saveButtonText: {
-    color: '#fff',
+  deleteButton: {
+    padding: 8,
   },
 });
 
