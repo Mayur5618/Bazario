@@ -6,13 +6,15 @@ import {
     getReviewStats,
     getLatestReviews,
     searchProductReviews,
-    sellerSignin
+    sellerSignin,
+    signup
 } from '../controllers/seller.controller.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Auth
+router.post('/signup', signup);
 router.post('/signin', sellerSignin);
 
 // Dashboard

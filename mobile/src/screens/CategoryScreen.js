@@ -190,7 +190,7 @@ const CategoryScreen = () => {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.productsGrid}>
-                            {subcategory.products.map(renderProduct)}
+                            {subcategory.products.slice(0, 4).map(renderProduct)}
                         </View>
                     </Animatable.View>
                 ))

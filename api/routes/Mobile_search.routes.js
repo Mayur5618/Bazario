@@ -5,13 +5,15 @@ import {
   saveSearchHistory,
   getRecentSearches,
   deleteSearchHistory,
-  clearSearchHistory
+  clearSearchHistory,
+  getPopularProductsByCity
 } from '../controllers/search.controller.js';
 
 const router = express.Router();
 
-// Public route
+// Public routes
 router.get('/suggestions', getSearchSuggestions);
+router.get('/popular-by-city', getPopularProductsByCity);
 
 // Protected routes
 router.use(protect);

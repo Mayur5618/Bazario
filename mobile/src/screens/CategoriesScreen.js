@@ -46,7 +46,6 @@ const CategoriesScreen = () => {
                 return {
                   id: category.toLowerCase().replace(/\s+/g, '-'),
                   title: category,
-                  description: `Explore our ${category} collection`,
                   image: product.images[0],
                   totalProducts: productsResponse.data.total
                 };
@@ -94,7 +93,6 @@ const CategoriesScreen = () => {
       }
         >
             <Text style={styles.header}>Categories</Text>
-            <Text style={styles.subHeader}>Explore our curated collection</Text>
 
             <View style={styles.categoriesGrid}>
         {categories.map((category, index) => (
@@ -115,16 +113,11 @@ const CategoriesScreen = () => {
                 resizeMode="cover"
               />
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
-                style={styles.gradient}
+                colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.9)']}
+                locations={[0, 0.5, 0.8, 1]}
+                style={styles.categoryNameContainer}
               >
                 <Text style={styles.categoryTitle}>{category.title}</Text>
-                <Text style={styles.categoryDescription}>{category.description}</Text>
-                <View style={styles.productsCount}>
-                  <Text style={styles.productsCountText}>
-                    {category.totalProducts} Products
-                  </Text>
-                </View>
               </LinearGradient>
             </TouchableOpacity>
           </Animatable.View>
@@ -151,12 +144,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     paddingHorizontal: 16,
     paddingTop: 20,
-    },
-    subHeader: {
-        fontSize: 16,
-    color: '#6B7280',
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    marginBottom: 16,
     },
     categoriesGrid: {
     flexDirection: 'row',
@@ -170,37 +158,40 @@ const styles = StyleSheet.create({
     categoryCard: {
     width: '100%',
     aspectRatio: 1,
-        borderRadius: 16,
+        borderRadius: 12,
         overflow: 'hidden',
     backgroundColor: '#f5f5f5',
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   categoryImage: {
     width: '100%',
     height: '100%',
   },
-  gradient: {
+  categoryNameContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '60%',
-    padding: 16,
+    height: '50%',
     justifyContent: 'flex-end',
+    paddingBottom: 12,
   },
   categoryTitle: {
-    fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
-    marginBottom: 4,
-    },
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 5,
+  },
     categoryDescription: {
     fontSize: 12,
         color: '#fff',

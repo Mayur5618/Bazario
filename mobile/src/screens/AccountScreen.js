@@ -27,20 +27,22 @@ const AccountScreen = () => {
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
-    email: '',
-    phone: '',
-    address: '',
+    phone: ''
   });
   const router = useRouter();
 
   useEffect(() => {
     if (user) {
+      console.log('User data received:', {
+        firstname: user.firstname,
+        lastname: user.lastname,
+        mobileno: user.mobileno
+      });
+      
       setProfileData({
         firstName: user.firstname || '',
         lastName: user.lastname || '',
-        email: user.email || '',
-        phone: user.mobileno || '',
-        address: user.address || '',
+        phone: user.mobileno || ''
       });
     }
   }, [user]);
@@ -96,22 +98,21 @@ const AccountScreen = () => {
 
   const handleSubmit = async () => {
     try {
+      console.log('Submitting profile data:', profileData);
       const response = await axios.put('/api/users/profile', {
         firstname: profileData.firstName,
-        lastname: profileData.lastName,
-        email: profileData.email,
-        address: profileData.address,
+        lastname: profileData.lastName
       });
 
       if (response.data.success) {
         // Update local user data
-        login({
+        const updatedUser = {
           ...user,
           firstname: profileData.firstName,
-          lastname: profileData.lastName,
-          email: profileData.email,
-          address: profileData.address,
-        }, user._id);
+          lastname: profileData.lastName
+        };
+        console.log('Updating user with:', updatedUser);
+        login(updatedUser, user._id);
         
         setIsEditing(false);
         showToast('Profile updated successfully');
@@ -163,11 +164,6 @@ const AccountScreen = () => {
 
   const menuItems = [
     {
-      icon: 'person-outline',
-      title: 'Profile Details',
-      route: '/profile-details'
-    },
-    {
       icon: 'cart-outline',
       title: 'My Orders',
       onPress: () => router.push('/orders')
@@ -181,21 +177,6 @@ const AccountScreen = () => {
       icon: 'location-outline',
       title: 'Shipping Address',
       onPress: handleNavigateToShippingAddress
-    },
-    {
-      icon: 'card-outline',
-      title: 'Payment Methods',
-      onPress: () => router.push('/payment-methods')
-    },
-    {
-      icon: 'notifications-outline',
-      title: 'Notifications',
-      onPress: () => router.push('/notifications')
-    },
-    {
-      icon: 'settings-outline',
-      title: 'Settings',
-      onPress: () => router.push('/settings')
     }
   ];
 
@@ -206,8 +187,8 @@ const AccountScreen = () => {
       onPress={item.onPress || (() => router.push(item.route))}
     >
       <View style={styles.menuItemContent}>
-        <View style={[styles.iconContainer, { backgroundColor: item.color + '10' }]}>
-          <Ionicons name={item.icon} size={24} color={item.color} />
+        <View style={[styles.iconContainer, { backgroundColor: '#f0f0f0' }]}>
+          <Ionicons name={item.icon} size={24} color="#666" />
         </View>
         <Text style={styles.menuItemText}>{item.title}</Text>
       </View>
@@ -248,7 +229,6 @@ const AccountScreen = () => {
           <Text style={styles.userName}>
             {user?.firstname} {user?.lastname}
           </Text>
-          <Text style={styles.userType}>Buyer Account</Text>
         </View>
       </View>
 
@@ -278,17 +258,6 @@ const AccountScreen = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
-              value={profileData.email}
-              onChangeText={(text) => setProfileData({...profileData, email: text})}
-              editable={isEditing}
-              keyboardType="email-address"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone</Text>
             <TextInput
               style={[styles.input, styles.disabledInput]}
@@ -296,38 +265,6 @@ const AccountScreen = () => {
               editable={false}
             />
             <Text style={styles.helperText}>Mobile number cannot be changed</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Address</Text>
-            <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
-              value={profileData.address}
-              onChangeText={(text) => setProfileData({...profileData, address: text})}
-              editable={isEditing}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Ionicons name="person-outline" size={20} color="#6C63FF" />
-              <View>
-                <Text style={styles.infoLabel}>Account Type</Text>
-                <Text style={styles.infoValue}>{user?.userType || 'Buyer'}</Text>
-              </View>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="calendar-outline" size={20} color="#6C63FF" />
-              <View>
-                <Text style={styles.infoLabel}>Member Since</Text>
-                <Text style={styles.infoValue}>{formatDate(user?.createdAt)}</Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -431,11 +368,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFF',
     marginBottom: 4,
-  },
-  userType: {
-    fontSize: 16,
-    color: '#FFF',
-    opacity: 0.8,
   },
   formContainer: {
     marginTop: -50,
