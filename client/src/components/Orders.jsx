@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FaBox, FaTruck, FaCheck } from 'react-icons/fa';
+import { FaBox, FaTruck, FaCheck, FaTimes } from 'react-icons/fa';
 import { orderService } from './services/orderService';
 import { toast } from 'react-hot-toast';
 
@@ -10,6 +10,10 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -33,12 +37,35 @@ const Orders = () => {
   };
 
   const handleCancelOrder = async (orderId) => {
+    setSelectedOrderId(orderId);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    const finalReason = cancelReason === 'Other' ? customReason : cancelReason;
+    
+    if (!finalReason.trim()) {
+      toast.error('Please provide a reason for cancellation');
+      return;
+    }
+
     try {
-      await orderService.cancelOrder(orderId);
-      toast.success('Order cancelled successfully');
-      fetchOrders(); // Refresh orders list
+      const response = await axios.put(`/api/orders/cancel/${selectedOrderId}`, {
+        cancellationReason: finalReason
+      }, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        toast.success('Order cancelled successfully');
+        setShowCancelModal(false);
+        setCancelReason('');
+        setCustomReason('');
+        setSelectedOrderId(null);
+        fetchOrders(); // Refresh orders list
+      }
     } catch (error) {
-      toast.error(error.message || 'Failed to cancel order');
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
     }
   };
 
@@ -347,6 +374,81 @@ const Orders = () => {
           </div>
         )}
       </div>
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-[90%]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Cancel Order</h3>
+              <button 
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setCustomReason('');
+                  setSelectedOrderId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Please provide a reason for cancellation
+              </label>
+              <select
+                value={cancelReason}
+                onChange={(e) => {
+                  setCancelReason(e.target.value);
+                  if (e.target.value !== 'Other') {
+                    setCustomReason('');
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a reason</option>
+                <option value="Changed my mind">Changed my mind</option>
+                <option value="Found better price elsewhere">Found better price elsewhere</option>
+                <option value="Ordered by mistake">Ordered by mistake</option>
+                <option value="Shipping time too long">Shipping time too long</option>
+                <option value="Other">Other</option>
+              </select>
+              
+              {cancelReason === 'Other' && (
+                <textarea
+                  placeholder="Please specify your reason"
+                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  rows="3"
+                />
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setCustomReason('');
+                  setSelectedOrderId(null);
+                }}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

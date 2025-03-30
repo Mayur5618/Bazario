@@ -145,6 +145,12 @@ const orderSchema = new mongoose.Schema({
     shippedAt: Date,
     deliveredAt: Date,
     cancelledAt: Date,
+    cancellationReason: {
+        type: String,
+        required: function() {
+            return this.status === 'cancelled';
+        }
+    },
     deliveryDate: {
         type: Date
     }

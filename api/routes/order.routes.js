@@ -61,7 +61,7 @@ router.get('/check-purchase/:productId', protect, async (req, res) => {
       }
   
       const existingReview = await Review.findOne({
-        user: req.user._id,
+        buyer: req.user._id,
         product: req.params.productId
       });
   
@@ -69,7 +69,8 @@ router.get('/check-purchase/:productId', protect, async (req, res) => {
         hasPurchased: true,
         hasReviewed: !!existingReview,
         orderDate: order.createdAt,
-        orderStatus: order.status
+        orderStatus: order.status,
+        orderId: order._id
       });
   
     } catch (error) {

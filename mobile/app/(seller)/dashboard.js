@@ -20,15 +20,17 @@ import ProductsTab from '../../src/components/ProductsTab';
 import OrdersTab from './OrdersTab';
 import ReviewsTab from './ReviewsTab';
 import ProfileTab from './profile';
+import B2BDashboard from '../../src/components/B2BDashboard';
 
 const { width } = Dimensions.get('window');
 const cardWidth = width - 40; // Full width cards with padding
 
 const SellerDashboard = () => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, businessMode, setBusinessMode } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mode, setMode] = useState('personal');
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -178,169 +180,173 @@ const SellerDashboard = () => {
       <View style={styles.headerLeft}>
         <Text style={styles.nameText}>{user?.firstname} {user?.lastname}</Text>
       </View>
-      <TouchableOpacity 
-        onPress={() => router.push('/(seller)/profile')}
-        style={styles.headerRight}
-      >
-        {user?.profileImage ? (
-          <Image
-            source={{ uri: user.profileImage }}
-            style={styles.profileImage}
-          />
-        ) : (
-          <View style={styles.profileImagePlaceholder}>
-            <Ionicons name="person" size={24} color="#666" />
-          </View>
-        )}
-      </TouchableOpacity>
+      
+      <View style={styles.modeToggle}>
+        <TouchableOpacity 
+          style={[styles.modeButton, businessMode === 'personal' && styles.activeModeButton]}
+          onPress={() => setBusinessMode('personal')}
+        >
+          <Text style={[styles.modeButtonText, businessMode === 'personal' && styles.activeModeButtonText]}>Personal</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.modeButton, businessMode === 'business' && styles.activeModeButton]}
+          onPress={() => setBusinessMode('business')}
+        >
+          <Text style={[styles.modeButtonText, businessMode === 'business' && styles.activeModeButtonText]}>Business</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
-  const renderDashboardContent = () => (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <View style={styles.statsContainer}>
-        <DashboardCard 
-          title="Total Products"
-          value={stats.totalProducts}
-          icon="cube-outline"
-          color="#6C63FF"
-          onPress={() => router.push('/(seller)/products')}
-        />
-        <DashboardCard 
-          title="Total Orders"
-          value={stats.totalOrders}
-          icon="cart-outline"
-          color="#00C853"
-        />
-        <DashboardCard 
-          title="Pending Orders"
-          value={stats.pendingOrders}
-          icon="time-outline"
-          color="#FF9800"
-          onPress={() => router.push('/pending-orders')}
-        />
-        <DashboardCard 
-          title="Revenue"
-          value={`₹${stats.revenue}`}
-          icon="cash-outline"
-          color="#2196F3"
-        />
-        <DashboardCard 
-          title="Seller Rating"
-          value={stats.sellerRating > 0 ? `${stats.sellerRating} ★` : 'New'}
-          icon="star-outline"
-          color="#FFD700"
-          subtitle={`${stats.totalReviews} reviews`}
-        />
-      </View>
+  const renderDashboardContent = () => {
+    if (businessMode === 'business') {
+      return <B2BDashboard />;
+    }
 
-      {/* Latest Products Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest Products</Text>
-          <TouchableOpacity 
-            style={styles.viewAllButton}
+    return (
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.statsContainer}>
+          <DashboardCard 
+            title="Total Products"
+            value={stats.totalProducts}
+            icon="cube-outline"
+            color="#6C63FF"
             onPress={() => router.push('/(seller)/products')}
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-            <Ionicons name="chevron-forward" size={16} color="#6C63FF" />
-          </TouchableOpacity>
+          />
+          <DashboardCard 
+            title="Total Orders"
+            value={stats.totalOrders}
+            icon="cart-outline"
+            color="#00C853"
+          />
+          <DashboardCard 
+            title="Pending Orders"
+            value={stats.pendingOrders}
+            icon="time-outline"
+            color="#FF9800"
+            onPress={() => router.push('/pending-orders')}
+          />
+          <DashboardCard 
+            title="Revenue"
+            value={`₹${stats.revenue}`}
+            icon="cash-outline"
+            color="#2196F3"
+          />
+          <DashboardCard 
+            title="Seller Rating"
+            value={stats.sellerRating > 0 ? `${stats.sellerRating} ★` : 'New'}
+            icon="star-outline"
+            color="#FFD700"
+            subtitle={`${stats.totalReviews} reviews`}
+          />
         </View>
-        <View style={styles.analyticsContainer}>
-          {stats.latestProducts && stats.latestProducts.length > 0 ? (
-            stats.latestProducts.map((product) => (
-              <ProductAnalyticsCard key={product._id} product={product} />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="cube-outline" size={48} color="#666" />
-              <Text style={styles.emptyStateText}>No products added yet</Text>
-            </View>
-          )}
-        </View>
-      </View>
 
-      {/* Latest Review Section */}
-      {stats.latestReview && (
+        {/* Latest Products Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Latest Review</Text>
-          <View style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewUser}>
-                <Ionicons name="person-circle-outline" size={24} color="#666" />
-                <Text style={styles.reviewUserName}>{stats.latestReview.userName}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Latest Products</Text>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => router.push('/(seller)/products')}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color="#6C63FF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.analyticsContainer}>
+            {stats.latestProducts && stats.latestProducts.length > 0 ? (
+              stats.latestProducts.map((product) => (
+                <ProductAnalyticsCard key={product._id} product={product} />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="cube-outline" size={48} color="#666" />
+                <Text style={styles.emptyStateText}>No products added yet</Text>
               </View>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#FFD700" />
-                <Text style={styles.ratingText}>{stats.latestReview.rating}</Text>
-              </View>
-            </View>
-            <Text style={styles.reviewText}>{stats.latestReview.comment}</Text>
-            <Text style={styles.reviewDate}>
-              {new Date(stats.latestReview.createdAt).toLocaleDateString()}
-            </Text>
+            )}
           </View>
         </View>
-      )}
-    </ScrollView>
-  );
+
+        {/* Latest Review Section */}
+        {stats.latestReview && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Latest Review</Text>
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewUser}>
+                  <Ionicons name="person-circle-outline" size={24} color="#666" />
+                  <Text style={styles.reviewUserName}>{stats.latestReview.userName}</Text>
+                </View>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color="#FFD700" />
+                  <Text style={styles.ratingText}>{stats.latestReview.rating}</Text>
+                </View>
+              </View>
+              <Text style={styles.reviewText}>{stats.latestReview.comment}</Text>
+              <Text style={styles.reviewDate}>
+                {new Date(stats.latestReview.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return (
-          <ScrollView 
-            style={styles.container}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          >
-            {renderHeader()}
+        return businessMode === 'business' ? (
+          <B2BDashboard />
+        ) : (
+          <View style={styles.container}>
             {renderDashboardContent()}
-          </ScrollView>
+          </View>
         );
       case 'products':
         return (
           <View style={styles.container}>
-            {renderHeader()}
-            <ProductsTab />
+            <ProductsTab mode={businessMode} />
           </View>
         );
       case 'orders':
         return (
           <View style={styles.container}>
-            {renderHeader()}
-            <OrdersTab />
+            <OrdersTab mode={businessMode} />
           </View>
         );
       case 'reviews':
         return (
           <View style={styles.container}>
-            {renderHeader()}
-            <ReviewsTab />
+            <ReviewsTab mode={businessMode} />
           </View>
         );
       case 'profile':
         return (
-          <ScrollView style={styles.container}>
-            {renderHeader()}
+          <View style={styles.container}>
             <ProfileTab />
-          </ScrollView>
+          </View>
         );
       default:
-        return renderDashboardContent();
+        return null;
     }
   };
 
   return (
     <View style={styles.mainContainer}>
-      {renderContent()}
-      
+      {/* Common Header for all tabs */}
+      {renderHeader()}
+
+      {/* Content Area */}
+      <View style={styles.contentContainer}>
+        {renderContent()}
+      </View>
+
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
         <TouchableOpacity
@@ -428,35 +434,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     backgroundColor: '#FFFFFF',
   },
   headerLeft: {
     flex: 1,
-  },
-  headerRight: {
-    position: 'absolute',
-    right: 16,
-    top: 8,
-    zIndex: 1,
   },
   nameText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#1A1A1A',
   },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
   },
-  profileImagePlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
+  modeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  activeModeButton: {
+    backgroundColor: '#6C63FF',
+  },
+  modeButtonText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  activeModeButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   statsContainer: {
     padding: 20,
@@ -733,6 +742,9 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#F5F7FA',
+  },
+  contentContainer: {
+    flex: 1,
   },
   tabBar: {
     flexDirection: 'row',

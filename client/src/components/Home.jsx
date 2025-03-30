@@ -16,9 +16,30 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userCity, setUserCity] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
+
+  // Fetch user's city
+  useEffect(() => {
+    const fetchUserCity = async () => {
+      try {
+        const response = await axios.get('/api/products/buyer-city', {
+          withCredentials: true
+        });
+        if (response.data.success) {
+          setUserCity(response.data.city);
+        }
+      } catch (error) {
+        console.error('Error fetching user city:', error);
+      }
+    };
+
+    if (userData) {
+      fetchUserCity();
+    }
+  }, [userData]);
 
   // Fetch categories and their best rated product
   useEffect(() => {
@@ -199,13 +220,54 @@ const Home = () => {
     }
   ];
 
-  const handleCategoryClick = (slug) => {
-    // Convert slug to proper format
-    const formattedSlug = slug
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/&/g, 'and');
-    navigate(`/products/category/${formattedSlug}`);
+  const handleCategoryClick = async (slug) => {
+    // Keep original format, just encode for URL
+    const encodedCategory = encodeURIComponent(slug);
+    
+    try {
+      // Log the request details
+      console.log('Fetching category products:', {
+        category: slug,
+        city: userCity || userData?.city
+      });
+
+      const response = await axios.get(`/api/products/category/${encodedCategory}`, {
+        params: {
+          city: userCity || userData?.city || undefined
+        }
+      });
+
+      console.log('API Response:', response.data);
+
+      if (response.data.success) {
+        // Navigate with the data
+        navigate(`/products/category/${encodedCategory}`, {
+          state: { 
+            categoryData: {
+              ...response.data,
+              subcategories: response.data.subcategories.map(sub => ({
+                ...sub,
+                products: sub.products.map(product => ({
+                  ...product,
+                  seller: {
+                    ...product.seller,
+                    name: product.seller.name || 'Unknown Seller'
+                  }
+                }))
+              }))
+            },
+            city: userCity || userData?.city 
+          }
+        });
+      } else {
+        console.error('API returned success: false');
+        navigate(`/products/category/${encodedCategory}?city=${userCity || userData?.city || ''}`);
+      }
+    } catch (error) {
+      console.error('Error fetching category products:', error.response?.data || error.message);
+      // Still navigate but without data
+      navigate(`/products/category/${encodedCategory}?city=${userCity || userData?.city || ''}`);
+    }
   };
 
   if (loading) {

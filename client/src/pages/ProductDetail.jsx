@@ -12,6 +12,199 @@ import ReviewItem from '../components/ReviewItem';
 import { addToWishlist, removeFromWishlist } from "../store/wishlistSlice";
 import ReviewEditModal from '../components/ReviewEditModal';
 
+const ReviewForm = ({ onSubmit, onClose, orderId }) => {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [images, setImages] = useState([]);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + images.length > 5) {
+      toast.error('Maximum 5 images allowed');
+      return;
+    }
+
+    const newImages = [];
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error(`${file.name} is too large. Max size is 5MB`);
+        continue;
+      }
+
+      try {
+        const base64 = await convertToBase64(file);
+        newImages.push({
+          url: base64,
+          name: file.name
+        });
+      } catch (error) {
+        console.error('Error converting image:', error);
+        toast.error(`Failed to process ${file.name}`);
+      }
+    }
+
+    setImages([...images, ...newImages]);
+  };
+
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (rating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+    if (!comment.trim()) {
+      toast.error('Please write a review');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        rating,
+        comment,
+        images,
+        orderId
+      });
+      onClose();
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error(error.message || 'Failed to submit review');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Write a Review</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Overall Rating <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoveredRating(star)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                    className="text-2xl focus:outline-none"
+                  >
+                    <span className={`${
+                      star <= (hoveredRating || rating) ? 'text-yellow-400' : 'text-gray-300'
+                    }`}>
+                      ★
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Review <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows="4"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Share your experience with this product..."
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Add Photos (Optional)
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {images.map((image, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={image.url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImages(images.filter((_, i) => i !== index))}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {images.length < 5 && (
+                <div className="flex items-center justify-center w-full">
+                  <label className="w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:border-blue-500">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span className="mt-2 text-sm text-gray-500">Click to upload photos</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">You can upload up to 5 images</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+                isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Submitting...
+                </div>
+              ) : (
+                'Submit Review'
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -64,6 +257,9 @@ const ProductDetail = () => {
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
 
+  // Add review prompt state
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
@@ -95,6 +291,8 @@ const ProductDetail = () => {
         // Add to recently viewed if user is logged in
         if (userData) {
           await addToRecentlyViewed(data.product);
+          // Check if user has completed orders for this product
+          checkCompletedOrders();
         }
       } catch (err) {
         console.error('Error fetching product:', err);
@@ -311,36 +509,46 @@ const ProductDetail = () => {
 
   const handleReviewSubmit = async (formData) => {
     try {
-        console.log('Submitting review with images:', formData.images);
-        
-        // Extract base64 strings from image objects
-        const imageUrls = formData.images.map(img => img.url);
-        console.log('Image URLs being sent:', imageUrls);
+        if (!orderId) {
+            toast.error('Unable to submit review. Please try again later.');
+            return;
+        }
 
-        const response = await axios.post(`/api/reviews/products/${id}/reviews`, {
+        console.log('Submitting review with data:', {
             rating: formData.rating,
             comment: formData.comment,
-            images: imageUrls,
-            orderId: formData.orderId
-        }, {
+            orderId: orderId,
+            images: formData.images ? formData.images.map(img => img.url) : []
+        });
+
+        const response = await fetch(`/api/reviews/products/${id}`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
+            },
+            body: JSON.stringify({
+                rating: formData.rating,
+                comment: formData.comment,
+                orderId: orderId,
+                images: formData.images ? formData.images.map(img => img.url) : []
+            })
         });
 
-        const data = response.data;
+        const data = await response.json();
 
         if (data.success) {
             toast.success('Review submitted successfully!');
             await fetchReviews(); // Wait for reviews to be fetched
             setHasReviewed(true);
+            setEditingReview(false); // Close the review form
+            setShowReviewPrompt(false); // Hide the review prompt
         } else {
             throw new Error(data.message || 'Failed to submit review');
         }
     } catch (error) {
         console.error('Review submission error:', error);
-        throw error; // Let ProductReviewSection handle the error
+        toast.error(error.response?.data?.message || error.message || 'Failed to submit review');
     }
   };
 
@@ -639,6 +847,25 @@ const ProductDetail = () => {
     } catch (error) {
       console.error('Error updating review:', error);
       toast.error('Failed to update review');
+    }
+  };
+
+  const checkCompletedOrders = async () => {
+    try {
+      const response = await fetch(`/api/orders/check-purchase/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success || data.hasPurchased) {
+        setShowReviewPrompt(!data.hasReviewed);
+        setCanReview(true);
+        setHasReviewed(data.hasReviewed);
+      }
+    } catch (error) {
+      console.error('Error checking completed orders:', error);
     }
   };
 
@@ -986,12 +1213,34 @@ const ProductDetail = () => {
                                 <span className="text-xs text-gray-500">{productStats.totalReviews} ratings</span>
             </div>
           </div>
-                            {userData && canReview && !hasReviewed && (
+                            {userData && (
                               <button
-                                onClick={() => setEditingReview(true)}
-                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-600 rounded-full hover:bg-blue-50"
+                                onClick={() => {
+                                  if (!userData) {
+                                    toast.error("Please login to write a review");
+                                    return;
+                                  }
+                                  if (!canReview) {
+                                    toast.error("You need to purchase this product first to review it");
+                                    return;
+                                  }
+                                  if (hasReviewed) {
+                                    toast.error("You have already reviewed this product");
+                                    return;
+                                  }
+                                  setEditingReview(true);
+                                }}
+                                className={`px-4 py-2 ${
+                                  canReview && !hasReviewed
+                                    ? "bg-blue-600 hover:bg-blue-700"
+                                    : "bg-gray-400 cursor-not-allowed"
+                                } text-white rounded-lg transition-colors text-sm font-medium`}
                               >
-                                Write a Review
+                                {hasReviewed 
+                                  ? "Already Reviewed"
+                                  : canReview 
+                                    ? "Write a Review"
+                                    : "Purchase to Review"}
                               </button>
                             )}
                           </div>
@@ -1241,7 +1490,61 @@ const ProductDetail = () => {
         .hide-scrollbar::-webkit-scrollbar {
           display: none;  /* Chrome, Safari and Opera */
         }
+
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
       `}</style>
+
+      {/* Add Review Prompt */}
+      {showReviewPrompt && (
+        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-sm border border-blue-100 animate-slide-up">
+          <div className="flex items-start">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-900">Share your experience!</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                You've purchased this product. Help others by sharing your review.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowReviewPrompt(false)}
+              className="text-gray-400 hover:text-gray-500"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setEditingReview(true);
+              setShowReviewPrompt(false);
+            }}
+            className="mt-3 w-full bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Write a Review
+          </button>
+        </div>
+      )}
+
+      {editingReview && (
+        <ReviewForm
+          onSubmit={handleReviewSubmit}
+          onClose={() => setEditingReview(false)}
+          orderId={orderId}
+        />
+      )}
     </div>
   );
 };

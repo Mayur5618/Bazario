@@ -8,7 +8,10 @@ import {
   Image, 
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator 
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { orderApi } from '../api/orderApi';
@@ -19,6 +22,10 @@ const OrderHistoryScreen = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
   const router = useRouter();
 
   const fetchOrders = async () => {
@@ -104,6 +111,53 @@ const OrderHistoryScreen = () => {
     }
   };
 
+  const handleCancelOrder = (orderId) => {
+    setSelectedOrderId(orderId);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    const finalReason = cancelReason === 'Other' ? customReason : cancelReason;
+    
+    if (!finalReason.trim()) {
+      Alert.alert(
+        'Error',
+        'Please provide a reason for cancellation',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      const response = await orderApi.cancelOrder(selectedOrderId, finalReason);
+      
+      if (response.success) {
+        setShowCancelModal(false);
+        Alert.alert(
+          'Success',
+          'Order cancelled successfully',
+          [
+            { 
+              text: 'OK',
+              onPress: () => {
+                setCancelReason('');
+                setCustomReason('');
+                setSelectedOrderId(null);
+                fetchOrders(); // Refresh orders list
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to cancel order',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const OrderCard = ({ order }) => {
     const statusStyle = getStatusStyle(order.status);
     const isCompleted = order.status.toLowerCase() === 'completed';
@@ -184,6 +238,17 @@ const OrderHistoryScreen = () => {
           ]}>
             ₹{order.total}
           </Text>
+          {order.status.toLowerCase() === 'pending' && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                handleCancelOrder(order._id);
+              }}
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelButtonText}>Cancel Order</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -231,20 +296,101 @@ const OrderHistoryScreen = () => {
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No orders found</Text>
+    <View style={styles.container}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={styles.scrollView}
+      >
+        {loading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={styles.loader} />
+        ) : orders.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No orders found</Text>
+          </View>
+        ) : (
+          renderOrders()
+        )}
+      </ScrollView>
+
+      {/* Cancel Order Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCancelModal}
+        onRequestClose={() => {
+          setShowCancelModal(false);
+          setCancelReason('');
+          setCustomReason('');
+          setSelectedOrderId(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cancel Order</Text>
+            <Text style={styles.modalSubtitle}>Please select a reason for cancellation</Text>
+
+            <ScrollView style={styles.reasonsContainer}>
+              {['Changed my mind', 'Found better price elsewhere', 'Ordered by mistake', 'Shipping time too long', 'Other'].map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  style={[
+                    styles.reasonButton,
+                    cancelReason === reason && styles.selectedReasonButton
+                  ]}
+                  onPress={() => {
+                    setCancelReason(reason);
+                    if (reason !== 'Other') {
+                      setCustomReason('');
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.reasonText,
+                    cancelReason === reason && styles.selectedReasonText
+                  ]}>
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {cancelReason === 'Other' && (
+              <TextInput
+                style={styles.customReasonInput}
+                placeholder="Please specify your reason"
+                value={customReason}
+                onChangeText={setCustomReason}
+                multiline={true}
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelModalButton}
+                onPress={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setCustomReason('');
+                  setSelectedOrderId(null);
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleConfirmCancel}
+              >
+                <Text style={styles.confirmButtonText}>Confirm Cancellation</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      ) : (
-        renderOrders()
-      )}
-    </ScrollView>
+      </Modal>
+    </View>
   );
 };
 
@@ -322,21 +468,24 @@ const styles = StyleSheet.create({
   },
   totalContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    paddingHorizontal: 4,
   },
   totalLabel: {
     fontSize: 14,
     color: '#6B7280',
+    flex: 1,
   },
   totalAmount: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
+    marginLeft: 'auto',
+    marginRight: 12,
   },
   centerContainer: {
     flex: 1,
@@ -378,6 +527,109 @@ const styles = StyleSheet.create({
   },
   completedTotalContainer: {
     borderTopColor: '#E2E8F0',
+  },
+  cancelButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  reasonsContainer: {
+    maxHeight: 200,
+  },
+  reasonButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  selectedReasonButton: {
+    backgroundColor: '#3B82F6',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  selectedReasonText: {
+    color: '#FFFFFF',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    gap: 12,
+  },
+  cancelModalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelModalButtonText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  confirmButton: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loader: {
+    flex: 1,
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 16,
+    fontSize: 16,
+    color: '#1F2937',
+    backgroundColor: '#F9FAFB',
+    minHeight: 80,
   },
 });
 

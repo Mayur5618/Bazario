@@ -84,9 +84,11 @@ export const orderApi = {
     }
   },
 
-  cancelOrder: async (orderId) => {
+  cancelOrder: async (orderId, reason) => {
     try {
-      const response = await axios.put(`/api/orders/cancel/${orderId}`);
+      const response = await axios.put(`/api/orders/cancel/${orderId}`, {
+        cancellationReason: reason
+      });
       return response.data;
     } catch (error) {
       if (error.response) {

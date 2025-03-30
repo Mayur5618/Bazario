@@ -467,8 +467,17 @@ export const getOrderDetails = async (req, res) => {
 // };
 export const cancelOrder = async (req, res) => {
     try {
+        const { cancellationReason } = req.body;
+
+        if (!cancellationReason) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cancellation reason is required'
+            });
+        }
+
         const order = await Order.findOne({ 
-            _id: req.params.id,  // Changed from orderId to _id
+            _id: req.params.id,
             buyer: req.user._id 
         });
 
@@ -490,6 +499,8 @@ export const cancelOrder = async (req, res) => {
 
         // Update order status to cancelled
         order.status = 'cancelled';
+        order.cancellationReason = cancellationReason;
+        order.cancelledAt = new Date();
         await order.save();
 
         res.json({

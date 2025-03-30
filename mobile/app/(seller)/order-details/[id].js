@@ -128,6 +128,23 @@ const OrderDetails = () => {
                     </Text>
                 </View>
 
+                {order.status.toLowerCase() === 'cancelled' && (
+                    <>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>रद्द करने का कारण:</Text>
+                            <Text style={[styles.infoValue, { color: '#DC143C' }]}>
+                                {order.cancellationReason || 'कोई कारण नहीं दिया गया'}
+                            </Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>रद्द करने की तारीख:</Text>
+                            <Text style={[styles.infoValue, { color: '#DC143C' }]}>
+                                {formatDate(order.cancelledAt)}
+                            </Text>
+                        </View>
+                    </>
+                )}
+
                 <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>ऑर्डर नंबर:</Text>
                     <Text style={styles.infoValue}>{order.orderId}</Text>
