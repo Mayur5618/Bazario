@@ -1,18 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
-const ReviewForm = ({ productId, orderId, onReviewSubmitted }) => {
-    const [rating, setRating] = useState(0);
+const ReviewForm = ({ productId, orderId, onReviewSubmitted, existingReview = null }) => {
+    const [rating, setRating] = useState(existingReview?.rating || 0);
     const [hover, setHover] = useState(0);
-    const [comment, setComment] = useState('');
-    const [images, setImages] = useState([]);
+    const [comment, setComment] = useState(existingReview?.comment || '');
+    const [images, setImages] = useState(existingReview?.images || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (existingReview) {
+            setRating(existingReview.rating);
+            setComment(existingReview.comment);
+            setImages(existingReview.images || []);
+        }
+    }, [existingReview]);
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
-        if (files.length > 5) {
+        if (files.length + images.length > 5) {
             toast.error('Maximum 5 images allowed');
             return;
         }
@@ -29,7 +37,7 @@ const ReviewForm = ({ productId, orderId, onReviewSubmitted }) => {
 
         Promise.all(promises)
             .then(base64Images => {
-                setImages(base64Images);
+                setImages(prev => [...prev, ...base64Images]);
             })
             .catch(error => {
                 console.error('Error converting images:', error);
@@ -54,23 +62,40 @@ const ReviewForm = ({ productId, orderId, onReviewSubmitted }) => {
             const reviewData = {
                 rating,
                 comment,
-                images,
-                orderId
+                images
             };
 
-            const response = await axios.post(
-                `/api/products/${productId}/reviews`,
-                reviewData,
-                {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    withCredentials: true
-                }
-            );
+            let response;
+            if (existingReview) {
+                // Update existing review
+                response = await axios.put(
+                    `/api/reviews/${existingReview._id}`,
+                    reviewData,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        withCredentials: true
+                    }
+                );
+                toast.success('Review updated successfully!');
+            } else {
+                // Create new review
+                reviewData.orderId = orderId;
+                response = await axios.post(
+                    `/api/products/${productId}/reviews`,
+                    reviewData,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        withCredentials: true
+                    }
+                );
+                toast.success('Review submitted successfully!');
+            }
 
             if (response.data.success) {
-                toast.success('Review submitted successfully!');
                 setRating(0);
                 setComment('');
                 setImages([]);
@@ -162,7 +187,7 @@ const ReviewForm = ({ productId, orderId, onReviewSubmitted }) => {
                         : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
-                {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                {isSubmitting ? 'Submitting...' : existingReview ? 'Update Review' : 'Submit Review'}
             </button>
         </form>
     );

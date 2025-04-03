@@ -14,8 +14,87 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../../src/api/sellerApi';
+import { useLanguage } from '../../src/context/LanguageContext';
+
+// Translations for reviews tab
+const translations = {
+  en: {
+    reviews28Days: "Reviews in\nLast 28 Days",
+    repliedReviews: "Replied\nReviews",
+    pendingReplies: "Pending\nReplies",
+    searchProduct: "Search for product...",
+    loadingReviews: "Loading reviews...",
+    noReviews: "No reviews found",
+    noReviewsSubtext: "Reviews will appear here when customers rate your products",
+    replyToReview: "Reply to Review",
+    writeReply: "Write your reply...",
+    sendReply: "Send Reply",
+    yourReply: "Your Reply:",
+    reply: "Reply",
+    error: "Error",
+    success: "Success",
+    pleaseWriteReply: "Please write a reply",
+    replyAddedSuccess: "Your reply has been added successfully"
+  },
+  hi: {
+    reviews28Days: "पिछले 28 दिनों की\nसमीक्षाएं",
+    repliedReviews: "जवाब दी गई\nसमीक्षाएं",
+    pendingReplies: "लंबित\nजवाब",
+    searchProduct: "उत्पाद खोजें...",
+    loadingReviews: "समीक्षाएं लोड हो रही हैं...",
+    noReviews: "कोई समीक्षा नहीं मिली",
+    noReviewsSubtext: "जब ग्राहक आपके उत्पादों की रेटिंग करेंगे तो समीक्षाएं यहां दिखाई देंगी",
+    replyToReview: "समीक्षा का जवाब दें",
+    writeReply: "अपना जवाब लिखें...",
+    sendReply: "जवाब भेजें",
+    yourReply: "आपका जवाब:",
+    reply: "जवाब दें",
+    error: "त्रुटि",
+    success: "सफल",
+    pleaseWriteReply: "कृपया जवाब लिखें",
+    replyAddedSuccess: "आपका जवाब सफलतापूर्वक जोड़ दिया गया है"
+  },
+  mr: {
+    reviews28Days: "मागील 28 दिवसांच्या\nसमीक्षा",
+    repliedReviews: "उत्तर दिलेल्या\nसमीक्षा",
+    pendingReplies: "प्रलंबित\nउत्तरे",
+    searchProduct: "उत्पाद शोधा...",
+    loadingReviews: "समीक्षा लोड होत आहेत...",
+    noReviews: "कोणतीही समीक्षा सापडली नाही",
+    noReviewsSubtext: "ग्राहक आपल्या उत्पादांना रेटिंग देतील तेव्हा समीक्षा येथे दिसतील",
+    replyToReview: "समीक्षेला उत्तर द्या",
+    writeReply: "आपले उत्तर लिहा...",
+    sendReply: "उत्तर पाठवा",
+    yourReply: "तुमचे उत्तर:",
+    reply: "उत्तर द्या",
+    error: "त्रुटी",
+    success: "यशस्वी",
+    pleaseWriteReply: "कृपया उत्तर लिहा",
+    replyAddedSuccess: "तुमचे उत्तर यशस्वीरित्या जोडले गेले आहे"
+  },
+  gu: {
+    reviews28Days: "છેલ્લા 28 દિવસની\nસમીક્ષાઓ",
+    repliedReviews: "જવાબ આપેલી\nસમીક્ષાઓ",
+    pendingReplies: "બાકી\nજવાબો",
+    searchProduct: "ઉત્પાદ શોધો...",
+    loadingReviews: "સમીક્ષાઓ લોડ થઈ રહી છે...",
+    noReviews: "કોઈ સમીક્ષા મળી નથી",
+    noReviewsSubtext: "જ્યારે ગ્રાહકો તમારા ઉત્પાદોને રેટિંગ આપશે ત્યારે સમીક્ષાઓ અહીં દેખાશે",
+    replyToReview: "સમીક્ષાનો જવાબ આપો",
+    writeReply: "તમારો જવાબ લખો...",
+    sendReply: "જવાબ મોકલો",
+    yourReply: "તમારો જવાબ:",
+    reply: "જવાબ આપો",
+    error: "ભૂલ",
+    success: "સફળ",
+    pleaseWriteReply: "કૃપા કરી જવાબ લખો",
+    replyAddedSuccess: "તમારો જવાબ સફળતાપૂર્વક ઉમેરાયો છે"
+  }
+};
 
 const ReviewsTab = () => {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,7 +162,7 @@ const ReviewsTab = () => {
 
   const handleSubmitReply = async () => {
     if (!replyText.trim()) {
-      Alert.alert('त्रुटि', 'कृपया जवाब लिखें');
+      Alert.alert(t.error, t.pleaseWriteReply);
       return;
     }
 
@@ -92,13 +171,11 @@ const ReviewsTab = () => {
       const response = await sellerApi.replyToReview(selectedReview._id, replyText.trim());
       
       if (response.success) {
-        // Update the reviews list with the new reply
         const updatedReviews = reviews.map(review => 
           review._id === selectedReview._id ? response.review : review
         );
         setReviews(updatedReviews);
         
-        // Update stats
         setStats(prev => ({
           ...prev,
           repliedReviews: prev.repliedReviews + 1,
@@ -106,10 +183,10 @@ const ReviewsTab = () => {
         }));
 
         setReplyModalVisible(false);
-        Alert.alert('सफल', 'आपका जवाब सफलतापूर्वक जोड़ा गया है');
+        Alert.alert(t.success, t.replyAddedSuccess);
       }
     } catch (error) {
-      Alert.alert('त्रुटि', error.message || 'जवाब देने में समस्या हुई');
+      Alert.alert(t.error, error.message || 'Failed to submit reply');
     } finally {
       setReplying(false);
     }
@@ -117,7 +194,7 @@ const ReviewsTab = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('hi-IN', {
+    return date.toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -162,7 +239,7 @@ const ReviewsTab = () => {
 
       {review.replies && review.replies.length > 0 ? (
         <View style={styles.replyContainer}>
-          <Text style={styles.replyLabel}>आपका जवाब:</Text>
+          <Text style={styles.replyLabel}>{t.yourReply}</Text>
           <Text style={styles.replyText}>{review.replies[0].comment}</Text>
         </View>
       ) : (
@@ -170,7 +247,7 @@ const ReviewsTab = () => {
           style={styles.replyButton}
           onPress={() => handleReplyPress(review)}
         >
-          <Text style={styles.replyButtonText}>जवाब दें</Text>
+          <Text style={styles.replyButtonText}>{t.reply}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -188,15 +265,15 @@ const ReviewsTab = () => {
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
             <Text style={styles.statValue}>{stats.totalReviews28Days}</Text>
-            <Text style={styles.statLabel}>पिछले 28 दिनों{'\n'}के रिव्यू</Text>
+            <Text style={styles.statLabel}>{t.reviews28Days}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
             <Text style={styles.statValue}>{stats.repliedReviews}</Text>
-            <Text style={styles.statLabel}>जवाब दिए{'\n'}गए रिव्यू</Text>
+            <Text style={styles.statLabel}>{t.repliedReviews}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
             <Text style={styles.statValue}>{stats.pendingReplies}</Text>
-            <Text style={styles.statLabel}>बिना जवाब{'\n'}के रिव्यू</Text>
+            <Text style={styles.statLabel}>{t.pendingReplies}</Text>
           </View>
         </View>
 
@@ -204,7 +281,7 @@ const ReviewsTab = () => {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="प्रोडक्ट का नाम खोजें..."
+            placeholder={t.searchProduct}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -217,14 +294,15 @@ const ReviewsTab = () => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#6C63FF" />
-            <Text style={styles.loadingText}>रिव्यू लोड हो रहे हैं...</Text>
+            <Text style={styles.loadingText}>{t.loadingReviews}</Text>
           </View>
         ) : (
           <View style={styles.reviewsList}>
             {reviews.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="chatbubble-outline" size={64} color="#CCC" />
-                <Text style={styles.emptyStateText}>कोई रिव्यू नहीं मिला</Text>
+                <Ionicons name="star-outline" size={64} color="#CCC" />
+                <Text style={styles.emptyStateText}>{t.noReviews}</Text>
+                <Text style={styles.emptyStateSubtext}>{t.noReviewsSubtext}</Text>
               </View>
             ) : (
               reviews.map(review => renderReviewCard(review))
@@ -242,7 +320,7 @@ const ReviewsTab = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>रिव्यू का जवाब दें</Text>
+              <Text style={styles.modalTitle}>{t.replyToReview}</Text>
               <TouchableOpacity 
                 onPress={() => setReplyModalVisible(false)}
                 style={styles.closeButton}
@@ -253,7 +331,7 @@ const ReviewsTab = () => {
 
             <TextInput
               style={styles.replyInput}
-              placeholder="अपना जवाब लिखें..."
+              placeholder={t.writeReply}
               value={replyText}
               onChangeText={setReplyText}
               multiline
@@ -268,7 +346,7 @@ const ReviewsTab = () => {
               {replying ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.submitButtonText}>जवाब भेजें</Text>
+                <Text style={styles.submitButtonText}>{t.sendReply}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -442,6 +520,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
   modalOverlay: {
     flex: 1,

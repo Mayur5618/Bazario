@@ -31,22 +31,10 @@ const B2BDashboard = () => {
     <ScrollView style={styles.container}>
       <View style={styles.statsContainer}>
         <BulkOrderCard
-          title="Total Bulk Orders"
-          value="0"
-          icon="cube-outline"
-          color="#FFB800"
-        />
-        <BulkOrderCard
-          title="Active Business Clients"
+          title="Connected Business Agencies"
           value="0"
           icon="people-outline"
           color="#0052CC"
-        />
-        <BulkOrderCard
-          title="Pending Bulk Orders"
-          value="0"
-          icon="time-outline"
-          color="#FF8B00"
         />
         <BulkOrderCard
           title="B2B Revenue"
@@ -66,18 +54,18 @@ const B2BDashboard = () => {
             <Text style={styles.actionText}>Add Bulk Product</Text>
           </TouchableOpacity>
           
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/b2b-products')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#4CAF5015' }]}>
+              <Ionicons name="cube-outline" size={24} color="#4CAF50" />
+            </View>
+            <Text style={styles.actionText}>View Products</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/business-clients')}>
             <View style={[styles.actionIcon, { backgroundColor: '#0052CC15' }]}>
               <Ionicons name="people-outline" size={24} color="#0052CC" />
             </View>
             <Text style={styles.actionText}>View Business Clients</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/bulk-orders')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#FF8B0015' }]}>
-              <Ionicons name="cart-outline" size={24} color="#FF8B00" />
-            </View>
-            <Text style={styles.actionText}>Manage Bulk Orders</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/b2b-analytics')}>

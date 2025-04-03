@@ -118,7 +118,7 @@ const loadingDotVariants = {
 const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = false }) => {
   const { category: urlCategory } = useParams();
   const [searchParams] = useSearchParams();
-  const [products, setProducts] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [currentFilters, setCurrentFilters] = useState({
@@ -142,46 +142,68 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
   const fetchProducts = async (filters = {}) => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams();
       
       // Get category from URL params first, then fallback to props
       const categoryToUse = urlCategory || category;
       
-      // Add category to query params if available
-      if (categoryToUse) {
-        // Convert URL format back to proper category name
-        const formattedCategory = categoryToUse
-          .split('-')
-          .map(word => {
-            // Special handling for 'and' to convert to '&'
-            if (word === 'and') return '&';
-            return word.charAt(0).toUpperCase() + word.slice(1);
-          })
-          .join(' ');
-        queryParams.append('category', formattedCategory);
+      if (!categoryToUse) {
+        throw new Error('Category is required');
       }
 
-      // Add city filter if available
-      if (city) {
-        queryParams.append('city', city);
-      }
-
-      // Add all filter parameters
-      if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
-      if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
-      if (filters.rating) queryParams.append('minRating', filters.rating);
-      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
-      if (filters.search) queryParams.append('search', filters.search);
-
-      // Always add platformType
-      queryParams.append('platformType', 'b2c');
-
-      console.log('API Query:', `/api/products/filtered?${queryParams.toString()}`);
-      const response = await axios.get(`/api/products/filtered?${queryParams.toString()}`);
+      // Format category for URL
+      const formattedCategory = categoryToUse.toLowerCase();
+      
+      // Add city parameter if available
+      const cityParam = city ? `?city=${encodeURIComponent(city)}` : '';
+      
+      // Make API call with new URL format
+      console.log('API URL:', `/api/products/web/category/${formattedCategory}${cityParam}`);
+      const response = await axios.get(`/api/products/web/category/${formattedCategory}${cityParam}`);
       console.log('API Response:', response.data);
       
       if (response.data.success) {
-        setProducts(response.data.products);
+        // Store subcategories directly
+        let filteredSubcategories = response.data.subcategories.map(sub => {
+          let filteredProducts = sub.products;
+          
+          // Apply filters to products in each subcategory
+          if (filters.minPrice) {
+            filteredProducts = filteredProducts.filter(p => p.price >= filters.minPrice);
+          }
+          if (filters.maxPrice) {
+            filteredProducts = filteredProducts.filter(p => p.price <= filters.maxPrice);
+          }
+          if (filters.rating) {
+            filteredProducts = filteredProducts.filter(p => p.rating >= filters.rating);
+          }
+          
+          // Apply sorting within each subcategory
+          if (filters.sortBy) {
+            switch(filters.sortBy) {
+              case 'price_low':
+                filteredProducts.sort((a, b) => a.price - b.price);
+                break;
+              case 'price_high':
+                filteredProducts.sort((a, b) => b.price - a.price);
+                break;
+              case 'rating_high':
+                filteredProducts.sort((a, b) => b.rating - a.rating);
+                break;
+              default:
+                filteredProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            }
+          }
+          
+          return {
+            ...sub,
+            products: filteredProducts
+          };
+        });
+
+        // Filter out subcategories with no products after filtering
+        filteredSubcategories = filteredSubcategories.filter(sub => sub.products.length > 0);
+        
+        setSubcategories(filteredSubcategories);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -248,13 +270,13 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
       <div className="flex items-center gap-3">
         <div className="relative w-12 h-12 flex-shrink-0">
           <img 
-            src={product.images[0]} 
-            alt={product.name} 
+            src={product.images[0] || '/placeholder-image.jpg'} 
+            alt={product.name || 'Product'} 
             className="w-full h-full rounded-md object-cover"
           />
         </div>
         <div className="flex-1">
-          <p className="font-medium text-gray-800 line-clamp-1">{product.name}</p>
+          <p className="font-medium text-gray-800 line-clamp-1">{product.name || 'Unnamed Product'}</p>
           <div className="flex items-center gap-2">
             {isLoading ? (
               <>
@@ -313,7 +335,7 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
     }
 
     setIsAddingToCart(prev => ({ ...prev, [productId]: true }));
-    const product = products.find(p => p._id === productId);
+    const product = subcategories.find(sub => sub.products.some(p => p._id === productId));
 
     try {
       const response = await axios.post("/api/cart/add", {
@@ -322,12 +344,12 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
       });
 
       if (response.data.success) {
-        dispatch(cartAdd({ product, quantity: 1 }));
+        dispatch(cartAdd({ product: product.products.find(p => p._id === productId), quantity: 1 }));
         setCartItems(prev => ({
           ...prev,
-          [productId]: { product, quantity: 1 }
+          [productId]: { product: product.products.find(p => p._id === productId), quantity: 1 }
         }));
-        showToastMessage(product, 1, 'add');
+        showToastMessage(product.products.find(p => p._id === productId), 1, 'add');
       }
     } catch (error) {
       toast.error("Failed to add item to cart");
@@ -339,11 +361,11 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
   const handleUpdateQuantity = async (productId, newQuantity, maxStock) => {
     if (newQuantity < 0 || newQuantity > maxStock) return;
     
-    const product = products.find(p => p._id === productId);
+    const product = subcategories.find(sub => sub.products.some(p => p._id === productId));
 
     try {
       // Show loading toast
-      showToastMessage(product, newQuantity, 'update', true);
+      showToastMessage(product.products.find(p => p._id === productId), newQuantity, 'update', true);
 
       if (newQuantity === 0) {
         const response = await axios.delete(`/api/cart/remove/${productId}`);
@@ -355,7 +377,7 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
             return newItems;
           });
           // Show success message for removal
-          showToastMessage(product, 0, 'remove', false);
+          showToastMessage(product.products.find(p => p._id === productId), 0, 'remove', false);
         }
       } else {
         const response = await axios.put(`/api/cart/update/${productId}`, {
@@ -368,7 +390,7 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
             [productId]: { ...prev[productId], quantity: newQuantity }
           }));
           // Show success message for update
-          showToastMessage(product, newQuantity, 'update', false);
+          showToastMessage(product.products.find(p => p._id === productId), newQuantity, 'update', false);
         }
       }
     } catch (error) {
@@ -660,104 +682,79 @@ const CategoryProducts = ({ category, hideViewAll = false, city, showFilters = f
             )}
           </AnimatePresence>
 
-          {products.length === 0 ? (
+          {/* Subcategories */}
+          {subcategories?.length > 0 ? (
+            subcategories.map((subcategory, index) => (
+              <div key={subcategory.subcategory || index} className="mb-10">
+                <h2 className="text-xl font-semibold mb-6 text-gray-800">
+                  {subcategory.subcategory || 'Products'}
+                </h2>
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6"
+                >
+                  {subcategory.products?.map((product) => (
+                    <motion.div
+                      key={product._id}
+                      variants={productCardVariants}
+                      whileHover="hover"
+                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+                    >
+                      <Link to={`/product/${product._id}`} className="block">
+                        <div className="aspect-w-1 aspect-h-1 relative overflow-hidden">
+                          <img
+                            src={product.images?.[0] || '/placeholder-image.jpg'}
+                            alt={product.name || 'Product'}
+                            className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-3">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {product.name || 'Unnamed Product'}
+                          </h3>
+                          <div className="mt-2 flex justify-between items-center">
+                            <p className="text-lg font-semibold text-gray-900">
+                              ₹{product.price || 0}
+                              <span className="text-xs text-gray-500 ml-1">
+                                per {product.unitType || 'piece'}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="mt-2 flex items-center">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <FaStar
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.floor(product.rating || 0)
+                                      ? 'text-yellow-400'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="ml-1 text-xs text-gray-500">
+                              ({product.reviews?.length || 0})
+                            </span>
+                          </div>
+                          <div className="mt-2">
+                            <p className={`text-xs ${(product.stock || 0) > 0 ? 'text-green-600' : 'text-red-600'} font-medium`}>
+                              {(product.stock || 0) > 0 ? 'In Stock' : 'Out of Stock'}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+            ))
+          ) : (
             <div className="text-center py-12">
               <p className="text-gray-500">No products found in this category.</p>
             </div>
-          ) : (
-            <motion.div
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { 
-                opacity: 1,
-                transition: {
-                  duration: 0.4,
-                  staggerChildren: 0.05
-                }
-              }
-            }}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
-            >
-              {products.map((product) => (
-                <motion.div
-                  key={product._id}
-                variants={{
-                  hidden: { 
-                    opacity: 0,
-                    y: 20
-                  },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: {
-                      type: "spring",
-                      damping: 15,
-                      stiffness: 300,
-                      duration: 0.4
-                    }
-                  }
-                }}
-                whileHover={{
-                  y: -5,
-                  transition: {
-                    duration: 0.2
-                  }
-                }}
-                  onClick={() => navigate(`/product/${product._id}`)}
-                  className="cursor-pointer"
-                >
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
-                    {/* Product Image */}
-                    <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="p-2 flex flex-col flex-grow">
-                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
-                        {product.name}
-                      </h3>
-
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-sm sm:text-base font-bold">₹{product.price}</span>
-                          <span className="text-[10px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="flex">
-                          {[...Array(5)].map((_, index) => (
-                            <FaStar
-                              key={index}
-                              className={`w-2 h-2 sm:w-3 sm:h-3 ${
-                                index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-[10px] sm:text-xs text-gray-600">
-                          ({product.reviews?.length || 0})
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                        <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                        </span>
-                        <span className="text-gray-500">Stock: {product.stock}</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
           )}
     </div>
   );

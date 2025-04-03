@@ -52,6 +52,7 @@ const translations = {
       accountNumber: 'Account Number',
       ifsc: 'IFSC Code',
       bankName: 'Bank Name',
+      confirmPassword: 'Confirm Password',
     },
     placeholders: {
       firstName: 'Enter first name',
@@ -73,6 +74,7 @@ const translations = {
       accountNumber: 'Enter account number',
       ifsc: 'Enter IFSC code',
       bankName: 'Enter bank name',
+      confirmPassword: 'Confirm your password',
     },
     buttons: {
       next: 'Next',
@@ -131,6 +133,7 @@ const translations = {
       accountNumber: 'खाता संख्या',
       ifsc: 'IFSC कोड',
       bankName: 'बैंक का नाम',
+      confirmPassword: 'पासवर्ड की पुष्टि करें',
     },
     placeholders: {
       firstName: 'पहला नाम दर्ज करें',
@@ -152,6 +155,7 @@ const translations = {
       accountNumber: 'खाता संख्या दर्ज करें',
       ifsc: 'IFSC कोड दर्ज करें',
       bankName: 'बैंक का नाम दर्ज करें',
+      confirmPassword: 'पासवर्ड की पुष्टि करें',
     },
     buttons: {
       next: 'अगला',
@@ -928,11 +932,11 @@ const AgencyRegistration = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{t.labels.confirmPassword || 'पासवर्ड की पुष्टि करें'}</Text>
+              <Text style={styles.inputLabel}>{t.labels.confirmPassword || 'Confirm Password'}</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
-                  placeholder={t.placeholders.confirmPassword || 'पासवर्ड की पुष्टि करें'}
+                  placeholder={t.placeholders.confirmPassword || 'Confirm your password'}
                   value={formData.confirmPassword}
                   onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
                   secureTextEntry={!showPassword}

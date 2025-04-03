@@ -222,16 +222,22 @@ export const sellerApi = {
     },
 
     // Get seller's products
-    getSellerProducts: async () => {
+    getSellerProducts: async (params = {}) => {
         try {
-            const response = await axios.get('/api/seller/products');
+            const response = await axios.get('/api/seller/products', {
+                params: {
+                    platformType: params.platformType || 'b2c',
+                    limit: params.limit,
+                    sort: params.sort
+                }
+            });
             return response.data;
         } catch (error) {
             console.error('Error fetching seller products:', error);
-            if (error.response) {
-                throw new Error(error.response.data.message || 'Failed to fetch seller products');
-            }
-            throw new Error('Network error occurred');
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error fetching seller products'
+            };
         }
     },
 
@@ -294,5 +300,19 @@ export const sellerApi = {
 
     getReviewStats,
     getLatestReviews,
-    searchProductReviews
+    searchProductReviews,
+
+    // Get seller's B2B products
+    getSellerB2BProducts: async () => {
+        try {
+            const response = await axios.get('/api/products/seller/b2b-products');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching B2B products:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error fetching B2B products'
+            };
+        }
+    },
 }; 

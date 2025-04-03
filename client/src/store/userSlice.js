@@ -15,7 +15,10 @@ const userSlice = createSlice({
       state.error = null;
     },
     SignInSuccess: (state, action) => {
-      state.userData = action.payload;
+      state.userData = {
+        ...action.payload,
+        city: action.payload.city || action.payload.address?.city || ''
+      };
       state.loading = false;
       state.error = null;
     },

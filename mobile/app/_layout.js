@@ -50,6 +50,12 @@ export default function RootLayout() {
                           headerShown: false,
                         }}
                       />
+                      <Stack.Screen 
+                        name="(agency)" 
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
                     </Stack>
                     <Toast />
                   </LanguageProvider>

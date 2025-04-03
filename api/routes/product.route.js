@@ -17,7 +17,14 @@ import {
   uploadProductImages,
   getProductsByCategoryAndSubcategory,
   getProductsByCategory,
-  getProductsBySubcategory
+  getProductsBySubcategory,
+  createB2BProduct,
+  getSellerB2BProducts,
+  getB2BCategories,
+  getB2BProductsByCategory,
+  getB2BProductById,
+  getProductsByFormattedCategory,
+  getBuyerCity
 } from "../controllers/product.controller.js";
 import { 
   createReview, 
@@ -72,8 +79,8 @@ router.post('/bulk', getBulkProducts);
 // Categories routes
 router.get('/categories', async (req, res) => {
   try {
-    const { platformType } = req.query;
-    const query = platformType ? { platformType: { $in: [platformType] } } : {};
+    // Always filter for b2c platform type
+    const query = { platformType: { $in: ['b2c'] } };
     const categories = await Product.distinct('category', query);
     res.status(200).json({
       success: true,
@@ -108,6 +115,33 @@ router.get('/categories', async (req, res) => {
 //   }
 // });
 
+// B2B Product Routes
+router.post(
+  "/b2b/products/create",
+  verifyToken,
+  sellerOrAgency,
+  checkPlatformAccess("b2b"),
+  createB2BProduct
+);
+
+// Get B2B product by ID
+router.get('/b2b/products/:id', getB2BProductById);
+
+// Get seller's B2B products
+router.get(
+  "/seller/b2b-products",
+  verifyToken,
+  sellerOrAgency,
+  checkPlatformAccess("b2b"),
+  getSellerB2BProducts
+);
+
+// Get B2B categories
+router.get('/b2b/categories', getB2BCategories);
+
+// Get B2B products by category
+router.get('/b2b/category/:category', getB2BProductsByCategory);
+
 router.post(
   "/upload",  
   verifyToken,
@@ -119,5 +153,11 @@ router.get('/category/:category', getProductsByCategoryAndSubcategory);
 
 // Get products by subcategory
 router.get('/category/:category/subcategory/:subcategory', getProductsBySubcategory);
+
+// Web App specific route for formatted category names
+router.get('/web/category/:formattedCategory', getProductsByFormattedCategory);
+
+// Get buyer's city
+router.get('/buyer-city', verifyToken, getBuyerCity);
 
 export default router;

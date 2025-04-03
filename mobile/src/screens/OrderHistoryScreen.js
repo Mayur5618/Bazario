@@ -200,19 +200,25 @@ const OrderHistoryScreen = () => {
               isCompleted && styles.completedItemContainer
             ]}
           >
-            <Image 
-              source={{ uri: item.product.images[0] }}
-              style={[
-                styles.itemImage,
-                isCompleted && styles.completedItemImage
-              ]}
-            />
+            {item.product && item.product.images && item.product.images.length > 0 ? (
+              <Image 
+                source={{ uri: item.product.images[0] }}
+                style={[
+                  styles.itemImage,
+                  isCompleted && styles.completedItemImage
+                ]}
+              />
+            ) : (
+              <View style={[styles.itemImage, isCompleted && styles.completedItemImage, { backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' }]}>
+                <Text>No Image</Text>
+              </View>
+            )}
             <View style={styles.itemDetails}>
               <Text style={[
                 styles.itemName,
                 isCompleted && styles.completedOrderText
               ]}>
-                {item.product.name}
+                {item.product ? item.product.name : 'Product Name Unavailable'}
               </Text>
               <Text style={styles.quantityText}>
                 Quantity: {item.quantity}

@@ -320,12 +320,14 @@ const ProductDetail = () => {
         throw new Error(data.message || 'Failed to fetch reviews');
       }
 
-      setReviews(data.reviews);
-      setProductStats({
-        averageRating: parseFloat(data.stats.averageRating),
-        totalReviews: data.stats.totalReviews,
-        ratingCounts: data.stats.ratingCounts
-      });
+      if (data.success) {
+        setReviews(data.reviews);
+        setProductStats({
+          averageRating: parseFloat(data.stats.averageRating),
+          totalReviews: data.stats.totalReviews,
+          ratingCounts: data.stats.ratingCounts
+        });
+      }
     } catch (error) {
       console.error('Fetch reviews error:', error);
       toast.error('Failed to load reviews');
@@ -509,46 +511,82 @@ const ProductDetail = () => {
 
   const handleReviewSubmit = async (formData) => {
     try {
-        if (!orderId) {
-            toast.error('Unable to submit review. Please try again later.');
-            return;
+      if (!userData) {
+        toast.error('Please login to submit a review');
+        return;
+      }
+
+      // First check if user can review
+      const checkResponse = await fetch(`/api/reviews/check/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
+      });
+      const checkData = await checkResponse.json();
 
-        console.log('Submitting review with data:', {
-            rating: formData.rating,
-            comment: formData.comment,
-            orderId: orderId,
-            images: formData.images ? formData.images.map(img => img.url) : []
-        });
+      if (!checkData.success) {
+        toast.error(checkData.message || 'Unable to verify review eligibility');
+        return;
+      }
 
-        const response = await fetch(`/api/reviews/products/${id}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                rating: formData.rating,
-                comment: formData.comment,
-                orderId: orderId,
-                images: formData.images ? formData.images.map(img => img.url) : []
-            })
-        });
+      if (!checkData.canReview) {
+        toast.error('You cannot review this product at this time');
+        return;
+      }
 
-        const data = await response.json();
+      // If we have orderId from the check, use it
+      const reviewData = {
+        rating: formData.rating,
+        comment: formData.comment,
+        orderId: checkData.orderId,
+        images: formData.images ? formData.images.map(img => img.url) : []
+      };
 
-        if (data.success) {
-            toast.success('Review submitted successfully!');
-            await fetchReviews(); // Wait for reviews to be fetched
-            setHasReviewed(true);
-            setEditingReview(false); // Close the review form
-            setShowReviewPrompt(false); // Hide the review prompt
-        } else {
-            throw new Error(data.message || 'Failed to submit review');
-        }
+      const response = await fetch(`/api/reviews/products/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(reviewData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update reviews list immediately
+        setReviews(prevReviews => [data.review, ...prevReviews]);
+        
+        // Update product stats
+        setProductStats(prev => ({
+          ...prev,
+          totalReviews: prev.totalReviews + 1,
+          ratingCounts: {
+            ...prev.ratingCounts,
+            [data.review.rating]: (prev.ratingCounts[data.review.rating] || 0) + 1
+          },
+          averageRating: (
+            (prev.averageRating * prev.totalReviews + data.review.rating) / 
+            (prev.totalReviews + 1)
+          ).toFixed(1)
+        }));
+
+        // Update review status
+        setHasReviewed(true);
+        setCanReview(false);
+        setEditingReview(false); // Close the review form
+        setShowReviewPrompt(false); // Hide the review prompt
+
+        toast.success('Review submitted successfully!');
+        
+        // Refresh reviews to ensure everything is in sync
+        fetchReviews();
+      } else {
+        throw new Error(data.message || 'Failed to submit review');
+      }
     } catch (error) {
-        console.error('Review submission error:', error);
-        toast.error(error.response?.data?.message || error.message || 'Failed to submit review');
+      console.error('Review submission error:', error);
+      toast.error(error.message || 'Failed to submit review');
     }
   };
 

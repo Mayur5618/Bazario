@@ -51,7 +51,7 @@ const Orders = () => {
 
     try {
       const response = await axios.put(`/api/orders/cancel/${selectedOrderId}`, {
-        cancellationReason: finalReason
+        reason: finalReason
       }, {
         withCredentials: true
       });
@@ -232,19 +232,19 @@ const Orders = () => {
                                     className="flex items-start sm:items-center gap-3 sm:gap-4 border-b pb-3 sm:pb-4 border-gray-100"
                                   >
                                     <img
-                                      src={item.product.images[0]}
-                                      alt={item.product.name}
+                                      src={item.product?.images?.[0] || '/placeholder-image.jpg'}
+                                      alt={item.product?.name || 'Product'}
                                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
                                     />
                                     <div className="flex-1 min-w-0">
                                       <h4 className="text-sm sm:text-base font-medium text-gray-900 truncate">
-                                        {item.product.name}
+                                        {item.product?.name || 'Product Unavailable'}
                                       </h4>
                                       <p className="text-xs sm:text-sm text-gray-500 mt-1">
                                         Quantity: {item.quantity} × ₹{item.price}
                                       </p>
                                       <p className="text-xs sm:text-sm text-gray-500">
-                                        Seller: {item.seller.firstname} {item.seller.lastname}
+                                        Seller: {item.seller?.firstname || ''} {item.seller?.lastname || ''}
                                       </p>
                                     </div>
                                   </div>
@@ -327,19 +327,19 @@ const Orders = () => {
                                     className="flex items-start sm:items-center gap-3 sm:gap-4 border-b pb-3 sm:pb-4 border-gray-200"
                                   >
                                     <img
-                                      src={item.product.images[0]}
-                                      alt={item.product.name}
+                                      src={item.product?.images?.[0] || '/placeholder-image.jpg'}
+                                      alt={item.product?.name || 'Product'}
                                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded opacity-80"
                                     />
                                     <div className="flex-1 min-w-0">
                                       <h4 className="text-sm sm:text-base font-medium text-gray-600 truncate">
-                                        {item.product.name}
+                                        {item.product?.name || 'Product Unavailable'}
                                       </h4>
                                       <p className="text-xs sm:text-sm text-gray-500 mt-1">
                                         Quantity: {item.quantity} × ₹{item.price}
                                       </p>
                                       <p className="text-xs sm:text-sm text-gray-500">
-                                        Seller: {item.seller.firstname} {item.seller.lastname}
+                                        Seller: {item.seller?.firstname || ''} {item.seller?.lastname || ''}
                                       </p>
                                     </div>
                                   </div>

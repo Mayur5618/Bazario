@@ -15,11 +15,94 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../../src/api/sellerApi';
 import { LineChart } from 'react-native-chart-kit';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
+// Translations for orders tab
+const translations = {
+  en: {
+    totalOrders: "Total Orders",
+    pendingOrders: "Pending Orders",
+    completedOrders: "Completed Orders",
+    cancelledOrders: "Cancelled Orders",
+    lastMonthStats: "Last 6 Months Statistics",
+    ordersInCurrentMonth: "Orders in Current Month",
+    all: "All",
+    pending: "Pending",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    noOrders: "No orders found",
+    loadingOrders: "Loading orders...",
+    orderNumber: "Order #",
+    customer: "Customer",
+    date: "Date",
+    amount: "Amount",
+    week: "Week"
+  },
+  hi: {
+    totalOrders: "कुल ऑर्डर",
+    pendingOrders: "लंबित ऑर्डर",
+    completedOrders: "पूर्ण ऑर्डर",
+    cancelledOrders: "रद्द ऑर्डर",
+    lastMonthStats: "पिछले 6 महीने का आंकड़ा",
+    ordersInCurrentMonth: "वर्तमान महीने के ऑर्डर",
+    all: "सभी",
+    pending: "लंबित",
+    completed: "पूर्ण",
+    cancelled: "रद्द",
+    noOrders: "कोई ऑर्डर नहीं मिला",
+    loadingOrders: "ऑर्डर लोड हो रहे हैं...",
+    orderNumber: "ऑर्डर #",
+    customer: "ग्राहक",
+    date: "दिनांक",
+    amount: "राशि",
+    week: "सप्ताह"
+  },
+  mr: {
+    totalOrders: "एकूण ऑर्डर",
+    pendingOrders: "प्रलंबित ऑर्डर",
+    completedOrders: "पूर्ण ऑर्डर",
+    cancelledOrders: "रद्द ऑर्डर",
+    lastMonthStats: "मागील 6 महिन्यांचे आकडे",
+    ordersInCurrentMonth: "चालू महिन्यातील ऑर्डर",
+    all: "सर्व",
+    pending: "प्रलंबित",
+    completed: "पूर्ण",
+    cancelled: "रद्द",
+    noOrders: "कोणतेही ऑर्डर सापडले नाही",
+    loadingOrders: "ऑर्डर लोड होत आहेत...",
+    orderNumber: "ऑर्डर #",
+    customer: "ग्राहक",
+    date: "दिनांक",
+    amount: "रक्कम",
+    week: "आठवडा"
+  },
+  gu: {
+    totalOrders: "કુલ ઓર્ડર",
+    pendingOrders: "બાકી ઓર્ડર",
+    completedOrders: "પૂર્ણ ઓર્ડર",
+    cancelledOrders: "રદ્દ ઓર્ડર",
+    lastMonthStats: "છેલ્લા 6 મહિનાનાં આંકડા",
+    ordersInCurrentMonth: "વર્તમાન મહિનાના ઓર્ડર",
+    all: "બધા",
+    pending: "બાકી",
+    completed: "પૂર્ણ",
+    cancelled: "રદ્દ",
+    noOrders: "કોઈ ઓર્ડર મળ્યો નથી",
+    loadingOrders: "ઓર્ડર લોડ થઈ રહ્યા છે...",
+    orderNumber: "ઓર્ડર #",
+    customer: "ગ્રાહક",
+    date: "તારીખ",
+    amount: "રકમ",
+    week: "અઠવાડિયું"
+  }
+};
+
 const OrdersTab = () => {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,7 +163,7 @@ const OrdersTab = () => {
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      Alert.alert('त्रुटि', 'ऑर्डर लोड करने में समस्या हुई');
+      Alert.alert('Error', 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -168,9 +251,13 @@ const OrdersTab = () => {
     const currentMonth = new Date().getMonth();
     const currentMonthData = data.find(item => new Date(item.month).getMonth() === currentMonth) || { totalOrders: 0 };
     
-    // Get daily data for current month
     return {
-      labels: ['सप्ताह 1', 'सप्ताह 2', 'सप्ताह 3', 'सप्ताह 4'],
+      labels: [
+        `${t.week} 1`, 
+        `${t.week} 2`, 
+        `${t.week} 3`, 
+        `${t.week} 4`
+      ],
       datasets: [{
         data: [
           Math.floor(Math.random() * 10),
@@ -190,7 +277,7 @@ const OrdersTab = () => {
     
     // Get daily data for last month
     return {
-      labels: ['सप्ताह 1', 'सप्ताह 2', 'सप्ताह 3', 'सप्ताह 4'],
+      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
       datasets: [{
         data: [
           Math.floor(Math.random() * 10),
@@ -205,7 +292,7 @@ const OrdersTab = () => {
   const getLast6MonthsData = () => {
     const data = orderStats.monthlyData.all || [];
     return {
-      labels: ['जन', 'फर', 'मार्च', 'अप्रै', 'मई', 'जून'],
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
       datasets: [{
         data: [
           Math.floor(Math.random() * 20),
@@ -226,11 +313,11 @@ const OrdersTab = () => {
       onPress={() => router.push(`/(seller)/order-details/${order._id}`)}
     >
       <View style={styles.orderHeader}>
-        <Text style={styles.orderId}>ऑर्डर #{order.orderId}</Text>
+        <Text style={styles.orderId}>{t.orderNumber}{order.orderId}</Text>
         <Text style={[styles.orderStatus, { color: getStatusColor(order.status) }]}>
-          {order.status === 'pending' ? 'लंबित' :
-           order.status === 'completed' || order.status === 'delivered' ? 'पूर्ण' :
-           order.status === 'cancelled' ? 'रद्द' : order.status}
+          {order.status === 'pending' ? t.pending :
+           order.status === 'completed' || order.status === 'delivered' ? t.completed :
+           order.status === 'cancelled' ? t.cancelled : order.status}
         </Text>
       </View>
 
@@ -288,26 +375,26 @@ const OrdersTab = () => {
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
           <Text style={styles.statValue}>{orderStats.totalOrders}</Text>
-          <Text style={styles.statLabel}>कुल{'\n'}ऑर्डर</Text>
+          <Text style={styles.statLabel}>{t.totalOrders}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
           <Text style={styles.statValue}>{orderStats.pendingOrders}</Text>
-          <Text style={styles.statLabel}>लंबित{'\n'}ऑर्डर</Text>
+          <Text style={styles.statLabel}>{t.pendingOrders}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
           <Text style={styles.statValue}>{orderStats.completedOrders}</Text>
-          <Text style={styles.statLabel}>पूर्ण{'\n'}ऑर्डर</Text>
+          <Text style={styles.statLabel}>{t.completedOrders}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#FFEBEE' }]}>
           <Text style={styles.statValue}>{orderStats.cancelledOrders}</Text>
-          <Text style={styles.statLabel}>रद्द{'\n'}ऑर्डर</Text>
+          <Text style={styles.statLabel}>{t.cancelledOrders}</Text>
         </View>
       </View>
 
       {/* Charts Section */}
       <View style={styles.chartsSection}>
         <View style={styles.chartHeader}>
-          <Text style={styles.sectionTitle}>पिछले 6 महीनों के आँकड़े</Text>
+          <Text style={styles.sectionTitle}>{t.lastMonthStats}</Text>
           <View style={styles.chartDots}>
             {[0, 1, 2].map((index) => (
               <View
@@ -335,7 +422,7 @@ const OrdersTab = () => {
         >
           {/* Current Month Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
-            <Text style={styles.chartTitle}>इस महीने के ऑर्डर</Text>
+            <Text style={styles.chartTitle}>{t.ordersInCurrentMonth}</Text>
             <LineChart
               data={getCurrentMonthData()}
               width={width - 64}
@@ -380,7 +467,7 @@ const OrdersTab = () => {
 
           {/* Last Month Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
-            <Text style={styles.chartTitle}>पिछले महीने के ऑर्डर</Text>
+            <Text style={styles.chartTitle}>Orders in Last Month</Text>
             <LineChart
               data={getLastMonthData()}
               width={width - 64}
@@ -425,7 +512,7 @@ const OrdersTab = () => {
 
           {/* Last 6 Months Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
-            <Text style={styles.chartTitle}>पिछले 6 महीनों के ऑर्डर</Text>
+            <Text style={styles.chartTitle}>Orders in Last 6 Months</Text>
             <LineChart
               data={getLast6MonthsData()}
               width={width - 64}
@@ -477,7 +564,7 @@ const OrdersTab = () => {
           onPress={() => setSelectedTab('all')}
         >
           <Text style={[styles.tabText, selectedTab === 'all' && styles.activeTabText]}>
-            सभी
+            {t.all}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -485,7 +572,7 @@ const OrdersTab = () => {
           onPress={() => setSelectedTab('pending')}
         >
           <Text style={[styles.tabText, selectedTab === 'pending' && styles.activeTabText]}>
-            लंबित
+            {t.pending}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -493,7 +580,7 @@ const OrdersTab = () => {
           onPress={() => setSelectedTab('completed')}
         >
           <Text style={[styles.tabText, selectedTab === 'completed' && styles.activeTabText]}>
-            पूर्ण
+            {t.completed}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -501,7 +588,7 @@ const OrdersTab = () => {
           onPress={() => setSelectedTab('cancelled')}
         >
           <Text style={[styles.tabText, selectedTab === 'cancelled' && styles.activeTabText]}>
-            रद्द
+            {t.cancelled}
           </Text>
         </TouchableOpacity>
       </View>
@@ -510,14 +597,15 @@ const OrdersTab = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C63FF" />
-          <Text style={styles.loadingText}>ऑर्डर्स लोड हो रहे हैं...</Text>
+          <Text style={styles.loadingText}>{t.loadingOrders}</Text>
         </View>
       ) : (
         <View style={styles.ordersList}>
           {getFilteredOrders().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="receipt-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyStateText}>कोई ऑर्डर नहीं मिला</Text>
+              <Text style={styles.emptyStateText}>{t.noOrders}</Text>
+              <Text style={styles.emptyStateSubtext}>Orders will appear here when customers place them</Text>
             </View>
           ) : (
             getFilteredOrders().map(order => renderOrderCard(order))
@@ -734,6 +822,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
 });
 

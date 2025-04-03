@@ -15,13 +15,104 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { sellerApi } from '../../../src/api/sellerApi';
+import { useLanguage } from '../../../src/context/LanguageContext';
 
 const { width } = Dimensions.get('window');
+
+// Translations for product details
+const translations = {
+  en: {
+    productDetails: "Product Details",
+    inStock: "In Stock",
+    outOfStock: "Out of Stock",
+    perPiece: "per piece",
+    stock: "Stock",
+    sold: "Sold",
+    rating: "Rating",
+    description: "Description",
+    categoryAndTags: "Category and Tags",
+    additionalInfo: "Additional Information",
+    productId: "Product ID",
+    created: "Created",
+    updated: "Updated",
+    loading: "Loading product details...",
+    error: "Error",
+    loadError: "Failed to load product details",
+    shareProduct: "Share Product",
+    shareText: "Check out this product:",
+    shareError: "Error sharing product"
+  },
+  hi: {
+    productDetails: "उत्पाद विवरण",
+    inStock: "स्टॉक में",
+    outOfStock: "स्टॉक ख़त्म",
+    perPiece: "प्रति नग",
+    stock: "स्टॉक",
+    sold: "बिका",
+    rating: "रेटिंग",
+    description: "विवरण",
+    categoryAndTags: "श्रेणी और टैग",
+    additionalInfo: "अतिरिक्त जानकारी",
+    productId: "उत्पाद आईडी",
+    created: "बनाया गया",
+    updated: "अपडेट किया गया",
+    loading: "उत्पाद विवरण लोड हो रहा है...",
+    error: "त्रुटि",
+    loadError: "उत्पाद विवरण लोड करने में विफल",
+    shareProduct: "उत्पाद शेयर करें",
+    shareText: "इस उत्पाद को देखें:",
+    shareError: "उत्पाद शेयर करने में त्रुटि"
+  },
+  mr: {
+    productDetails: "उत्पाद तपशील",
+    inStock: "स्टॉक मध्ये",
+    outOfStock: "स्टॉक संपला",
+    perPiece: "प्रति नग",
+    stock: "स्टॉक",
+    sold: "विकले",
+    rating: "रेटिंग",
+    description: "वर्णन",
+    categoryAndTags: "श्रेणी आणि टॅग्स",
+    additionalInfo: "अतिरिक्त माहिती",
+    productId: "उत्पाद आयडी",
+    created: "तयार केले",
+    updated: "अपडेट केले",
+    loading: "उत्पाद तपशील लोड होत आहे...",
+    error: "त्रुटी",
+    loadError: "उत्पाद तपशील लोड करण्यात अयशस्वी",
+    shareProduct: "उत्पाद शेअर करा",
+    shareText: "हे उत्पाद पहा:",
+    shareError: "उत्पाद शेअर करण्यात त्रुटी"
+  },
+  gu: {
+    productDetails: "ઉત્પાદ વિગતો",
+    inStock: "સ્ટોકમાં છે",
+    outOfStock: "સ્ટોક ખતમ",
+    perPiece: "પ્રતિ નંગ",
+    stock: "સ્ટોક",
+    sold: "વેચાયેલ",
+    rating: "રેટિંગ",
+    description: "વર્ણન",
+    categoryAndTags: "શ્રેણી અને ટેગ્સ",
+    additionalInfo: "વધારાની માહિતી",
+    productId: "ઉત્પાદ આઈડી",
+    created: "બનાવ્યું",
+    updated: "અપડેટ કર્યું",
+    loading: "ઉત્પાદ વિગતો લોડ થઈ રહી છે...",
+    error: "ભૂલ",
+    loadError: "ઉત્પાદ વિગતો લોડ કરવામાં નિષ્ફળ",
+    shareProduct: "ઉત્પાદ શેર કરો",
+    shareText: "આ ઉત્પાદ જુઓ:",
+    shareError: "ઉત્પાદ શેર કરવામાં ભૂલ"
+  }
+};
 
 const ProductDetails = () => {
   const params = useLocalSearchParams();
   const { id, shouldRefresh } = params;
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -46,11 +137,11 @@ const ProductDetails = () => {
       if (response.success) {
         setProduct(response.product);
       } else {
-        Alert.alert('एरर', 'प्रोडक्ट की जानकारी लोड करने में समस्या हुई');
+        Alert.alert(t.error, t.loadError);
       }
     } catch (error) {
       console.error('Error fetching product details:', error);
-      Alert.alert('एरर', 'प्रोडक्ट की जानकारी लोड करने में समस्या हुई');
+      Alert.alert(t.error, t.loadError);
     } finally {
       setLoading(false);
     }
@@ -62,12 +153,11 @@ const ProductDetails = () => {
 
   const handleShare = async () => {
     try {
-      const result = await Share.share({
-        message: `${product.name}\nकीमत: ₹${product.price}\n\nप्रोडक्ट की जानकारी देखें`,
-        title: product.name,
+      await Share.share({
+        message: `${t.shareText}\n${product.name} - ₹${product.price}`,
       });
     } catch (error) {
-      Alert.alert('एरर', 'शेयर करने में समस्या हुई');
+      Alert.alert(t.error, t.shareError);
     }
   };
 
@@ -91,7 +181,7 @@ const ProductDetails = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>प्रोडक्ट की जानकारी लोड हो रही है...</Text>
+        <Text style={styles.loadingText}>{t.loading}</Text>
       </View>
     );
   }
@@ -99,12 +189,12 @@ const ProductDetails = () => {
   if (!product) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>प्रोडक्ट नहीं मिला</Text>
+        <Text style={styles.errorText}>{t.error}</Text>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backButtonText}>वापस जाएं</Text>
+          <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -117,7 +207,7 @@ const ProductDetails = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>प्रोडक्ट विवरण</Text>
+        <Text style={styles.headerTitle}>{t.productDetails}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
             <Ionicons name="share-outline" size={24} color="#fff" />
@@ -163,7 +253,7 @@ const ProductDetails = () => {
           ) : (
             <View style={styles.noImageContainer}>
               <Ionicons name="image-outline" size={80} color="#CCC" />
-              <Text style={styles.noImageText}>कोई फोटो नहीं है</Text>
+              <Text style={styles.noImageText}>No photos available</Text>
             </View>
           )}
         </View>
@@ -181,14 +271,14 @@ const ProductDetails = () => {
                   styles.stockText,
                   { color: product.stock > 0 ? '#059669' : '#DC2626' }
                 ]}>
-                  {product.stock > 0 ? 'उपलब्ध है' : 'स्टॉक खत्म'}
+                  {product.stock > 0 ? t.inStock : t.outOfStock}
                 </Text>
               </View>
             </View>
             
             <View style={styles.priceContainer}>
               <Text style={styles.price}>₹{product.price}</Text>
-              <Text style={styles.unit}>प्रति {product.unitType}</Text>
+              <Text style={styles.unit}>{t.perPiece}</Text>
             </View>
           </View>
 
@@ -196,25 +286,25 @@ const ProductDetails = () => {
             <View style={styles.statItem}>
               <MaterialIcons name="inventory" size={24} color="#6C63FF" />
               <Text style={styles.statValue}>{product.stock}</Text>
-              <Text style={styles.statLabel}>स्टॉक</Text>
+              <Text style={styles.statLabel}>{t.stock}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <FontAwesome5 name="shopping-cart" size={22} color="#6C63FF" />
               <Text style={styles.statValue}>{product.totalSold || 0}</Text>
-              <Text style={styles.statLabel}>बिक चुका है</Text>
+              <Text style={styles.statLabel}>{t.sold}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <MaterialIcons name="star-rate" size={24} color="#6C63FF" />
               <Text style={styles.statValue}>{product.rating || 0}</Text>
-              <Text style={styles.statLabel}>रेटिंग</Text>
+              <Text style={styles.statLabel}>{t.rating}</Text>
             </View>
           </View>
 
           {product.unitType === 'kg' && product.subUnitPrices && (
             <View style={styles.subPrices}>
-              <Text style={styles.sectionTitle}>छोटी मात्रा में कीमत</Text>
+              <Text style={styles.sectionTitle}>Price in Smaller Units</Text>
               <View style={styles.subPriceGrid}>
                 {Object.entries(product.subUnitPrices).map(([unit, price]) => (
                   <View key={unit} style={styles.subPriceItem}>
@@ -228,13 +318,13 @@ const ProductDetails = () => {
 
           {product.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>विवरण</Text>
+              <Text style={styles.sectionTitle}>{t.description}</Text>
               <Text style={styles.description}>{product.description}</Text>
             </View>
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>श्रेणी और टैग्स</Text>
+            <Text style={styles.sectionTitle}>{t.categoryAndTags}</Text>
             <View style={styles.categoryContainer}>
               <View style={styles.categoryBadge}>
                 <MaterialIcons name="category" size={20} color="#6C63FF" />
@@ -253,22 +343,22 @@ const ProductDetails = () => {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>अतिरिक्त जानकारी</Text>
+            <Text style={styles.sectionTitle}>{t.additionalInfo}</Text>
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>प्रोडक्ट ID</Text>
+                <Text style={styles.infoLabel}>{t.productId}</Text>
                 <Text style={styles.infoValue}>{product._id}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>बनाया गया</Text>
+                <Text style={styles.infoLabel}>{t.created}</Text>
                 <Text style={styles.infoValue}>
-                  {new Date(product.createdAt).toLocaleDateString('hi-IN')}
+                  {new Date(product.createdAt).toLocaleDateString('en-US')}
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>अपडेट किया गया</Text>
+                <Text style={styles.infoLabel}>{t.updated}</Text>
                 <Text style={styles.infoValue}>
-                  {new Date(product.updatedAt).toLocaleDateString('hi-IN')}
+                  {new Date(product.updatedAt).toLocaleDateString('en-US')}
                 </Text>
               </View>
             </View>

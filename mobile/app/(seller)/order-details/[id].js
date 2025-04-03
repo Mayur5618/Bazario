@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { sellerApi } from '../../../src/api/sellerApi';
 import Toast from 'react-native-root-toast';
+import { useLanguage } from '../../../src/context/LanguageContext';
+import { translations } from '../../../src/translations/orderDetails';
 
 const OrderDetails = () => {
     const { id } = useLocalSearchParams();
@@ -11,6 +13,7 @@ const OrderDetails = () => {
     const [loading, setLoading] = useState(true);
     const [customerHistory, setCustomerHistory] = useState(null);
     const router = useRouter();
+    const { language, t } = useLanguage(translations);
 
     useEffect(() => {
         fetchOrderDetails();
@@ -35,13 +38,13 @@ const OrderDetails = () => {
                     }
                 }
             } else {
-                Toast.show('ऑर्डर की जानकारी लोड करने में समस्या आई है', {
+                Toast.show('Something went wrong', {
                     duration: Toast.durations.LONG,
                 });
             }
         } catch (error) {
             console.error('Error fetching order details:', error);
-            Toast.show('कुछ गलत हो गया', {
+            Toast.show('Error loading order details', {
                 duration: Toast.durations.LONG,
             });
         } finally {
@@ -63,20 +66,20 @@ const OrderDetails = () => {
 
     const getStatusText = (status) => {
         switch (status.toLowerCase()) {
-            case 'pending': return 'लंबित';
-            case 'confirmed': return 'पुष्टि की गई';
-            case 'processing': return 'प्रोसेसिंग';
-            case 'shipped': return 'शिप किया गया';
-            case 'delivered': return 'डिलीवर किया गया';
-            case 'cancelled': return 'रद्द किया गया';
+            case 'pending': return t.status.pending;
+            case 'confirmed': return t.status.confirmed;
+            case 'processing': return t.status.processing;
+            case 'shipped': return t.status.shipped;
+            case 'delivered': return t.status.delivered;
+            case 'cancelled': return t.status.cancelled;
             default: return status;
         }
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'उपलब्ध नहीं';
+        if (!dateString) return 'Not Available';
         const date = new Date(dateString);
-        return date.toLocaleDateString('hi-IN', {
+        return date.toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -93,7 +96,7 @@ const OrderDetails = () => {
         return (
             <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#6B46C1" />
-                <Text style={styles.loadingText}>जानकारी लोड हो रही है...</Text>
+                <Text style={styles.loadingText}>{t.loading}</Text>
             </View>
         );
     }
@@ -101,7 +104,7 @@ const OrderDetails = () => {
     if (!order) {
         return (
             <View style={styles.centered}>
-                <Text style={styles.errorText}>ऑर्डर नहीं मिला</Text>
+                <Text style={styles.errorText}>{t.error}</Text>
             </View>
         );
     }
@@ -116,7 +119,7 @@ const OrderDetails = () => {
                 >
                     <Ionicons name="arrow-back" size={24} color="#4A5568" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>ऑर्डर की जानकारी</Text>
+                <Text style={styles.headerTitle}>{t.title}</Text>
             </View>
 
             {/* Order Status */}
@@ -124,20 +127,20 @@ const OrderDetails = () => {
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
                     <View style={[styles.statusDot, { backgroundColor: getStatusColor(order.status) }]} />
                     <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-                        ऑर्डर स्थिति: {getStatusText(order.status)}
+                        {t.status.title}: {getStatusText(order.status)}
                     </Text>
                 </View>
 
                 {order.status.toLowerCase() === 'cancelled' && (
                     <>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>रद्द करने का कारण:</Text>
+                            <Text style={styles.infoLabel}>{t.cancellation.reason}</Text>
                             <Text style={[styles.infoValue, { color: '#DC143C' }]}>
-                                {order.cancellationReason || 'कोई कारण नहीं दिया गया'}
+                                {order.cancellationReason || t.cancellation.noReason}
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>रद्द करने की तारीख:</Text>
+                            <Text style={styles.infoLabel}>{t.cancellation.date}</Text>
                             <Text style={[styles.infoValue, { color: '#DC143C' }]}>
                                 {formatDate(order.cancelledAt)}
                             </Text>
@@ -146,12 +149,12 @@ const OrderDetails = () => {
                 )}
 
                 <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>ऑर्डर नंबर:</Text>
+                    <Text style={styles.infoLabel}>{t.order.number}</Text>
                     <Text style={styles.infoValue}>{order.orderId}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>ऑर्डर की तारीख:</Text>
+                    <Text style={styles.infoLabel}>{t.order.date}</Text>
                     <Text style={styles.infoValue}>{formatDate(order.createdAt || order.orderDate)}</Text>
                 </View>
 
@@ -160,7 +163,7 @@ const OrderDetails = () => {
                   order.status === 'Completed' || 
                   order.status === 'Delivered') && (
                     <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>पूरा होने की तारीख:</Text>
+                        <Text style={styles.infoLabel}>{t.order.completionDate}</Text>
                         <Text style={[styles.infoValue, { color: '#48BB78' }]}>
                             {formatDate(order.deliveryDate || order.updatedAt)}
                         </Text>
@@ -172,11 +175,10 @@ const OrderDetails = () => {
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <Ionicons name="cart" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>ऑर्डर किए गए प्रोडक्ट</Text>
+                    <Text style={styles.sectionTitle}>{t.products.title}</Text>
                 </View>
                 {order.items && order.items.map((item, index) => (
                     <View key={index} style={styles.productCard}>
-                        {/* Product Image */}
                         {item.product && item.product.images && item.product.images.length > 0 ? (
                             <Image 
                                 source={{ uri: item.product.images[0] }}
@@ -189,12 +191,11 @@ const OrderDetails = () => {
                             </View>
                         )}
                         
-                        {/* Product Details */}
                         <View style={styles.productInfo}>
-                            <Text style={styles.productName}>{item.product?.name || 'प्रोडक्ट का नाम'}</Text>
-                            <Text style={styles.quantityText}>मात्रा: {item.quantity} पीस</Text>
-                            <Text style={styles.priceText}>₹{item.price} प्रति पीस</Text>
-                            <Text style={styles.subtotalText}>कुल: ₹{item.subtotal}</Text>
+                            <Text style={styles.productName}>{item.product?.name || 'Product Name'}</Text>
+                            <Text style={styles.quantityText}>{t.products.quantity} {item.quantity} {t.products.pieces}</Text>
+                            <Text style={styles.priceText}>₹{item.price} {t.products.perPiece}</Text>
+                            <Text style={styles.subtotalText}>{t.products.total} ₹{item.subtotal}</Text>
                         </View>
                     </View>
                 ))}
@@ -204,7 +205,7 @@ const OrderDetails = () => {
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <Ionicons name="person" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>ग्राहक की जानकारी</Text>
+                    <Text style={styles.sectionTitle}>{t.customer.title}</Text>
                 </View>
 
                 <View style={styles.customerCard}>
@@ -235,7 +236,7 @@ const OrderDetails = () => {
                     <View style={styles.addressBox}>
                         <Ionicons name="location" size={20} color="#4A5568" />
                         <View style={styles.addressDetails}>
-                            <Text style={styles.addressLabel}>डिलीवरी का पता:</Text>
+                            <Text style={styles.addressLabel}>{t.customer.deliveryAddress}</Text>
                             <Text style={styles.addressText}>
                                 {order.shippingAddress?.street},
                                 {'\n'}{order.shippingAddress?.city}, 
@@ -250,7 +251,7 @@ const OrderDetails = () => {
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <Ionicons name="wallet" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>पेमेंट की जानकारी</Text>
+                    <Text style={styles.sectionTitle}>{t.payment.title}</Text>
                 </View>
 
                 <View style={styles.paymentCard}>
@@ -266,28 +267,28 @@ const OrderDetails = () => {
                         <Text style={[styles.paymentStatusText, { 
                             color: order.payment?.status === 'paid' ? '#48BB78' : '#FFA500' 
                         }]}>
-                            {order.payment?.status === 'paid' ? 'भुगतान प्राप्त' : 'भुगतान बाकी'}
+                            {order.payment?.status === 'paid' ? t.payment.status.paid : t.payment.status.pending}
                         </Text>
                     </View>
 
                     {/* Payment Method */}
                     <View style={styles.paymentMethod}>
-                        <Text style={styles.methodLabel}>भुगतान का तरीका:</Text>
+                        <Text style={styles.methodLabel}>{t.payment.method}</Text>
                         <Text style={styles.methodValue}>{order.payment?.method || 'COD'}</Text>
                     </View>
 
                     {/* Payment Details */}
                     <View style={styles.paymentDetails}>
                         <View style={styles.paymentRow}>
-                            <Text style={styles.paymentLabel}>प्रोडक्ट का मूल्य:</Text>
+                            <Text style={styles.paymentLabel}>{t.payment.details.productValue}</Text>
                             <Text style={styles.paymentValue}>₹{order.subtotal}</Text>
                         </View>
                         <View style={styles.paymentRow}>
-                            <Text style={styles.paymentLabel}>डिलीवरी चार्ज:</Text>
+                            <Text style={styles.paymentLabel}>{t.payment.details.deliveryCharge}</Text>
                             <Text style={styles.paymentValue}>₹{order.shippingCost}</Text>
                         </View>
                         <View style={[styles.paymentRow, styles.totalRow]}>
-                            <Text style={styles.totalLabel}>कुल राशि:</Text>
+                            <Text style={styles.totalLabel}>{t.payment.details.totalAmount}</Text>
                             <Text style={styles.totalValue}>₹{order.total}</Text>
                         </View>
                     </View>
@@ -298,19 +299,19 @@ const OrderDetails = () => {
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <MaterialIcons name="local-shipping" size={20} color="#4A5568" />
-                    <Text style={styles.sectionTitle}>डिलीवरी की जानकारी</Text>
+                    <Text style={styles.sectionTitle}>{t.delivery.title}</Text>
                 </View>
 
                 <View style={styles.deliveryCard}>
                     <View style={styles.deliveryRow}>
-                        <Text style={styles.deliveryLabel}>अनुमानित डिलीवरी:</Text>
+                        <Text style={styles.deliveryLabel}>{t.delivery.estimated}</Text>
                         <Text style={styles.deliveryValue}>
-                            {order.expectedDeliveryDate ? formatDate(order.expectedDeliveryDate) : '3-5 दिन में'}
+                            {order.expectedDeliveryDate ? formatDate(order.expectedDeliveryDate) : t.delivery.defaultEstimate}
                         </Text>
                     </View>
                     
                     <View style={styles.deliveryRow}>
-                        <Text style={styles.deliveryLabel}>वर्तमान स्थिति:</Text>
+                        <Text style={styles.deliveryLabel}>{t.delivery.currentStatus}</Text>
                         <Text style={[styles.deliveryValue, { color: getStatusColor(order.status) }]}>
                             {getStatusText(order.status)}
                         </Text>
@@ -318,7 +319,7 @@ const OrderDetails = () => {
 
                     {order.deliveryDate && (
                         <View style={styles.deliveryRow}>
-                            <Text style={styles.deliveryLabel}>डिलीवरी की तारीख:</Text>
+                            <Text style={styles.deliveryLabel}>{t.delivery.deliveryDate}</Text>
                             <Text style={styles.deliveryValue}>{formatDate(order.deliveryDate)}</Text>
                         </View>
                     )}
@@ -330,7 +331,7 @@ const OrderDetails = () => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <FontAwesome name="star" size={20} color="#F6E05E" />
-                        <Text style={styles.sectionTitle}>ग्राहक की राय</Text>
+                        <Text style={styles.sectionTitle}>{t.review.title}</Text>
                     </View>
 
                     <View style={styles.reviewCard}>
@@ -350,12 +351,12 @@ const OrderDetails = () => {
 
                         {/* Review Comment */}
                         <Text style={styles.reviewText}>
-                            {order.review.comment || 'कोई टिप्पणी नहीं'}
+                            {order.review.comment || t.review.noComments}
                         </Text>
 
                         {/* Review Date */}
                         <Text style={styles.reviewDate}>
-                            समीक्षा की तारीख: {formatDate(order.review.createdAt)}
+                            {t.review.reviewDate} {formatDate(order.review.createdAt)}
                         </Text>
                     </View>
                 </View>
@@ -366,18 +367,18 @@ const OrderDetails = () => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <MaterialIcons name="assignment-return" size={20} color="#E53E3E" />
-                        <Text style={styles.sectionTitle}>रिटर्न/रिफंड की जानकारी</Text>
+                        <Text style={styles.sectionTitle}>{t.return.title}</Text>
                     </View>
 
                     <View style={styles.returnCard}>
                         <Text style={styles.returnStatus}>
-                            स्थिति: {order.returnRequest.status}
+                            {t.return.status} {order.returnRequest.status}
                         </Text>
                         <Text style={styles.returnReason}>
-                            कारण: {order.returnRequest.reason}
+                            {t.return.reason} {order.returnRequest.reason}
                         </Text>
                         <Text style={styles.returnDate}>
-                            अनुरोध की तारीख: {formatDate(order.returnRequest.createdAt)}
+                            {t.return.requestDate} {formatDate(order.returnRequest.createdAt)}
                         </Text>
                     </View>
                 </View>
@@ -388,28 +389,28 @@ const OrderDetails = () => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <FontAwesome name="history" size={20} color="#4A5568" />
-                        <Text style={styles.sectionTitle}>ग्राहक का ऑर्डर इतिहास</Text>
+                        <Text style={styles.sectionTitle}>{t.history.title}</Text>
                     </View>
 
                     <View style={styles.historyCard}>
                         <View style={styles.historySummary}>
                             <View style={styles.historyItem}>
                                 <Text style={styles.historyNumber}>{customerHistory.customerSummary.totalOrders}</Text>
-                                <Text style={styles.historyLabel}>कुल ऑर्डर</Text>
+                                <Text style={styles.historyLabel}>{t.history.totalOrders}</Text>
                             </View>
                             <View style={styles.historyItem}>
                                 <Text style={styles.historyNumber}>{customerHistory.customerSummary.successfulDeliveries}</Text>
-                                <Text style={styles.historyLabel}>सफल डिलीवरी</Text>
+                                <Text style={styles.historyLabel}>{t.history.successfulDeliveries}</Text>
                             </View>
                             <View style={styles.historyItem}>
                                 <Text style={styles.historyNumber}>₹{customerHistory.customerSummary.totalSpent}</Text>
-                                <Text style={styles.historyLabel}>कुल खरीदारी</Text>
+                                <Text style={styles.historyLabel}>{t.history.totalSpent}</Text>
                             </View>
                         </View>
 
                         {customerHistory.repeatedProducts.length > 0 && (
                             <View style={styles.repeatedProducts}>
-                                <Text style={styles.repeatedTitle}>दोबारा खरीदे गए प्रोडक्ट:</Text>
+                                <Text style={styles.repeatedTitle}>{t.history.repeatedTitle}</Text>
                                 {customerHistory.repeatedProducts.map((product, index) => (
                                     <View key={index} style={styles.repeatedItem}>
                                         <Image 
@@ -417,11 +418,8 @@ const OrderDetails = () => {
                                             style={styles.repeatedImage}
                                         />
                                         <View style={styles.repeatedInfo}>
-                                            <Text style={styles.repeatedName}>{product.name}</Text>
-                                            <View style={styles.repeatedStatusRow}>
-                                                <Text style={styles.repeatedCount}>
-                                                    कुल खरीदे: {product.totalPurchased} बार
-                                                </Text>
+                                            <View style={styles.repeatedNameRow}>
+                                                <Text style={styles.repeatedName}>{product.name}</Text>
                                                 <View style={[
                                                     styles.statusIndicator,
                                                     { backgroundColor: product.status?.toLowerCase() === 'completed' || 
@@ -433,7 +431,7 @@ const OrderDetails = () => {
                                                               product.status?.toLowerCase() === 'delivered'
                                                               ? "checkmark-circle" 
                                                               : "time"} 
-                                                        size={16} 
+                                                        size={12} 
                                                         color={product.status?.toLowerCase() === 'completed' || 
                                                                product.status?.toLowerCase() === 'delivered'
                                                                ? '#48BB78' 
@@ -448,13 +446,16 @@ const OrderDetails = () => {
                                                     ]}>
                                                         {product.status?.toLowerCase() === 'completed' || 
                                                          product.status?.toLowerCase() === 'delivered'
-                                                         ? 'पूरा हो गया' 
-                                                         : 'चल रहा है'}
+                                                         ? t.history.orderStatus.completed 
+                                                         : t.history.orderStatus.inProgress}
                                                     </Text>
                                                 </View>
                                             </View>
+                                            <Text style={styles.repeatedCount}>
+                                                {t.history.totalPurchased} {product.totalPurchased} {t.history.times}
+                                            </Text>
                                             <Text style={styles.repeatedDate}>
-                                                आखिरी खरीद: {formatDate(product.lastPurchased)}
+                                                {t.history.lastPurchased} {formatDate(product.lastPurchased)}
                                             </Text>
                                         </View>
                                     </View>
@@ -780,58 +781,88 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 12,
+        paddingHorizontal: 8,
     },
     historyItem: {
         flexDirection: 'column',
         alignItems: 'center',
+        flex: 1,
     },
     historyNumber: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#2D3748',
+        marginBottom: 2,
     },
     historyLabel: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#718096',
+        textAlign: 'center',
     },
     repeatedProducts: {
         marginTop: 12,
-        padding: 12,
-        backgroundColor: '#F7FAFC',
-        borderRadius: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#E2E8F0',
+        paddingTop: 16,
     },
     repeatedTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: '#2D3748',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     repeatedItem: {
         flexDirection: 'row',
-        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
         marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     repeatedImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 8,
+        width: 60,
+        height: 60,
+        borderRadius: 6,
         marginRight: 12,
     },
     repeatedInfo: {
         flex: 1,
     },
+    repeatedNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
     repeatedName: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '600',
         color: '#2D3748',
+        flex: 1,
+        marginRight: 8,
+    },
+    statusIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 12,
+    },
+    statusText: {
+        fontSize: 10,
+        marginLeft: 3,
+        fontWeight: '500',
     },
     repeatedCount: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#4A5568',
+        marginBottom: 2,
     },
     repeatedDate: {
         fontSize: 12,
         color: '#718096',
+        marginTop: 4,
     },
     customerBadge: {
         backgroundColor: '#48BB7820',
@@ -842,24 +873,6 @@ const styles = StyleSheet.create({
     customerBadgeText: {
         fontSize: 14,
         color: '#48BB78',
-        fontWeight: '500',
-    },
-    repeatedStatusRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginVertical: 4,
-    },
-    statusIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusText: {
-        fontSize: 12,
-        marginLeft: 4,
         fontWeight: '500',
     },
     centered: {

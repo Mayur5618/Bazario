@@ -38,12 +38,21 @@ export const LanguageProvider = ({ children }) => {
   );
 };
 
-export const useLanguage = () => {
+export const useLanguage = (translations) => {
   const context = useContext(LanguageContext);
   if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
-  return context;
+
+  const { language } = context;
+  
+  const t = translations ? translations[language] || translations['en'] : {};
+
+  return {
+    language,
+    updateLanguage: context.updateLanguage,
+    t
+  };
 };
 
 export default LanguageContext; 

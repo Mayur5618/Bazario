@@ -382,6 +382,7 @@ export const signin = async (req, res) => {
                 platformType: user.platformType,
                 profileImage: user.profileImage,
                 wishlist: user.wishlist,
+                city: user.city || user.address?.city || '',
                 token: token
               }
         });
@@ -850,6 +851,87 @@ export const getSellerProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching seller profile',
+      error: error.message
+    });
+  }
+};
+
+// Get agency details by ID
+export const getAgencyDetails = async (req, res) => {
+  try {
+    const { agencyId } = req.params;
+
+    // Find agency and select specific fields
+    const agency = await Agency.findById(agencyId).select(
+      'firstname lastname email mobileno agencyName address city state pincode profileImage businessLicenseNumber alternateContactNumber website subscribedSellers notifications platformType logoUrl'
+    );
+
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agency not found'
+      });
+    }
+
+    // Get agency's active bids count
+    const activeBidsCount = await Order.countDocuments({
+      'buyer': agencyId,
+      'status': 'active'
+    });
+
+    // Get agency's won auctions count
+    const wonAuctionsCount = await Order.countDocuments({
+      'buyer': agencyId,
+      'status': 'completed'
+    });
+
+    // Calculate total investment
+    const orders = await Order.find({
+      'buyer': agencyId,
+      'status': 'completed'
+    });
+    
+    const totalInvestment = orders.reduce((total, order) => {
+      return total + (order.totalAmount || 0);
+    }, 0);
+
+    // Format the response
+    const response = {
+      _id: agency._id,
+      firstname: agency.firstname,
+      lastname: agency.lastname,
+      email: agency.email,
+      mobileno: agency.mobileno,
+      agencyName: agency.agencyName,
+      address: agency.address,
+      city: agency.city,
+      state: agency.state,
+      pincode: agency.pincode,
+      profileImage: agency.profileImage,
+      businessLicenseNumber: agency.businessLicenseNumber,
+      alternateContactNumber: agency.alternateContactNumber,
+      website: agency.website,
+      logoUrl: agency.logoUrl || "",
+      platformType: agency.platformType,
+      stats: {
+        activeBids: activeBidsCount,
+        wonAuctions: wonAuctionsCount,
+        totalInvestment: totalInvestment
+      },
+      subscribedSellers: agency.subscribedSellers || [],
+      notifications: agency.notifications || []
+    };
+
+    res.status(200).json({
+      success: true,
+      data: response
+    });
+
+  } catch (error) {
+    console.error('Error fetching agency details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching agency details',
       error: error.message
     });
   }

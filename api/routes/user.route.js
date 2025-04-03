@@ -1,5 +1,5 @@
 import express from 'express';
-import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile, getSellerData, uploadProfileImage, getProfile, sellerSignup } from'../controllers/user.controller.js';
+import { signup, signin, updatePlatformTypes, sendOtp, verifyOtp, verifyUser, logout, checkAuth, signOut, checkMobileExists, updateProfile, getSellerData, uploadProfileImage, getProfile, sellerSignup, getAgencyDetails } from'../controllers/user.controller.js';
 import { protect } from '../middleware/authMiddleware.js';
 import Seller from '../models/seller.model.js';
 
@@ -81,5 +81,8 @@ router.post('/upload/firebase', protect, async (req, res) => {
     });
   }
 });
+
+// Get agency details by ID
+router.get('/agency/:agencyId', getAgencyDetails);
 
 export default router;

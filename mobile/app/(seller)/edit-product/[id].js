@@ -35,16 +35,16 @@ const categories = [
 ];
 
 const unitTypes = [
-  { label: 'किलोग्राम', value: 'kg' },
-  { label: 'ग्राम', value: 'g' },
-  { label: 'पीस', value: 'piece' },
-  { label: 'थाली', value: 'thali' },
-  { label: 'पैक', value: 'pack' },
-  { label: 'जार', value: 'jar' },
-  { label: 'बोतल', value: 'bottle' },
-  { label: 'पैकेट', value: 'pkt' },
-  { label: 'सेट', value: 'set' },
-  { label: 'बॉक्स', value: 'box' }
+  { label: 'Kilogram', value: 'kg' },
+  { label: 'Gram', value: 'g' },
+  { label: 'Piece', value: 'piece' },
+  { label: 'Thali', value: 'thali' },
+  { label: 'Pack', value: 'pack' },
+  { label: 'Jar', value: 'jar' },
+  { label: 'Bottle', value: 'bottle' },
+  { label: 'Packet', value: 'pkt' },
+  { label: 'Set', value: 'set' },
+  { label: 'Box', value: 'box' }
 ];
 
 const EditProductScreen = () => {
@@ -100,7 +100,6 @@ const EditProductScreen = () => {
         };
         setFormData(productData);
         
-        // Set YouTube thumbnail if link exists
         if (productData.youtubeLink) {
           const videoId = getYoutubeVideoId(productData.youtubeLink);
           if (videoId) {
@@ -108,11 +107,11 @@ const EditProductScreen = () => {
           }
         }
       } else {
-        Alert.alert('एरर', 'प्रोडक्ट की जानकारी लोड करने में समस्या हुई');
+        Alert.alert('Error', 'Problem loading product information');
       }
     } catch (error) {
       console.error('Error fetching product details:', error);
-      Alert.alert('एरर', 'प्रोडक्ट की जानकारी लोड करने में समस्या हुई');
+      Alert.alert('Error', 'Problem loading product information');
     } finally {
       setLoading(false);
     }
@@ -142,16 +141,16 @@ const EditProductScreen = () => {
               images: [...prev.images, uploadResponse.data.url]
             }));
           } else {
-            throw new Error('फोटो अपलोड नहीं हो सका');
+            throw new Error('Failed to upload photo');
           }
         } catch (uploadError) {
           console.error('Error uploading image:', uploadError);
-          Alert.alert('एरर', 'फोटो अपलोड करने में समस्या हुई');
+          Alert.alert('Error', 'Problem uploading photo');
         }
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('एरर', 'फोटो चुनने में समस्या हुई');
+      Alert.alert('Error', 'Problem selecting photo');
     } finally {
       setImageLoading(false);
     }
@@ -209,39 +208,39 @@ const EditProductScreen = () => {
     switch (step) {
       case 1:
         if (!formData.name) {
-          Alert.alert('ज़रूरी', 'कृपया प्रोडक्ट का नाम भरें');
+          Alert.alert('Error', 'Please enter product name');
           return false;
         }
         if (!formData.category) {
-          Alert.alert('ज़रूरी', 'कृपया श्रेणी चुनें');
+          Alert.alert('Error', 'Please select category');
           return false;
         }
         return true;
       case 2:
         if (formData.images.length === 0) {
-          Alert.alert('ज़रूरी', 'कम से कम एक फोटो चुनें');
+          Alert.alert('Error', 'Please select at least one photo');
           return false;
         }
         if (formData.youtubeLink && !validateYoutubeUrl(formData.youtubeLink)) {
-          Alert.alert('एरर', 'कृपया सही यूट्यूब लिंक डालें');
+          Alert.alert('Error', 'Please enter a valid YouTube link');
           return false;
         }
         if (formData.youtubeLink && formData.images.length > 4) {
-          Alert.alert('एरर', 'यूट्यूब वीडियो के साथ अधिकतम 4 फोटो अपलोड कर सकते हैं');
+          Alert.alert('Error', 'Maximum 4 photos can be uploaded with a YouTube video');
           return false;
         }
         if (!formData.youtubeLink && formData.images.length > 5) {
-          Alert.alert('एरर', 'अधिकतम 5 फोटो अपलोड कर सकते हैं');
+          Alert.alert('Error', 'Maximum 5 photos can be uploaded');
           return false;
         }
         return true;
       case 3:
         if (!formData.price || !formData.unitType) {
-          Alert.alert('ज़रूरी', 'कृपया कीमत और यूनिट टाइप भरें');
+          Alert.alert('Error', 'Please enter price and unit type');
           return false;
         }
         if (!formData.stock) {
-          Alert.alert('ज़रूरी', 'कृपया स्टॉक की मात्रा भरें');
+          Alert.alert('Error', 'Please enter stock');
           return false;
         }
         return true;
@@ -295,11 +294,11 @@ const EditProductScreen = () => {
 
       if (response.data?.success) {
         Alert.alert(
-          'सफल',
-          'प्रोडक्ट अपडेट हो गया है',
+          'Success',
+          'Product updated successfully',
           [
             {
-              text: 'ठीक है',
+              text: 'OK',
               onPress: () => {
                 if (router.canGoBack()) {
                   // First navigate back to product page
@@ -313,11 +312,11 @@ const EditProductScreen = () => {
           ]
         );
       } else {
-        Alert.alert('एरर', 'प्रोडक्ट अपडेट करने में समस्या हुई');
+        Alert.alert('Error', 'Problem updating product');
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      Alert.alert('एरर', error.response?.data?.message || 'प्रोडक्ट अपडेट करने में समस्या हुई');
+      Alert.alert('Error', error.response?.data?.message || 'Problem updating product');
     } finally {
       setSaving(false);
       setShowConfirmation(false);
@@ -413,19 +412,20 @@ const EditProductScreen = () => {
 
   const renderStep1 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 1: बेसिक जानकारी</Text>
+      <Text style={styles.stepTitle}>Step 1: Basic Information</Text>
       
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>प्रोडक्ट का नाम *</Text>
+        <Text style={styles.label}>Product Name *</Text>
         <TextInput
           style={styles.input}
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+          placeholder="Enter product name"
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>श्रेणी *</Text>
+        <Text style={styles.label}>Category *</Text>
         <View style={styles.categoryContainer}>
           <TextInput
             style={styles.input}
@@ -435,7 +435,7 @@ const EditProductScreen = () => {
               setShowCategorySuggestions(true);
             }}
             onFocus={() => setShowCategorySuggestions(true)}
-            placeholder="श्रेणी चुनें या टाइप करें"
+            placeholder="Select Category or type"
           />
           
           {showCategorySuggestions && (
@@ -468,7 +468,7 @@ const EditProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>उपश्रेणी *</Text>
+        <Text style={styles.label}>Subcategory *</Text>
         <View style={styles.subcategoryContainer}>
           <TextInput
             style={styles.input}
@@ -486,7 +486,7 @@ const EditProductScreen = () => {
                 setShowSubcategorySuggestions(true);
               }
             }}
-            placeholder="उपश्रेणी चुनें या टाइप करें"
+            placeholder="Select Subcategory or type"
           />
 
           {showSubcategorySuggestions && formData.category && (
@@ -519,11 +519,12 @@ const EditProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>विवरण (वैकल्पिक)</Text>
+        <Text style={styles.label}>Description (Optional)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={formData.description}
           onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+          placeholder="Write product description"
           multiline
           numberOfLines={4}
         />
@@ -533,11 +534,11 @@ const EditProductScreen = () => {
 
   const renderStep2 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 2: फोटो और मीडिया</Text>
+      <Text style={styles.stepTitle}>Step 2: Photos and Media</Text>
       <Text style={styles.stepDescription}>
         {formData.youtubeLink 
-          ? 'अधिकतम 4 फोटो और 1 यूट्यूब वीडियो अपलोड कर सकते हैं'
-          : 'अधिकतम 5 फोटो अपलोड कर सकते हैं'}
+          ? 'Maximum 4 photos and 1 YouTube video can be uploaded'
+          : 'Maximum 5 photos can be uploaded'}
       </Text>
       
       <View style={styles.imageSection}>
@@ -569,7 +570,7 @@ const EditProductScreen = () => {
               ) : (
                 <>
                   <Ionicons name="camera" size={32} color="#6C63FF" />
-                  <Text style={styles.addImageText}>फोटो जोड़ें</Text>
+                  <Text style={styles.addImageText}>Add Photo</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -578,7 +579,7 @@ const EditProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>यूट्यूब लिंक (वैकल्पिक)</Text>
+        <Text style={styles.label}>YouTube Link (Optional)</Text>
         <TextInput
           style={styles.input}
           value={formData.youtubeLink}
@@ -602,10 +603,10 @@ const EditProductScreen = () => {
 
   const renderStep3 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 3: कीमत और स्टॉक</Text>
+      <Text style={styles.stepTitle}>Step 3: Price and Stock</Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>यूनिट टाइप *</Text>
+        <Text style={styles.label}>Unit Type *</Text>
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={formData.unitType}
@@ -627,19 +628,20 @@ const EditProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>मुख्य कीमत (₹) *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.price}
-          onChangeText={(text) => {
-            setFormData(prev => ({ ...prev, price: text }));
-            calculateSubUnitPrices(text, formData.unitType);
-          }}
-          keyboardType="numeric"
-        />
-        <Text style={styles.unitLabel}>
-          ₹ / {unitTypes.find(t => t.value === formData.unitType)?.label || formData.unitType}
-        </Text>
+        <Text style={styles.label}>Main Price (₹) *</Text>
+        <View style={styles.priceContainer}>
+          <TextInput
+            style={[styles.input, styles.priceInput]}
+            value={formData.price}
+            onChangeText={(text) => {
+              setFormData(prev => ({ ...prev, price: text }));
+              calculateSubUnitPrices(text, formData.unitType);
+            }}
+            keyboardType="numeric"
+            placeholder="Enter price"
+          />
+          <Text style={styles.priceUnit}>₹ / {unitTypes.find(t => t.value === formData.unitType)?.label || formData.unitType}</Text>
+        </View>
       </View>
 
       {formData.unitType === 'kg' && (
@@ -659,12 +661,13 @@ const EditProductScreen = () => {
       )}
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>स्टॉक *</Text>
+        <Text style={styles.label}>Stock *</Text>
         <TextInput
           style={styles.input}
           value={formData.stock}
           onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text }))}
           keyboardType="numeric"
+          placeholder="Enter available stock"
         />
       </View>
     </View>
@@ -672,7 +675,7 @@ const EditProductScreen = () => {
 
   const renderStep4 = () => (
     <View>
-      <Text style={styles.stepTitle}>चरण 4: प्रीव्यू</Text>
+      <Text style={styles.stepTitle}>Step 4: Preview</Text>
       
       <View style={styles.previewCard}>
         {formData.images.length > 0 && (
@@ -685,7 +688,7 @@ const EditProductScreen = () => {
         <View style={styles.previewContent}>
           <Text style={styles.previewName}>{formData.name}</Text>
           <Text style={styles.previewPrice}>₹{formData.price}/{formData.unitType}</Text>
-          <Text style={styles.previewStock}>स्टॉक: {formData.stock} {formData.unitType}</Text>
+          <Text style={styles.previewStock}>Stock: {formData.stock} {formData.unitType}</Text>
           <Text style={styles.previewCategory}>{formData.category}</Text>
           
           {formData.description && (
@@ -712,25 +715,25 @@ const EditProductScreen = () => {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>प्रोडक्ट की जानकारी जाँच लें</Text>
+          <Text style={styles.modalTitle}>Verify Product Information</Text>
           
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>प्रोडक्ट:</Text>
+            <Text style={styles.confirmationLabel}>Product:</Text>
             <Text style={styles.confirmationValue}>{formData.name}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>कीमत:</Text>
-            <Text style={styles.confirmationValue}>₹{formData.price} प्रति {formData.unitSize} {formData.unitType}</Text>
+            <Text style={styles.confirmationLabel}>Price:</Text>
+            <Text style={styles.confirmationValue}>₹{formData.price} per {formData.unitSize} {formData.unitType}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>श्रेणी:</Text>
+            <Text style={styles.confirmationLabel}>Category:</Text>
             <Text style={styles.confirmationValue}>{formData.category}</Text>
           </View>
 
           <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>स्टॉक:</Text>
+            <Text style={styles.confirmationLabel}>Stock:</Text>
             <Text style={styles.confirmationValue}>{formData.stock} {formData.unitType}</Text>
           </View>
 
@@ -739,7 +742,7 @@ const EditProductScreen = () => {
               style={[styles.modalButton, styles.cancelButton]}
               onPress={() => setShowConfirmation(false)}
             >
-              <Text style={styles.cancelButtonText}>वापस जाएं</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -750,7 +753,7 @@ const EditProductScreen = () => {
               {saving ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.confirmButtonText}>अपडेट करें</Text>
+                <Text style={styles.confirmButtonText}>Update</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -763,7 +766,7 @@ const EditProductScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>प्रोडक्ट की जानकारी लोड हो रही है...</Text>
+        <Text style={styles.loadingText}>Loading product information...</Text>
       </View>
     );
   }
@@ -771,10 +774,10 @@ const EditProductScreen = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>प्रोडक्ट अपडेट करें</Text>
+        <Text style={styles.headerTitle}>Update Product</Text>
       </View>
 
       <View style={styles.stepIndicator}>
@@ -803,7 +806,7 @@ const EditProductScreen = () => {
             disabled={saving}
           >
             <Text style={styles.submitButtonText}>
-              {step === 4 ? 'समीक्षा करें' : 'अगला'}
+              {step === 4 ? 'Review' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -826,7 +829,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E8E8E8',
   },
-  backButton: {
+  headerButton: {
     padding: 8,
   },
   headerTitle: {

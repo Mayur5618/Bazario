@@ -15,12 +15,65 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../api/sellerApi';
 import { BlurView } from 'expo-blur';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = width / 2 - 24; // 2 cards per row with padding
 
+// Translations for products tab
+const translations = {
+  en: {
+    myProducts: "My Products",
+    allProducts: "All Products",
+    inStock: "In Stock",
+    outOfStock: "Out of Stock",
+    loadingProducts: "Loading products...",
+    noProductsFound: "No products found",
+    addFirstProduct: "Add First Product",
+    inStockLabel: "in stock",
+    soldLabel: "sold"
+  },
+  hi: {
+    myProducts: "मेरे उत्पाद",
+    allProducts: "सभी उत्पाद",
+    inStock: "स्टॉक में",
+    outOfStock: "स्टॉक ख़त्म",
+    loadingProducts: "उत्पाद लोड हो रहे हैं...",
+    noProductsFound: "कोई उत्पाद नहीं मिला",
+    addFirstProduct: "पहला उत्पाद जोड़ें",
+    inStockLabel: "स्टॉक में",
+    soldLabel: "बिक चुका"
+  },
+  mr: {
+    myProducts: "माझी उत्पादने",
+    allProducts: "सर्व उत्पादने",
+    inStock: "स्टॉक मध्ये",
+    outOfStock: "स्टॉक संपला",
+    loadingProducts: "उत्पादने लोड होत आहेत...",
+    noProductsFound: "कोणतीही उत्पादने सापडली नाहीत",
+    addFirstProduct: "पहिले उत्पाद जोडा",
+    inStockLabel: "स्टॉक मध्ये",
+    soldLabel: "विकले"
+  },
+  gu: {
+    myProducts: "મારા ઉત્પાદનો",
+    allProducts: "બધા ઉત્પાદનો",
+    inStock: "સ્ટોકમાં",
+    outOfStock: "સ્ટોક ખતમ",
+    loadingProducts: "ઉત્પાદનો લોડ થઈ રહ્યા છે...",
+    noProductsFound: "કોઈ ઉત્પાદન મળ્યું નથી",
+    addFirstProduct: "પ્રથમ ઉત્પાદન ઉમેરો",
+    inStockLabel: "સ્ટોકમાં",
+    soldLabel: "વેચાયેલ"
+  }
+};
+
 const ProductsTab = () => {
   const router = useRouter();
+  const { businessMode } = useAuth();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,18 +81,20 @@ const ProductsTab = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [businessMode]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await sellerApi.getSellerProducts();
+      const response = await sellerApi.getSellerProducts({
+        platformType: businessMode === 'business' ? 'b2b' : 'b2c'
+      });
       if (response.success) {
         setProducts(response.products);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      Alert.alert('त्रुटि', 'प्रोडक्ट्स लोड करने में समस्या हुई');
+      Alert.alert('Error', 'Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -85,7 +140,7 @@ const ProductsTab = () => {
           )}
           {isOutOfStock && (
             <BlurView intensity={70} style={styles.outOfStockOverlay}>
-              <Text style={styles.outOfStockText}>स्टॉक खत्म</Text>
+              <Text style={styles.outOfStockText}>{t.outOfStock}</Text>
             </BlurView>
           )}
         </View>
@@ -99,11 +154,11 @@ const ProductsTab = () => {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Ionicons name="cube-outline" size={16} color="#666" />
-              <Text style={styles.statText}>{product.stock} स्टॉक</Text>
+              <Text style={styles.statText}>{product.stock} {t.inStockLabel}</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="cart-outline" size={16} color="#666" />
-              <Text style={styles.statText}>{product.numSales || 0} बिके</Text>
+              <Text style={styles.statText}>{product.numSales || 0} {t.soldLabel}</Text>
             </View>
           </View>
         </View>
@@ -127,7 +182,7 @@ const ProductsTab = () => {
           onPress={() => setSelectedFilter('all')}
         >
           <Text style={[styles.filterText, selectedFilter === 'all' && styles.activeFilterText]}>
-            सभी प्रोडक्ट्स
+            {t.allProducts}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -135,7 +190,7 @@ const ProductsTab = () => {
           onPress={() => setSelectedFilter('inStock')}
         >
           <Text style={[styles.filterText, selectedFilter === 'inStock' && styles.activeFilterText]}>
-            स्टॉक में
+            {t.inStock}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -143,7 +198,7 @@ const ProductsTab = () => {
           onPress={() => setSelectedFilter('outOfStock')}
         >
           <Text style={[styles.filterText, selectedFilter === 'outOfStock' && styles.activeFilterText]}>
-            स्टॉक खत्म
+            {t.outOfStock}
           </Text>
         </TouchableOpacity>
       </View>
@@ -151,7 +206,7 @@ const ProductsTab = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C63FF" />
-          <Text style={styles.loadingText}>प्रोडक्ट्स लोड हो रहे हैं...</Text>
+          <Text style={styles.loadingText}>{t.loadingProducts}</Text>
         </View>
       ) : (
         <ScrollView
@@ -163,12 +218,12 @@ const ProductsTab = () => {
           {getFilteredProducts().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="cube-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyStateText}>कोई प्रोडक्ट नहीं मिला</Text>
+              <Text style={styles.emptyStateText}>{t.noProductsFound}</Text>
               <TouchableOpacity
                 style={styles.addFirstButton}
                 onPress={() => router.push('/(seller)/add-product')}
               >
-                <Text style={styles.addFirstButtonText}>पहला प्रोडक्ट जोड़ें</Text>
+                <Text style={styles.addFirstButtonText}>{t.addFirstProduct}</Text>
               </TouchableOpacity>
             </View>
           ) : (

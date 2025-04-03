@@ -18,7 +18,11 @@ import wishlistRoutes from './routes/wishlist.route.js';
 import sellerRoutes from './routes/seller.route.js';
 import uploadRoutes from './routes/upload.route.js';
 import agencyRoutes from './routes/agencyRoutes.js';
+import b2bProductRoutes from './routes/b2bProduct.routes.js';
+import bidRoutes from './routes/bid.route.js';
+import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
+import './models/agency.model.js'; // Import Agency model to register it
 import recentlyViewedRoutes from './routes/recentlyViewed.js';
 import buyerRoutes from './routes/buyer.route.js';
 
@@ -66,6 +70,8 @@ app.use('/api/agency', agencyRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/recently-viewed', recentlyViewedRoutes);
 app.use('/api/buyer', buyerRoutes);
+app.use('/api/b2b', b2bProductRoutes);
+app.use('/api/bids', bidRoutes);
 
 // Error handling middleware should be last
 app.use(errorMiddleware);

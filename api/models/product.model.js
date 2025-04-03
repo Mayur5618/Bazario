@@ -64,17 +64,59 @@ const productSchema = new mongoose.Schema({
         }
     },
     // B2B specific fields
-    minOrderQuantity: {
+    // minOrderQuantity: {
+    //     type: Number,
+    //     required: function() {
+    //         return this.platformType.includes('b2b');
+    //     }
+    // },
+    // maxOrderQuantity: {
+    //     type: Number,
+    //     required: function() {
+    //         return this.platformType.includes('b2b');
+    //     }
+    // },
+    // New B2B Auction fields
+    auctionEndDate: {
+        type: Date,
+        required: function() {
+            return this.platformType.includes('b2b');
+        }
+    },
+    minPrice: {
         type: Number,
         required: function() {
             return this.platformType.includes('b2b');
         }
     },
-    maxOrderQuantity: {
+    maxPrice: {
         type: Number,
         required: function() {
             return this.platformType.includes('b2b');
         }
+    },
+    unitPrice: {
+        type: Number,
+        required: function() {
+            return this.platformType.includes('b2b');
+        }
+    },
+    negotiationEnabled: {
+        type: Boolean,
+        default: false
+    },
+    currentHighestBid: {
+        type: Number,
+        default: 0
+    },
+    currentHighestBidder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'agency'
+    },
+    auctionStatus: {
+        type: String,
+        enum: ['active', 'ended', 'cancelled'],
+        default: 'active'
     },
     rating: {
         type: Number,

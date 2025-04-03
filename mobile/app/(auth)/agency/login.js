@@ -101,7 +101,7 @@ const AgencyLogin = () => {
     <SafeAreaView style={styles.container}>
       <TouchableOpacity 
         style={styles.backButton}
-        onPress={() => router.back()}
+        onPress={() => router.push('/(auth)/agency')}
       >
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>

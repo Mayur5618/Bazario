@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { SignInSetUp, SignInFailure, logout } from "../store/userSlice";
-import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart, FaSignOutAlt, FaUserEdit } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaUser, FaBars, FaUserCircle, FaHeart, FaSignOutAlt, FaUserEdit, FaHistory } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import '../styles/header.css';
-import { addToRecentSearches } from '../store/searchSlice';
+import { addToRecentSearches, clearRecentSearches } from '../store/searchSlice';
 import { AnimatePresence, motion } from "framer-motion";
 
 const Header = () => {
@@ -26,6 +26,7 @@ const Header = () => {
   const recentSearches = useSelector((state) => state.search.recentSearches);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [showRecentSearchesDropdown, setShowRecentSearchesDropdown] = useState(false);
 
   const showMenu = () => {
     clearTimeout(timeoutRef.current);
@@ -91,16 +92,18 @@ const Header = () => {
     };
   }, []);
 
-  // Debounced search function
+  // Modify the useEffect for search
   useEffect(() => {
     const debounceTimer = setTimeout(async () => {
       if (searchTerm.trim()) {
         try {
           setIsSearching(true);
+          setShowRecentSearchesDropdown(false); // Hide recent searches when typing
           const response = await axios.get(`/api/products?query=${searchTerm}`);
           setSearchResults(response.data.products.slice(0, 5));
         } catch (error) {
           console.error("Search error:", error);
+          setSearchResults([]);
         } finally {
           setIsSearching(false);
         }
@@ -111,6 +114,18 @@ const Header = () => {
 
     return () => clearTimeout(debounceTimer);
   }, [searchTerm]);
+
+  // Add click outside handler for recent searches dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowRecentSearchesDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -291,17 +306,10 @@ const Header = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    if (e.target.value) {
-                      setShowRecentSearches(false);
-                    } else {
-                      setShowRecentSearches(true);
-                    }
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => {
-                    if (!searchTerm) {
-                      setShowRecentSearches(true);
+                    if (!searchTerm.trim()) {
+                      setShowRecentSearchesDropdown(true);
                     }
                   }}
                   placeholder="Search products..."
@@ -314,6 +322,73 @@ const Header = () => {
                   <FaSearch className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
+
+              {/* Recent Searches Dropdown - Mobile */}
+              {showRecentSearchesDropdown && !searchTerm && recentSearches.length > 0 && (
+                <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="px-4 py-2 text-xs text-gray-500 border-b">Recent Searches</div>
+                  {recentSearches.map((term, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSearchTerm(term);
+                        handleRecentSearchClick(term);
+                        setShowRecentSearchesDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center"
+                    >
+                      <FaHistory className="h-3 w-3 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-700">{term}</span>
+                    </div>
+                  ))}
+                  <div 
+                    className="px-4 py-2 text-xs text-red-500 hover:bg-gray-50 cursor-pointer border-t"
+                    onClick={() => {
+                      dispatch(clearRecentSearches());
+                      setShowRecentSearchesDropdown(false);
+                    }}
+                  >
+                    Clear Recent Searches
+                  </div>
+                </div>
+              )}
+
+              {/* Product Search Results - Mobile */}
+              {searchTerm && (
+                <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">Searching...</div>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((result) => (
+                      <div
+                        key={result._id}
+                        onClick={() => handleSuggestionClick(result)}
+                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center space-x-3"
+                      >
+                        {/* Product Image */}
+                        <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
+                          <img 
+                            src={result.images[0]} 
+                            alt={result.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://via.placeholder.com/100?text=No+Image';
+                            }}
+                          />
+                        </div>
+                        {/* Product Details */}
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700 font-medium">{result.name}</p>
+                          <p className="text-xs text-gray-500">₹{result.price}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No results found</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -332,17 +407,10 @@ const Header = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    if (e.target.value) {
-                      setShowRecentSearches(false);
-                    } else {
-                      setShowRecentSearches(true);
-                    }
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => {
-                    if (!searchTerm) {
-                      setShowRecentSearches(true);
+                    if (!searchTerm.trim()) {
+                      setShowRecentSearchesDropdown(true);
                     }
                   }}
                   placeholder="Search products..."
@@ -355,6 +423,73 @@ const Header = () => {
                   <FaSearch className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
+
+              {/* Recent Searches Dropdown - Desktop */}
+              {showRecentSearchesDropdown && !searchTerm && recentSearches.length > 0 && (
+                <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="px-4 py-3 text-xs text-gray-500 border-b">Recent Searches</div>
+                  {recentSearches.map((term, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSearchTerm(term);
+                        handleRecentSearchClick(term);
+                        setShowRecentSearchesDropdown(false);
+                      }}
+                      className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center"
+                    >
+                      <FaHistory className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-700">{term}</span>
+                    </div>
+                  ))}
+                  <div 
+                    className="px-4 py-3 text-xs text-red-500 hover:bg-gray-50 cursor-pointer border-t"
+                    onClick={() => {
+                      dispatch(clearRecentSearches());
+                      setShowRecentSearchesDropdown(false);
+                    }}
+                  >
+                    Clear Recent Searches
+                  </div>
+                </div>
+              )}
+
+              {/* Product Search Results - Desktop */}
+              {searchTerm && (
+                <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((result) => (
+                      <div
+                        key={result._id}
+                        onClick={() => handleSuggestionClick(result)}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center space-x-4"
+                      >
+                        {/* Product Image */}
+                        <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
+                          <img 
+                            src={result.images[0]} 
+                            alt={result.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://via.placeholder.com/100?text=No+Image';
+                            }}
+                          />
+                        </div>
+                        {/* Product Details */}
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700 font-medium">{result.name}</p>
+                          <p className="text-sm text-gray-500">₹{result.price}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-gray-500">No results found</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

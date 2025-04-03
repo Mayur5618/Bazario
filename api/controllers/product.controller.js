@@ -3,6 +3,10 @@ import Product from '../models/product.model.js';
 import Review from '../models/review.model.js';
 import { uploadToFirebase } from '../utilities/firebase.js';
 import Seller from '../models/seller.model.js';
+import asyncHandler from 'express-async-handler';
+import Bid from '../models/bid.model.js';
+import Agency from '../models/agency.model.js';
+import User from '../models/baseUser.model.js';
 
 const router = express.Router();
 
@@ -164,6 +168,140 @@ export const createProduct = async (req, res) => {
     }
 };
 
+//POST /api/b2b/products/create
+export const createB2BProduct = async (req, res) => {
+    try {
+        console.log('Create B2B Product Request Body:', req.body);
+        console.log('Authenticated User:', req.user);
+
+        const {
+            name,
+            category,
+            subcategory,
+            minPrice,
+            maxPrice,
+            unitType,
+            Price,  // Frontend field
+            Stock,  // Frontend field
+            auctionEndDate,
+            negotiationEnabled,
+            images
+        } = req.body;
+
+        // Map frontend fields to backend fields
+        const unitPrice = Price || minPrice;
+        const totalStock = Stock || 1000; // Default stock if not provided
+
+        // Validate required fields
+        if (!name || !category || !subcategory || !minPrice || !maxPrice || !unitType) {
+            console.log('Missing required fields:', { name, category, subcategory, minPrice, maxPrice, unitType });
+            return res.status(400).json({ 
+                success: false, 
+                message: "सभी आवश्यक फील्ड भरें। नाम, श्रेणी, उपश्रेणी, न्यूनतम मूल्य, अधिकतम मूल्य, इकाई प्रकार आवश्यक हैं।" 
+            });
+        }
+
+        // Validate price range
+        if (Number(minPrice) >= Number(maxPrice)) {
+            return res.status(400).json({
+                success: false,
+                message: 'न्यूनतम मूल्य अधिकतम मूल्य से कम होना चाहिए।'
+            });
+        }
+
+        // Validate unit type
+        const validUnitTypes = ['kg', 'g', 'piece', 'thali', 'pack', 'ton', 'quintal'];
+        if (!validUnitTypes.includes(unitType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'अमान्य इकाई प्रकार। मान्य प्रकार हैं: kg, g, piece, thali, pack, ton, quintal'
+            });
+        }
+
+        // Check if user exists and is authorized for B2B
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'उपयोगकर्ता प्रमाणित नहीं है'
+            });
+        }
+
+        // Check for existing product with same name
+        const existingProduct = await Product.findOne({
+            name: { $regex: new RegExp(`^${name}$`, 'i') },
+            seller: req.user._id,
+            platformType: 'b2b'
+        });
+
+        if (existingProduct) {
+            return res.status(400).json({
+                success: false,
+                message: 'इस नाम का B2B प्रोडक्ट पहले से मौजूद है। कृपया दूसरा नाम चुनें या मौजूदा प्रोडक्ट को अपडेट करें।',
+                existingProduct: {
+                    id: existingProduct._id,
+                    name: existingProduct.name,
+                    minPrice: existingProduct.minPrice,
+                    maxPrice: existingProduct.maxPrice,
+                    totalStock: existingProduct.totalStock
+                }
+            });
+        }
+
+        // Prepare product data with default values
+        const productData = {
+            name,
+            description: '', // Default empty description
+            category,
+            subcategory,
+            minPrice: Number(minPrice),
+            maxPrice: Number(maxPrice),
+            unitType,
+            unitPrice: Number(unitPrice),
+            totalStock: Number(totalStock),
+            // Set price and stock for B2B products
+            price: Number(minPrice), // Using minPrice as base price
+            stock: Number(totalStock), // Using totalStock as stock
+            auctionEndDate: auctionEndDate || null,
+            negotiationEnabled: negotiationEnabled || false,
+            images: images || [],
+            youtubeLink: '', // Default empty youtube link
+            platformType: ['b2b'],
+            seller: req.user._id,
+            availableLocations: [req.user.city], // Default to seller's city
+            primaryLocation: req.user.city,
+            minOrderQuantity: 1, // Default minimum order quantity
+            maxOrderQuantity: totalStock, // Default maximum order quantity to total stock
+            tags: [], // Default empty tags
+            status: 'active'
+        };
+
+        console.log('Final B2B Product Data:', productData);
+
+        const product = new Product(productData);
+        const createdProduct = await product.save();
+        
+        console.log('B2B Product created successfully:', createdProduct);
+
+        res.status(201).json({
+            success: true,
+            message: 'B2B प्रोडक्ट सफलतापूर्वक बनाया गया',
+            product: createdProduct
+        });
+
+    } catch (error) {
+        console.error('Create B2B product error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            code: error.code
+        });
+        res.status(500).json({
+            success: false,
+            message: 'आंतरिक सर्वर त्रुटि'
+        });
+    }
+};
+
 //PUT /api/products/:id
 export const updateProduct = async (req, res) => {
     try {
@@ -249,86 +387,83 @@ export const getProducts = async (req, res) => {
     try {
         const { 
             page = 1, 
-            limit = 10, 
+            limit = 10,
+            query,  // search query
+            city,   // buyer's city
             category, 
             subcategory, 
             minPrice, 
             maxPrice, 
             sortBy = 'createdAt',
             sortOrder = 'desc',
-            search,
-            platformType,
-            buyerCity
+            platformType = 'b2c'
         } = req.query;
 
-        console.log('Received query params:', { category, buyerCity }); // Debug log
+        console.log('Search Query:', query);
+        console.log('Buyer City:', city);
 
-        const query = {};
+        // Base query object
+        const searchQuery = {
+            platformType: { $in: [platformType] },
+            stock: { $gt: 0 }  // Only show products with stock > 0
+        };
 
-        // Add category filter if provided (case-insensitive)
-        if (category && category !== 'undefined' && category !== 'null') {
-            query.category = { 
-                $regex: new RegExp(`^${category}$`, 'i')
+        // Add name search if query exists
+        if (query && query.trim()) {
+            searchQuery.name = { 
+                $regex: new RegExp(query.trim(), 'i')
             };
-            console.log('Added category filter:', query.category);
         }
 
-        // Add subcategory filter if provided (case-insensitive)
+        // Add city-based filtering if buyer's city is provided
+        if (city && city.trim()) {
+            searchQuery.availableLocations = {
+                $regex: new RegExp(city.trim(), 'i')
+            };
+        }
+
+        // Add category filter if provided
+        if (category && category !== 'undefined' && category !== 'null') {
+            searchQuery.category = { 
+                $regex: new RegExp(`^${category}$`, 'i')
+            };
+        }
+
+        // Add subcategory filter if provided
         if (subcategory && subcategory !== 'undefined' && subcategory !== 'null') {
-            query.subcategory = { 
+            searchQuery.subcategory = { 
                 $regex: new RegExp(`^${subcategory}$`, 'i')
             };
         }
 
-        // Add price range filter if provided
+        // Add price range filter
         if ((minPrice && minPrice !== 'undefined') || (maxPrice && maxPrice !== 'undefined')) {
-            query.price = {};
-            if (minPrice) query.price.$gte = Number(minPrice);
-            if (maxPrice) query.price.$lte = Number(maxPrice);
+            searchQuery.price = {};
+            if (minPrice) searchQuery.price.$gte = Number(minPrice);
+            if (maxPrice) searchQuery.price.$lte = Number(maxPrice);
         }
 
-        // Add platform type filter if provided
-        if (platformType && platformType !== 'undefined' && platformType !== 'null') {
-            query.platformType = platformType;
-        }
-
-        // Add search filter if provided (case-insensitive)
-        if (search && search !== 'undefined' && search !== 'null') {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { tags: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        // Add city-based filtering if buyer's city is provided (case-insensitive)
-        if (buyerCity && buyerCity !== 'undefined' && buyerCity !== 'null') {
-            query.availableLocations = { 
-                $elemMatch: { 
-                    $regex: new RegExp(buyerCity, 'i') 
-                }
-            };
-            console.log('Added city filter:', query.availableLocations);
-        }
-
-        console.log('Final query:', JSON.stringify(query, null, 2));
+        console.log('Final search query:', JSON.stringify(searchQuery, null, 2));
 
         // Calculate pagination
         const skip = (Number(page) - 1) * Number(limit);
+        
+        // Sort options
         const sortOptions = {};
         sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
         // Execute query with pagination and sorting
-        const products = await Product.find(query)
+        const products = await Product.find(searchQuery)
             .sort(sortOptions)
             .skip(skip)
             .limit(Number(limit))
-            .populate('seller', 'name email city userType');
-
-        console.log(`Found ${products.length} products`);
+            .populate('seller', 'name email city userType')
+            .lean();
 
         // Get total count for pagination
-        const total = await Product.countDocuments(query);
+        const total = await Product.countDocuments(searchQuery);
+
+        console.log(`Found ${products.length} products matching criteria`);
 
         res.json({
             success: true,
@@ -795,7 +930,7 @@ export const getProductsByCategoryAndSubcategory = async (req, res) => {
             {
                 $group: {
                     _id: '$subcategory',
-                    products: { 
+                    products: {
                         $push: {
                             _id: '$_id',
                             name: '$name',
@@ -870,8 +1005,8 @@ export const getBuyerCity = async (req, res) => {
             });
         }
 
-        // Get city from user's address
-        const city = req.user?.address?.city || '';
+        // Get city from user's address or directly from user object
+        const city = req.user?.address?.city || req.user?.city || '';
 
         console.log('Returning buyer city:', city);
 
@@ -959,6 +1094,530 @@ export const getProductsBySubcategory = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Get seller's B2B products
+export const getSellerB2BProducts = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+    console.log('Searching for seller ID:', sellerId);
+
+    const query = {
+      seller: sellerId,
+      platformType: 'b2b',
+    };
+    console.log('Query:', JSON.stringify(query));
+
+    const b2bProducts = await Product.find(query)
+      .select('name description price stock category subcategory images platformType minPrice maxPrice unitType unitPrice totalStock minOrderQuantity maxOrderQuantity auctionEndDate availableLocations negotiationEnabled tags createdAt auctionStatus currentHighestBid currentHighestBidder')
+      .populate('currentHighestBidder', 'agencyName')
+      .sort({ createdAt: -1 });
+
+    console.log('Found products:', b2bProducts.length);
+
+    if (!b2bProducts || b2bProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "कोई B2B प्रोडक्ट्स नहीं मिले"
+      });
+    }
+
+    // Format the response data
+    const formattedProducts = b2bProducts.map(product => ({
+      _id: product._id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      subcategory: product.subcategory,
+      images: product.images,
+      platformType: product.platformType,
+      minPrice: product.minPrice,
+      maxPrice: product.maxPrice,
+      unitType: product.unitType,
+      unitPrice: product.unitPrice,
+      totalStock: product.totalStock,
+      minOrderQuantity: product.minOrderQuantity,
+      maxOrderQuantity: product.maxOrderQuantity,
+      auctionEndDate: product.auctionEndDate,
+      availableLocations: product.availableLocations,
+      negotiationEnabled: product.negotiationEnabled,
+      tags: product.tags,
+      createdAt: product.createdAt,
+      // Add auction fields
+      auctionStatus: product.auctionStatus,
+      currentHighestBid: product.currentHighestBid,
+      currentHighestBidder: product.currentHighestBidder ? {
+        _id: product.currentHighestBidder._id,
+        agencyName: product.currentHighestBidder.agencyName
+      } : null
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedProducts,
+      totalProducts: formattedProducts.length,
+      message: "B2B प्रोडक्ट्स सफलतापूर्वक प्राप्त किए गए"
+    });
+  } catch (error) {
+    console.error("Error in getSellerB2BProducts:", error);
+    res.status(500).json({
+      success: false,
+      message: "B2B प्रोडक्ट्स प्राप्त करने में त्रुटि हुई",
+      error: error.message
+    });
+  }
+};
+
+// Get B2B product categories
+export const getB2BCategories = async (req, res) => {
+  try {
+    // Find unique categories where platformType includes 'b2b'
+    const categories = await Product.distinct('category', {
+      platformType: 'b2b'
+    });
+
+    // Get detailed category information with subcategories
+    const categoryDetails = await Product.aggregate([
+      {
+        $match: {
+          platformType: 'b2b'
+        }
+      },
+      {
+        $group: {
+          _id: '$category',
+          subcategories: { $addToSet: '$subcategory' },
+          totalProducts: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          category: '$_id',
+          subcategories: 1,
+          totalProducts: 1,
+          _id: 0
+        }
+      },
+      {
+        $sort: { category: 1 }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'B2B श्रेणियां सफलतापूर्वक प्राप्त की गईं',
+      categories: categoryDetails
+    });
+
+  } catch (error) {
+    console.error('Error in getB2BCategories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'B2B श्रेणियां प्राप्त करने में त्रुटि हुई',
+      error: error.message
+    });
+  }
+};
+
+// Get B2B products by category with subcategories
+export const getB2BProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'श्रेणी आवश्यक है'
+      });
+    }
+
+    // Find all B2B products in this category and group by subcategory
+    const productsGroupedBySubcategory = await Product.aggregate([
+      {
+        $match: {
+          category: { $regex: new RegExp(`^${category}$`, 'i') },
+          platformType: 'b2b',
+          auctionStatus: 'active' // Only show active auctions
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'seller',
+          foreignField: '_id',
+          as: 'sellerInfo'
+        }
+      },
+      {
+        $unwind: '$sellerInfo'
+      },
+      {
+        $group: {
+          _id: '$subcategory',
+          products: {
+            $push: {
+              _id: '$_id',
+              name: '$name',
+              description: '$description',
+              minPrice: '$minPrice',
+              maxPrice: '$maxPrice',
+              currentHighestBid: '$currentHighestBid',
+              images: '$images',
+              auctionEndDate: '$auctionEndDate',
+              unitType: '$unitType',
+              totalStock: '$stock',
+              seller: {
+                _id: '$sellerInfo._id',
+                name: '$sellerInfo.firstname',
+                city: '$sellerInfo.city'
+              }
+            }
+          },
+          totalProducts: { $sum: 1 },
+          averageMinPrice: { $avg: '$minPrice' },
+          averageMaxPrice: { $avg: '$maxPrice' }
+        }
+      },
+      {
+        $project: {
+          subcategory: '$_id',
+          products: 1,
+          totalProducts: 1,
+          priceRange: {
+            min: { $round: ['$averageMinPrice', 2] },
+            max: { $round: ['$averageMaxPrice', 2] }
+          },
+          _id: 0
+        }
+      },
+      {
+        $sort: { subcategory: 1 }
+      }
+    ]);
+
+    if (!productsGroupedBySubcategory || productsGroupedBySubcategory.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `इस श्रेणी में कोई B2B प्रोडक्ट नहीं मिला: ${category}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      category,
+      totalSubcategories: productsGroupedBySubcategory.length,
+      totalProducts: productsGroupedBySubcategory.reduce((acc, curr) => acc + curr.totalProducts, 0),
+      subcategories: productsGroupedBySubcategory
+    });
+
+  } catch (error) {
+    console.error('Error in getB2BProductsByCategory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'श्रेणी के अनुसार B2B प्रोडक्ट प्राप्त करने में त्रुटि हुई',
+      error: error.message
+    });
+  }
+};
+
+// Get B2B product by ID with detailed information
+export const getB2BProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the B2B product and populate seller details
+    const product = await Product.findOne({
+      _id: id,
+      platformType: 'b2b'
+    }).populate('seller', 'firstname lastname shopName city state businessType profileImage createdAt');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'B2B प्रोडक्ट नहीं मिला'
+      });
+    }
+
+    // Get current highest bidder details if exists
+    let currentHighestBidder = null;
+    if (product.currentHighestBidder) {
+      const bidder = await Agency.findOne({
+        _id: product.currentHighestBidder,
+        userType: 'agency'
+      }).select('agencyName city');
+      
+      if (bidder) {
+        currentHighestBidder = {
+          _id: bidder._id,
+          agencyName: bidder.agencyName,
+          city: bidder.city
+        };
+      }
+    }
+
+    // Get bid history with bidder details
+    const bidHistory = await Bid.find({ product: id })
+      .sort({ bidTime: -1 })
+      .limit(5)
+      .populate({
+        path: 'bidder',
+        match: { userType: 'agency' },
+        select: 'agencyName city'
+      });
+
+    // Get bid statistics
+    const bidStats = await Bid.aggregate([
+      { $match: { product: product._id } },
+      {
+        $group: {
+          _id: null,
+          totalBids: { $sum: 1 },
+          avgBid: { $avg: '$amount' },
+          maxBid: { $max: '$amount' },
+          minBid: { $min: '$amount' }
+        }
+      }
+    ]);
+
+    // Get similar products from same category
+    const similarProducts = await Product.find({
+      _id: { $ne: id },
+      category: product.category,
+      platformType: 'b2b',
+      auctionStatus: 'active'
+    })
+    .limit(5)
+    .select('name images minPrice maxPrice currentHighestBid auctionEndDate');
+
+    // Format the response
+    const response = {
+      success: true,
+      product: {
+        _id: product._id,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        subcategory: product.subcategory,
+        images: product.images,
+        minPrice: product.minPrice,
+        maxPrice: product.maxPrice,
+        currentHighestBid: product.currentHighestBid,
+        auctionEndDate: product.auctionEndDate,
+        auctionStatus: product.auctionStatus,
+        unitType: product.unitType,
+        totalStock: product.stock,
+        negotiationEnabled: product.negotiationEnabled,
+        createdAt: product.createdAt,
+        unitPrice: product.unitPrice,
+        seller: product.seller ? {
+          _id: product.seller._id,
+          name: `${product.seller.firstname} ${product.seller.lastname}`,
+          shopName: product.seller.shopName,
+          city: product.seller.city,
+          state: product.seller.state,
+          businessType: product.seller.businessType,
+          profileImage: product.seller.profileImage,
+          sellerSince: product.seller.createdAt
+        } : null,
+        currentHighestBidder
+      },
+      bidding: {
+        bidHistory: bidHistory.map(bid => ({
+          _id: bid._id,
+          amount: bid.amount,
+          bidTime: bid.bidTime,
+          bidder: bid.bidder ? {
+            _id: bid.bidder._id,
+            agencyName: bid.bidder.agencyName,
+            city: bid.bidder.city
+          } : null
+        })),
+        stats: bidStats[0] || {
+          totalBids: 0,
+          avgBid: 0,
+          maxBid: 0,
+          minBid: 0
+        }
+      },
+      similarProducts: similarProducts.map(prod => ({
+        _id: prod._id,
+        name: prod.name,
+        images: prod.images,
+        minPrice: prod.minPrice,
+        maxPrice: prod.maxPrice,
+        currentHighestBid: prod.currentHighestBid,
+        auctionEndDate: prod.auctionEndDate
+      }))
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Error in getB2BProductById:', error);
+    res.status(500).json({
+      success: false,
+      message: 'प्रोडक्ट की जानकारी प्राप्त करने में त्रुटि हुई',
+      error: error.message
+    });
+  }
+};
+
+// Get products by formatted category URL
+export const getProductsByFormattedCategory = async (req, res) => {
+    try {
+        const { formattedCategory } = req.params;
+        const { city } = req.query;
+
+        console.log('Received request for:', { formattedCategory, city });
+
+        if (!formattedCategory) {
+            return res.status(400).json({
+                success: false,
+                message: "Category is required"
+            });
+        }
+
+        // Convert formatted URL back to category name
+        let category = formattedCategory
+            .split('-')
+            .map((word, index, array) => {
+                // Special handling for 'and'
+                if (word.toLowerCase() === 'and') return '&';
+                
+                // Capitalize first letter of each word
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            })
+            .join(' ');
+
+        // Special handling for "Home-Made" category
+        if (category.toLowerCase() === 'home made') {
+            category = 'Home-Made';
+        }
+
+        console.log('Converted category name:', category);
+
+        // Base query with case-insensitive regex for category
+        let query = {
+            $or: [
+                // Exact match (case-insensitive)
+                { category: { $regex: new RegExp(`^${category}$`, 'i') } },
+                // Match with hyphen variation for "Home-Made"
+                { category: { $regex: new RegExp(`^${category.replace(' ', '-')}$`, 'i') } },
+                // Match with space variation for "Organic Vegetables & Fruits"
+                { category: { $regex: new RegExp(`^${category.replace('&', ' & ')}$`, 'i') } }
+            ],
+            platformType: 'b2c',
+            stock: { $gt: 0 }
+        };
+
+        // Add strict city filter if provided (case-insensitive)
+        if (city) {
+            const cityRegex = new RegExp(city, 'i');
+            query.availableLocations = { $regex: cityRegex };
+        }
+
+        console.log('MongoDB Query:', JSON.stringify(query, null, 2));
+
+        // First check if any products exist
+        const productCount = await Product.countDocuments(query);
+        console.log('Found products count:', productCount);
+
+        if (productCount === 0) {
+            // Try to find what categories and cities actually exist
+            const existingCategories = await Product.distinct('category');
+            const existingCities = await Product.distinct('availableLocations');
+            console.log('Existing categories in DB:', existingCategories);
+            console.log('Existing cities in DB:', existingCities);
+            
+            return res.status(404).json({
+                success: false,
+                message: `No products found for category: ${category}${city ? ` in ${city}` : ''}`,
+                debug: {
+                    searchedCategory: category,
+                    searchedCity: city,
+                    existingCategories: existingCategories,
+                    existingCities: existingCities
+                }
+            });
+        }
+
+        // Fetch products and group by subcategory
+        const products = await Product.aggregate([
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'seller',
+                    foreignField: '_id',
+                    as: 'sellerInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$sellerInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $group: {
+                    _id: '$subcategory',
+                    products: {
+                        $push: {
+                            _id: '$_id',
+                            name: '$name',
+                            description: '$description',
+                            price: '$price',
+                            images: '$images',
+                            stock: '$stock',
+                            rating: '$rating',
+                            numReviews: '$numReviews',
+                            unitSize: '$unitSize',
+                            unitType: '$unitType',
+                            availableLocations: '$availableLocations',
+                            primaryLocation: '$primaryLocation',
+                            seller: {
+                                _id: '$sellerInfo._id',
+                                firstname: '$sellerInfo.firstname',
+                                lastname: '$sellerInfo.lastname',
+                                city: '$sellerInfo.city'
+                            }
+                        }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    subcategory: '$_id',
+                    products: 1,
+                    count: 1,
+                    _id: 0
+                }
+            },
+            { $sort: { subcategory: 1 } }
+        ]);
+
+        console.log('Aggregation results:', JSON.stringify(products, null, 2));
+
+        res.status(200).json({
+            success: true,
+            category,
+            city: city || null,
+            totalSubcategories: products.length,
+            totalProducts: products.reduce((acc, curr) => acc + curr.count, 0),
+            subcategories: products
+        });
+
+    } catch (error) {
+        console.error('Error in getProductsByFormattedCategory:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching products by formatted category',
+            error: error.message
+        });
+    }
 };
 
 export default router;

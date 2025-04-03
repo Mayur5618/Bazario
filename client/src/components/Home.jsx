@@ -221,27 +221,36 @@ const Home = () => {
   ];
 
   const handleCategoryClick = async (slug) => {
+    // Format the category name: replace spaces with hyphens and & with 'and'
+    const formattedCategory = slug
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/&/g, 'and');
+    
     // Keep original format, just encode for URL
-    const encodedCategory = encodeURIComponent(slug);
+    const encodedCategory = encodeURIComponent(formattedCategory);
+    const city = userCity || userData?.city || '';
     
     try {
       // Log the request details
       console.log('Fetching category products:', {
-        category: slug,
-        city: userCity || userData?.city
+        category: formattedCategory,
+        city
       });
 
-      const response = await axios.get(`/api/products/category/${encodedCategory}`, {
+      // Use the new web API endpoint
+      const response = await axios.get(`/api/products/web/category/${encodedCategory}`, {
         params: {
-          city: userCity || userData?.city || undefined
+          city
         }
       });
 
       console.log('API Response:', response.data);
 
       if (response.data.success) {
-        // Navigate with the data
-        navigate(`/products/category/${encodedCategory}`, {
+        // Navigate with the data and include city in URL
+        const cityParam = city ? `?city=${encodeURIComponent(city)}` : '';
+        navigate(`/products/category/${encodedCategory}${cityParam}`, {
           state: { 
             categoryData: {
               ...response.data,
@@ -256,17 +265,17 @@ const Home = () => {
                 }))
               }))
             },
-            city: userCity || userData?.city 
+            city 
           }
         });
       } else {
         console.error('API returned success: false');
-        navigate(`/products/category/${encodedCategory}?city=${userCity || userData?.city || ''}`);
+        navigate(`/products/category/${encodedCategory}?city=${city || ''}`);
       }
     } catch (error) {
       console.error('Error fetching category products:', error.response?.data || error.message);
       // Still navigate but without data
-      navigate(`/products/category/${encodedCategory}?city=${userCity || userData?.city || ''}`);
+      navigate(`/products/category/${encodedCategory}?city=${city || ''}`);
     }
   };
 

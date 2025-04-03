@@ -110,20 +110,25 @@ export const getPendingOrders = async (req, res) => {
 export const getSellerProducts = async (req, res) => {
     try {
         const sellerId = req.params.sellerId || req.user._id;
-        const { sort = '-createdAt', limit } = req.query;
+        const { sort = '-createdAt', limit, platformType } = req.query;
         
         // Create base query
-        let query = Product.find({ seller: sellerId })
-            .sort(sort)
-            .select('name price images stock rating numReviews');
-
-        // Apply limit only if specified
-        if (limit) {
-            query = query.limit(parseInt(limit));
+        let query = { seller: sellerId };
+        
+        // Add platformType filter if provided
+        if (platformType) {
+            query.platformType = platformType;
         }
 
         // Execute query
-        const products = await query;
+        let products = await Product.find(query)
+            .sort(sort)
+            .select('name price images stock rating numReviews platformType minPrice maxPrice unitType unitPrice auctionEndDate availableLocations negotiationEnabled currentHighestBid currentHighestBidder auctionStatus');
+
+        // Apply limit only if specified
+        if (limit) {
+            products = products.slice(0, parseInt(limit));
+        }
 
         // Fetch latest review and pending orders for each product
         const productsWithDetails = await Promise.all(products.map(async (product) => {

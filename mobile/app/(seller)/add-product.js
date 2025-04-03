@@ -836,14 +836,14 @@ const AddProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>श्रेणी *</Text>
+        <Text style={styles.label}>{t.fields.category.label}</Text>
         {showCustomCategoryInput ? (
           <View>
             <TextInput
               style={styles.input}
               value={customCategoryInput}
               onChangeText={setCustomCategoryInput}
-              placeholder="अपनी श्रेणी दर्ज करें"
+              placeholder={t.fields.category.placeholder || "Enter your category"}
               onSubmitEditing={() => {
                 if (customCategoryInput.trim()) {
                   setFormData(prev => ({ ...prev, category: customCategoryInput.trim() }));
@@ -867,7 +867,7 @@ const AddProductScreen = () => {
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
-              <Picker.Item label="श्रेणी चुनें" value="" />
+              <Picker.Item label={t.fields.category.placeholder || "Select Category"} value="" />
               {categories.map((category) => (
                 <Picker.Item 
                   key={category} 
@@ -882,7 +882,7 @@ const AddProductScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>उपश्रेणी *</Text>
+        <Text style={styles.label}>{t.fields.subcategory.label || "Subcategory *"}</Text>
         <View style={styles.subcategoryContainer}>
           <View style={styles.subcategoryInputWrapper}>
             <TextInput
@@ -890,15 +890,13 @@ const AddProductScreen = () => {
               value={formData.subcategory}
               onChangeText={(text) => {
                 setFormData(prev => ({ ...prev, subcategory: text }));
-                // Hide suggestions when user starts typing
                 if (text.length > 0) {
                   setShowSubcategorySuggestions(false);
                 }
               }}
-              placeholder="उपश्रेणी दर्ज करें या चुनें"
+              placeholder={t.fields.subcategory.placeholder || "Enter or select subcategory"}
               placeholderTextColor="#666"
               onFocus={() => {
-                // Only show suggestions if no text is entered
                 if (!formData.subcategory) {
                   setShowSubcategorySuggestions(true);
                 }

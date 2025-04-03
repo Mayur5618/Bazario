@@ -17,12 +17,15 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from '../../src/config/axios';
 import { useAuth } from '../../src/context/AuthContext';
 import { sellerApi } from '../../src/api/sellerApi';
+import { useLanguage } from '../../src/context/LanguageContext';
+import { translations } from '../../src/translations/profile';
 
 const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { language, t } = useLanguage(translations);
   const [isEditing, setIsEditing] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -40,6 +43,16 @@ const ProfileScreen = () => {
   });
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
+
+  // If translations are not loaded yet, show loading state
+  if (!t) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#6B46C1" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   useEffect(() => {
     fetchProfileData();
@@ -74,7 +87,7 @@ const ProfileScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      Alert.alert('एरर', 'प्रोफ़ाइल लोड करने में समस्या हुई');
+      Alert.alert('Error', t.errors.loadProfile);
     } finally {
       setLoading(false);
     }
@@ -98,7 +111,6 @@ const ProfileScreen = () => {
         try {
           console.log('Uploading image to Firebase...');
           
-          // Upload base64 image to Firebase
           const uploadResponse = await axios.post('/api/upload/firebase', {
             file: result.assets[0].base64,
             path: `profile-images/${user?._id}-${Date.now()}.jpg`,
@@ -113,7 +125,6 @@ const ProfileScreen = () => {
           if (uploadResponse.data?.success && uploadResponse.data?.url) {
             console.log('Updating profile with new image URL...');
             
-            // Update profile with Firebase URL
             const updateResponse = await axios.put(`/api/users/sellers/${user?._id}`, {
               profileImage: uploadResponse.data.url
             });
@@ -123,25 +134,25 @@ const ProfileScreen = () => {
                 ...prev,
                 profileImage: uploadResponse.data.url
               }));
-              Alert.alert('सफल', 'प्रोफाइल फोटो अपडेट हो गया है');
-              fetchProfileData(); // Refresh profile data
+              Alert.alert('Success', t.success.photoUpdate);
+              fetchProfileData();
             } else {
-              throw new Error('प्रोफाइल अपडेट नहीं हो सका');
+              throw new Error('Could not update profile');
             }
           } else {
-            throw new Error('फोटो अपलोड नहीं हो सका');
+            throw new Error('Could not upload photo');
           }
         } catch (uploadError) {
           console.error('Error uploading image:', uploadError?.response?.data || uploadError);
           Alert.alert(
-            'एरर',
-            uploadError?.response?.data?.message || 'फोटो अपलोड करने में समस्या हुई। कृपया पुनः प्रयास करें।'
+            'Error',
+            t.errors.uploadPhoto
           );
         }
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('एरर', 'फोटो चुनने में समस्या हुई। कृपया पुनः प्रयास करें।');
+      Alert.alert('Error', t.errors.selectPhoto);
     } finally {
       setImageLoading(false);
     }
@@ -150,7 +161,6 @@ const ProfileScreen = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Split the full name into firstname and lastname
       const [firstname = '', lastname = ''] = profileData.name.split(' ');
       
       const updateData = {
@@ -167,13 +177,13 @@ const ProfileScreen = () => {
       const response = await axios.put(`/api/users/sellers/${user?._id}`, updateData);
       
       if (response.data) {
-        Alert.alert('सफल', 'प्रोफ़ाइल अपडेट हो गया है');
+        Alert.alert('Success', t.success.profileUpdate);
         setIsEditing(false);
-        fetchProfileData(); // Refresh data after update
+        fetchProfileData();
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('एरर', 'प्रोफ़ाइल अपडेट करने में समस्या हुई');
+      Alert.alert('Error', t.errors.updateProfile);
     } finally {
       setLoading(false);
     }
@@ -181,27 +191,26 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     Alert.alert(
-      "लॉगआउट",
-      "क्या आप लॉगआउट करना चाहते हैं?",
+      t.logoutConfirm.title,
+      t.logoutConfirm.message,
       [
         {
-          text: "रद्द करें",
+          text: t.logoutConfirm.cancel,
           style: "cancel"
         },
         {
-          text: "लॉगआउट",
+          text: t.logoutConfirm.confirm,
           style: "destructive",
           onPress: async () => {
             try {
               await logout();
-              // Navigate to login screen with reset to prevent going back
               router.replace({
                 pathname: '/(auth)/login',
                 params: { reset: true }
               });
             } catch (error) {
               console.error('Error logging out:', error);
-              Alert.alert('एरर', 'लॉगआउट करने में समस्या हुई');
+              Alert.alert('Error', t.errors.logout);
             }
           }
         }
@@ -211,7 +220,7 @@ const ProfileScreen = () => {
 
   const renderField = (label, value, key, keyboardType = 'default', multiline = false) => (
     <View style={styles.fieldContainer}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{t.fields[key]}</Text>
       {isEditing ? (
         <TextInput
           style={[
@@ -225,12 +234,12 @@ const ProfileScreen = () => {
           multiline={multiline}
           numberOfLines={multiline ? 4 : 1}
           placeholderTextColor="#999"
-          placeholder={`${label} दर्ज करें`}
+          placeholder={`${t.fields[key]} दर्ज करें`}
         />
       ) : (
         <View style={styles.valueContainer}>
-          <Text style={styles.value}>{value || 'Not provided'}</Text>
-          {!value && <Text style={styles.emptyText}>जानकारी उपलब्ध नहीं है</Text>}
+          <Text style={styles.value}>{value || t.placeholders.notProvided}</Text>
+          {!value && <Text style={styles.emptyText}>{t.placeholders.noInfo}</Text>}
         </View>
       )}
     </View>
@@ -238,9 +247,9 @@ const ProfileScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>लोड हो रहा है...</Text>
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#6B46C1" />
+        <Text style={styles.loadingText}>{t.loading}</Text>
       </View>
     );
   }
@@ -249,33 +258,23 @@ const ProfileScreen = () => {
     <ScrollView style={styles.container}>
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
-          <TouchableOpacity onPress={handleImagePick} style={styles.imageWrapper}>
-            {imageLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6C63FF" />
-              </View>
-            ) : profileData.profileImage ? (
+          <TouchableOpacity onPress={handleImagePick} disabled={!isEditing}>
+            {profileData.profileImage ? (
               <Image
                 source={{ uri: profileData.profileImage }}
                 style={styles.profileImage}
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
-                <Ionicons name="person" size={60} color="#666" />
+                <Ionicons name="person" size={64} color="#CCC" />
               </View>
             )}
-            {isEditing && !imageLoading && (
-              <View style={styles.editImageOverlay}>
-                <Ionicons name="camera" size={24} color="#FFF" />
-              </View>
-            )}
+            <Text style={styles.profileImageText}>
+              {isEditing ? (imageLoading ? t.uploadingPhoto : t.editPhoto) : t.profilePhoto}
+            </Text>
           </TouchableOpacity>
-          <Text style={styles.uploadText}>
-            {isEditing ? (imageLoading ? 'अपलोड हो रहा है...' : 'टैप करके फोटो बदलें') : 'प्रोफाइल फोटो'}
-          </Text>
         </View>
 
-        {/* Edit Button */}
         <TouchableOpacity 
           onPress={() => {
             if (isEditing) {
@@ -292,57 +291,52 @@ const ProfileScreen = () => {
             color="#FFF" 
           />
           <Text style={styles.editButtonText}>
-            {isEditing ? 'सेव करें' : 'एडिट करें'}
+            {isEditing ? t.save : t.edit}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{profileData.totalProducts}</Text>
-            <Text style={styles.statLabel}>प्रोडक्ट</Text>
+          <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
+            <Text style={styles.statValue}>{profileData.totalProducts}</Text>
+            <Text style={styles.statLabel}>{t.stats.products}</Text>
+            <Text style={styles.statSubLabel}>{t.stats.totalItems}</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{profileData.totalOrders}</Text>
-            <Text style={styles.statLabel}>ऑर्डर</Text>
+          <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
+            <Text style={styles.statValue}>{profileData.totalOrders}</Text>
+            <Text style={styles.statLabel}>{t.stats.orders}</Text>
+            <Text style={styles.statSubLabel}>{t.stats.totalSales}</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>₹{profileData.totalRevenue}</Text>
-            <Text style={styles.statLabel}>कमाई</Text>
+          <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
+            <Text style={styles.statValue}>₹{profileData.totalRevenue}</Text>
+            <Text style={styles.statLabel}>{t.stats.revenue}</Text>
+            <Text style={styles.statSubLabel}>{t.stats.totalEarnings}</Text>
           </View>
         </View>
 
-        {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={handleLogout}
         >
           <Ionicons name="log-out-outline" size={24} color="#FFF" />
-          <Text style={styles.logoutText}>लॉगआउट करें</Text>
+          <Text style={styles.logoutText}>{t.logout}</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.formContainer}>
-        <Text style={styles.sectionTitle}>व्यक्तिगत जानकारी</Text>
-        <View style={styles.form}>
-          {renderField('नाम', profileData.name, 'name')}
-          {renderField('दुकान का नाम', profileData.shopName, 'shopName')}
-          {renderField('फ़ोन नंबर', profileData.phone, 'phone', 'phone-pad')}
-        </View>
-
-        <Text style={styles.sectionTitle}>पता</Text>
-        <View style={styles.form}>
-          {renderField('पता', profileData.address, 'address', 'default', true)}
-          {renderField('शहर', profileData.city, 'city')}
-          {renderField('राज्य', profileData.state, 'state')}
-          {renderField('पिन कोड', profileData.pincode, 'pincode', 'numeric')}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t.sections.personalInfo}</Text>
+        <View style={styles.formContainer}>
+          {renderField(t.fields.name, profileData.name, 'name')}
+          {renderField(t.fields.shopName, profileData.shopName, 'shopName')}
+          {renderField(t.fields.phone, profileData.phone, 'phone', 'phone-pad')}
+          {renderField(t.fields.address, profileData.address, 'address', 'default', true)}
+          {renderField(t.fields.city, profileData.city, 'city')}
+          {renderField(t.fields.state, profileData.state, 'state')}
+          {renderField(t.fields.pincode, profileData.pincode, 'pincode', 'numeric')}
         </View>
       </View>
 
-      {/* Recent Products */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Products</Text>
+        <Text style={styles.sectionTitle}>{t.sections.recentProducts}</Text>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -364,7 +358,7 @@ const ProfileScreen = () => {
                 </Text>
                 <Text style={styles.productPrice}>₹{product.price}</Text>
                 <View style={styles.productStats}>
-                  <Text style={styles.productStock}>Stock: {product.stock}</Text>
+                  <Text style={styles.productStock}>{t.products.stock}: {product.stock}</Text>
                   <View style={styles.productRating}>
                     <MaterialIcons 
                       name="star" 
@@ -372,7 +366,7 @@ const ProfileScreen = () => {
                       color={product.rating > 0 ? "#FFD700" : "#666"}
                     />
                     <Text style={styles.ratingText}>
-                      {product.rating > 0 ? product.rating.toFixed(1) : 'NEW'}
+                      {product.rating > 0 ? product.rating.toFixed(1) : t.products.new}
                     </Text>
                   </View>
                 </View>
@@ -642,6 +636,45 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     marginLeft: 4,
+  },
+  profileImageText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+  statSubLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

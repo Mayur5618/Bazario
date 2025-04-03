@@ -266,7 +266,7 @@ const ProductCatalog = () => {
       const response = await axios.get('/api/products', {
         params: {
           category: category === 'all' ? undefined : category,
-          limit: 8,
+          limit: 10,
           featured: true
         }
       });
@@ -305,7 +305,7 @@ const ProductCatalog = () => {
           params: {
             category: initialCategory === 'all' ? undefined : initialCategory,
             featured: true,
-            limit: 8
+            limit: 10
           }
         });
 

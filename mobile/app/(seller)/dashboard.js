@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { sellerApi } from '../../src/api/sellerApi';
 import { BlurView } from 'expo-blur';
@@ -22,12 +23,93 @@ import ReviewsTab from './ReviewsTab';
 import ProfileTab from './profile';
 import B2BDashboard from '../../src/components/B2BDashboard';
 
+// Translations for all UI text
+const translations = {
+  en: {
+    totalProducts: 'Total Products',
+    totalOrders: 'Total Orders',
+    pendingOrders: 'Pending Orders',
+    revenue: 'Revenue',
+    sellerRating: 'Seller Rating',
+    reviews: 'Reviews',
+    latestProducts: 'Latest Products',
+    latestReview: 'Latest Review',
+    viewAll: 'View All',
+    dashboard: 'Dashboard',
+    products: 'Products',
+    orders: 'Orders',
+    reviews: 'Reviews',
+    profile: 'Profile',
+    personal: 'Personal',
+    business: 'Business',
+    noProductsYet: 'No products added yet'
+  },
+  hi: {
+    totalProducts: 'कुल उत्पाद',
+    totalOrders: 'कुल ऑर्डर',
+    pendingOrders: 'लंबित ऑर्डर',
+    revenue: 'कमाई',
+    sellerRating: 'विक्रेता रेटिंग',
+    reviews: 'समीक्षाएं',
+    latestProducts: 'नवीनतम उत्पाद',
+    latestReview: 'नवीनतम समीक्षा',
+    viewAll: 'सभी देखें',
+    dashboard: 'डैशबोर्ड',
+    products: 'उत्पाद',
+    orders: 'ऑर्डर',
+    reviews: 'समीक्षाएं',
+    profile: 'प्रोफाइल',
+    personal: 'व्यक्तिगत',
+    business: 'व्यापार',
+    noProductsYet: 'अभी तक कोई उत्पाद नहीं जोड़ा गया'
+  },
+  mr: {
+    totalProducts: 'एकूण उत्पादने',
+    totalOrders: 'एकूण ऑर्डर',
+    pendingOrders: 'प्रलंबित ऑर्डर',
+    revenue: 'महसूल',
+    sellerRating: 'विक्रेता रेटिंग',
+    reviews: 'समीक्षा',
+    latestProducts: 'नवीनतम उत्पादने',
+    latestReview: 'नवीनतम समीक्षा',
+    viewAll: 'सर्व पहा',
+    dashboard: 'डॅशबोर्ड',
+    products: 'उत्पादने',
+    orders: 'ऑर्डर',
+    reviews: 'समीक्षा',
+    profile: 'प्रोफाइल',
+    personal: 'वैयक्तिक',
+    business: 'व्यवसाय',
+    noProductsYet: 'अजून कोणतेही उत्पाद जोडले नाही'
+  },
+  gu: {
+    totalProducts: 'કુલ ઉત્પાદનો',
+    totalOrders: 'કુલ ઓર્ડર',
+    pendingOrders: 'બાકી ઓર્ડર',
+    revenue: 'આવક',
+    sellerRating: 'વિક્રેતા રેટિંગ',
+    reviews: 'સમીક્ષાઓ',
+    latestProducts: 'નવીનતમ ઉત્પાદનો',
+    latestReview: 'નવીનતમ સમીક્ષા',
+    viewAll: 'બધા જુઓ',
+    dashboard: 'ડેશબોર્ડ',
+    products: 'ઉત્પાદનો',
+    orders: 'ઓર્ડર',
+    reviews: 'સમીક્ષાઓ',
+    profile: 'પ્રોફાઇલ',
+    personal: 'વ્યક્તિગત',
+    business: 'વ્યાપાર',
+    noProductsYet: 'હજી સુધી કોઈ ઉત્પાદન ઉમેર્યું નથી'
+  }
+};
+
 const { width } = Dimensions.get('window');
 const cardWidth = width - 40; // Full width cards with padding
 
 const SellerDashboard = () => {
   const router = useRouter();
   const { user, logout, businessMode, setBusinessMode } = useAuth();
+  const { language } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [mode, setMode] = useState('personal');
@@ -43,9 +125,12 @@ const SellerDashboard = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Get translations for current language
+  const t = translations[language] || translations.en;
+
   useEffect(() => {
     fetchDashboardStats();
-  }, []);
+  }, [businessMode]);
 
   const handleLogout = async () => {
     try {
@@ -67,7 +152,11 @@ const SellerDashboard = () => {
       setLoading(true);
       const [statsResponse, productsResponse] = await Promise.all([
         sellerApi.getDashboardStats(),
-        sellerApi.getSellerProducts({ limit: 3, sort: '-createdAt' })
+        sellerApi.getSellerProducts({ 
+          limit: 3, 
+          sort: '-createdAt',
+          platformType: businessMode === 'business' ? 'b2b' : 'b2c'
+        })
       ]);
 
       if (statsResponse.success && productsResponse.success) {
@@ -186,13 +275,17 @@ const SellerDashboard = () => {
           style={[styles.modeButton, businessMode === 'personal' && styles.activeModeButton]}
           onPress={() => setBusinessMode('personal')}
         >
-          <Text style={[styles.modeButtonText, businessMode === 'personal' && styles.activeModeButtonText]}>Personal</Text>
+          <Text style={[styles.modeButtonText, businessMode === 'personal' && styles.activeModeButtonText]}>
+            {t.personal}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.modeButton, businessMode === 'business' && styles.activeModeButton]}
           onPress={() => setBusinessMode('business')}
         >
-          <Text style={[styles.modeButtonText, businessMode === 'business' && styles.activeModeButtonText]}>Business</Text>
+          <Text style={[styles.modeButtonText, businessMode === 'business' && styles.activeModeButtonText]}>
+            {t.business}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -212,33 +305,33 @@ const SellerDashboard = () => {
       >
         <View style={styles.statsContainer}>
           <DashboardCard 
-            title="Total Products"
+            title={t.totalProducts}
             value={stats.totalProducts}
             icon="cube-outline"
             color="#6C63FF"
             onPress={() => router.push('/(seller)/products')}
           />
           <DashboardCard 
-            title="Total Orders"
+            title={t.totalOrders}
             value={stats.totalOrders}
             icon="cart-outline"
             color="#00C853"
           />
           <DashboardCard 
-            title="Pending Orders"
+            title={t.pendingOrders}
             value={stats.pendingOrders}
             icon="time-outline"
             color="#FF9800"
             onPress={() => router.push('/pending-orders')}
           />
           <DashboardCard 
-            title="Revenue"
+            title={t.revenue}
             value={`₹${stats.revenue}`}
             icon="cash-outline"
             color="#2196F3"
           />
           <DashboardCard 
-            title="Seller Rating"
+            title={t.sellerRating}
             value={stats.sellerRating > 0 ? `${stats.sellerRating} ★` : 'New'}
             icon="star-outline"
             color="#FFD700"
@@ -249,12 +342,12 @@ const SellerDashboard = () => {
         {/* Latest Products Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Latest Products</Text>
+            <Text style={styles.sectionTitle}>{t.latestProducts}</Text>
             <TouchableOpacity 
               style={styles.viewAllButton}
               onPress={() => router.push('/(seller)/products')}
             >
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={styles.viewAllText}>{t.viewAll}</Text>
               <Ionicons name="chevron-forward" size={16} color="#6C63FF" />
             </TouchableOpacity>
           </View>
@@ -266,7 +359,7 @@ const SellerDashboard = () => {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="cube-outline" size={48} color="#666" />
-                <Text style={styles.emptyStateText}>No products added yet</Text>
+                <Text style={styles.emptyStateText}>{t.noProductsYet}</Text>
               </View>
             )}
           </View>
@@ -275,7 +368,7 @@ const SellerDashboard = () => {
         {/* Latest Review Section */}
         {stats.latestReview && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Latest Review</Text>
+            <Text style={styles.sectionTitle}>{t.latestReview}</Text>
             <View style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewUser}>
@@ -359,7 +452,7 @@ const SellerDashboard = () => {
             color={activeTab === 'dashboard' ? '#6C63FF' : '#666'}
           />
           <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.activeTabLabel]}>
-            Dashboard
+            {t.dashboard}
           </Text>
         </TouchableOpacity>
 
@@ -373,7 +466,7 @@ const SellerDashboard = () => {
             color={activeTab === 'products' ? '#6C63FF' : '#666'}
           />
           <Text style={[styles.tabLabel, activeTab === 'products' && styles.activeTabLabel]}>
-            Products
+            {t.products}
           </Text>
         </TouchableOpacity>
 
@@ -387,7 +480,7 @@ const SellerDashboard = () => {
             color={activeTab === 'orders' ? '#6C63FF' : '#666'}
           />
           <Text style={[styles.tabLabel, activeTab === 'orders' && styles.activeTabLabel]}>
-            Orders
+            {t.orders}
           </Text>
         </TouchableOpacity>
 
@@ -401,7 +494,7 @@ const SellerDashboard = () => {
             color={activeTab === 'reviews' ? '#6C63FF' : '#666'}
           />
           <Text style={[styles.tabLabel, activeTab === 'reviews' && styles.activeTabLabel]}>
-            Reviews
+            {t.reviews}
           </Text>
         </TouchableOpacity>
 
@@ -417,7 +510,7 @@ const SellerDashboard = () => {
             color={activeTab === 'profile' ? '#6C63FF' : '#666'}
           />
           <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
-            Profile
+            {t.profile}
           </Text>
         </TouchableOpacity>
       </View>

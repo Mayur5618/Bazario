@@ -499,6 +499,14 @@ export const updateReview = async (req, res) => {
         const { rating, comment, images } = req.body;
         const userId = req.user._id;
 
+        console.log('Update review attempt:', {
+            reviewId,
+            userId,
+            rating,
+            hasComment: !!comment,
+            hasImages: !!images
+        });
+
         // Find the review and check ownership
         const review = await Review.findById(reviewId);
         
@@ -509,6 +517,14 @@ export const updateReview = async (req, res) => {
             });
         }
 
+        console.log('Found review:', {
+            reviewId: review._id,
+            currentRating: review.rating,
+            currentComment: review.comment,
+            reviewOwner: review.buyer.toString(),
+            requestUser: userId.toString()
+        });
+
         if (review.buyer.toString() !== userId.toString()) {
             return res.status(403).json({
                 success: false,
@@ -516,39 +532,57 @@ export const updateReview = async (req, res) => {
             });
         }
 
-        // Handle image updates if needed
-        let imageUrls = review.images; // Keep existing images by default
-        if (Array.isArray(images)) {
-            // Upload new images if provided
-            try {
-                const uploadPromises = images.map(async (base64String) => {
-                    if (base64String && typeof base64String === 'string' && base64String.startsWith('data:')) {
-                        return await uploadToFirebase(base64String);
-                    }
-                    return base64String; // Keep existing image URLs
-                });
-
-                imageUrls = (await Promise.all(uploadPromises)).filter(url => url !== null);
-            } catch (uploadError) {
-                console.error('Image upload error:', uploadError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to upload images',
-                    error: uploadError.message
-                });
-            }
+        // Validate the data
+        if (rating === undefined || !comment) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rating and comment are required'
+            });
         }
 
-        // Update the review
-        const updatedReview = await Review.findByIdAndUpdate(
-            reviewId,
-            {
-                rating,
-                comment,
-                images: imageUrls
-            },
-            { new: true }
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rating must be between 1 and 5'
+            });
+        }
+
+        // Prepare update data
+        const updateData = {
+            rating: parseInt(rating),
+            comment: comment.trim(),
+            updatedAt: Date.now()
+        };
+
+        // Only update images if new ones are provided
+        if (images) {
+            updateData.images = images;
+        }
+
+        console.log('Updating review with data:', updateData);
+
+        // Update the review using findOneAndUpdate for atomic operation
+        const updatedReview = await Review.findOneAndUpdate(
+            { _id: reviewId, buyer: userId },
+            updateData,
+            { 
+                new: true,
+                runValidators: true 
+            }
         ).populate('buyer', 'firstname lastname');
+
+        if (!updatedReview) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review not found or unauthorized'
+            });
+        }
+
+        console.log('Review updated successfully:', {
+            reviewId: updatedReview._id,
+            newRating: updatedReview.rating,
+            newComment: updatedReview.comment
+        });
 
         res.status(200).json({
             success: true,
@@ -571,35 +605,83 @@ export const checkUserReview = async (req, res) => {
         const { productId } = req.params;
         const userId = req.user._id;
 
-        // Match your order route's status check
-        const validOrderStatuses = ['delivered', 'completed', 'Delivered', 'Completed'];
-
-        const completedOrder = await Order.findOne({
-            buyer: userId,
-            'items.product': productId,
-            status: { $in: validOrderStatuses }
-        });
-
-        console.log('Review eligibility check:', {
-            userId,
+        console.log('Checking review eligibility:', {
             productId,
-            hasCompletedOrder: !!completedOrder,
-            orderStatus: completedOrder?.status,
-            orderId: completedOrder?._id
+            userId
         });
 
-        // Check if user has already reviewed
+        // First check if user has already reviewed this product
         const existingReview = await Review.findOne({
             product: productId,
             buyer: userId
         });
 
+        console.log('Existing review check:', {
+            hasReview: !!existingReview,
+            reviewId: existingReview?._id
+        });
+
+        if (existingReview) {
+            return res.status(200).json({
+                success: true,
+                canReview: false,
+                hasReviewed: true,
+                orderId: existingReview.order
+            });
+        }
+
+        // Find all completed/delivered orders containing this product
+        const orders = await Order.find({
+            buyer: userId,
+            'items.product': productId,
+            status: { 
+                $in: ['delivered', 'completed', 'Delivered', 'Completed']
+            }
+        }).sort({ createdAt: -1 }); // Get most recent order first
+
+        console.log('Found orders:', {
+            count: orders.length,
+            orders: orders.map(order => ({
+                orderId: order._id,
+                status: order.status,
+                items: order.items.map(item => ({
+                    product: item.product.toString(),
+                    matches: item.product.toString() === productId
+                }))
+            }))
+        });
+
+        // Get the most recent eligible order
+        const eligibleOrder = orders[0];
+
+        // Double check if the product exists in the order
+        const productInOrder = eligibleOrder?.items.some(item => 
+            item.product.toString() === productId
+        );
+
+        console.log('Order eligibility:', {
+            hasEligibleOrder: !!eligibleOrder,
+            orderStatus: eligibleOrder?.status,
+            productInOrder,
+            orderId: eligibleOrder?._id
+        });
+
+        if (!eligibleOrder || !productInOrder) {
+            return res.status(200).json({
+                success: true,
+                canReview: false,
+                hasReviewed: false,
+                message: 'No eligible orders found for this product',
+                orderId: null
+            });
+        }
+
         res.status(200).json({
             success: true,
-            canReview: !!completedOrder && !existingReview,
-            hasReviewed: !!existingReview,
-            orderId: completedOrder?._id || null,
-            orderStatus: completedOrder?.status
+            canReview: true,
+            hasReviewed: false,
+            orderId: eligibleOrder._id,
+            orderStatus: eligibleOrder.status
         });
 
     } catch (error) {
