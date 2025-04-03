@@ -1525,91 +1525,88 @@ const ProductDetail = () => {
           </div>
 
           <div className="relative">
-            {product.relatedProducts?.length > 5 && (
+            {product.relatedProducts?.length > 0 && (
               <>
                 <button 
                   onClick={() => {
                     const container = document.getElementById('related-products-container');
-                    container.scrollLeft -= container.offsetWidth;
+                    container.scrollLeft -= 240; // Scroll by card width
                   }}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ transform: 'translate(-10px, -50%)' }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
+                  <FaChevronLeft className="w-5 h-5 text-gray-600" />
                 </button>
                 <button 
                   onClick={() => {
                     const container = document.getElementById('related-products-container');
-                    container.scrollLeft += container.offsetWidth;
+                    container.scrollLeft += 240; // Scroll by card width
                   }}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ transform: 'translate(10px, -50%)' }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <FaChevronRight className="w-5 h-5 text-gray-600" />
                 </button>
               </>
             )}
             
             <div 
               id="related-products-container"
-              className="overflow-x-auto hide-scrollbar scroll-smooth"
+              className="flex overflow-x-auto hide-scrollbar scroll-smooth gap-4 pb-4"
+              style={{ scrollBehavior: 'smooth' }}
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 min-w-max">
-                {product.relatedProducts?.map((relatedProduct) => (
-                  <div 
-                    key={relatedProduct._id}
-                    className="w-[160px] sm:w-[200px] md:w-[220px] lg:w-[240px] bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col"
-                  >
-                    <Link to={`/product/${relatedProduct._id}`}>
-                      <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
-                        <img
-                          src={relatedProduct.images[0]}
-                          alt={relatedProduct.name}
-                          className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        />
-                        {relatedProduct.stock <= 0 && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                            <span className="text-white text-sm md:text-base font-medium">Out of Stock</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-2 flex flex-col flex-grow">
-                        <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-1">
-                          {relatedProduct.name}
-                        </h3>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-sm sm:text-base font-bold">₹{relatedProduct.price}</span>
-                          </div>
+              {product.relatedProducts?.map((relatedProduct) => (
+                <div 
+                  key={relatedProduct._id}
+                  className="flex-shrink-0 w-[240px] bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all"
+                >
+                  <Link to={`/product/${relatedProduct._id}`} className="block">
+                    <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                      <img
+                        src={relatedProduct.images[0]}
+                        alt={relatedProduct.name}
+                        className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                      {relatedProduct.stock <= 0 && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                          <span className="text-white text-sm font-medium">Out of Stock</span>
                         </div>
-                        <div className="flex items-center gap-1 mb-1">
-                          <div className="flex">
-                            {[...Array(5)].map((_, index) => (
-                              <FaStar
-                                key={index}
-                                className={`w-2 h-2 sm:w-3 sm:h-3 ${
-                                  index < (relatedProduct.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-[10px] sm:text-xs text-gray-600">
-                            ({relatedProduct.reviews?.length || 0})
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                          <span className={`font-medium ${relatedProduct.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {relatedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                          </span>
-                          <span className="text-gray-500">Stock: {relatedProduct.stock}</span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">
+                        {relatedProduct.name}
+                      </h3>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-bold text-gray-900">₹{relatedProduct.price}</span>
                         </div>
                       </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="flex">
+                          {[...Array(5)].map((_, index) => (
+                            <FaStar
+                              key={index}
+                              className={`w-3 h-3 ${
+                                index < (relatedProduct.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          ({relatedProduct.reviews?.length || 0})
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={`font-medium ${relatedProduct.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {relatedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                        <span className="text-gray-500">Stock: {relatedProduct.stock}</span>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1618,11 +1615,11 @@ const ProductDetail = () => {
       {/* Add this CSS to hide scrollbar but keep functionality */}
       <style jsx>{`
         .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
         .hide-scrollbar::-webkit-scrollbar {
-          display: none;  /* Chrome, Safari and Opera */
+          display: none;
         }
 
         @keyframes slide-up {

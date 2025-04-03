@@ -26,7 +26,8 @@ import {
   getProductsByFormattedCategory,
   getBuyerCity,
   getMostOrderedProductsByCategory,
-  getMostOrderedProductByCategory
+  getMostOrderedProductByCategory,
+  getLimitedProductsByCategory
 } from "../controllers/product.controller.js";
 import { 
   createReview, 
@@ -167,5 +168,8 @@ router.get('/most-ordered-by-category', getMostOrderedProductsByCategory);
 
 // Get most ordered product by specific category
 router.get('/most-ordered-by-category/:categoryName', getMostOrderedProductByCategory);
+
+// Get limited products by category
+router.get('/limited-by-category/:category', getLimitedProductsByCategory);
 
 export default router;

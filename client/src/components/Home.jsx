@@ -10,6 +10,44 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setCartItems, clearCart } from '../store/cartSlice';
 import axios from 'axios';
 
+// Add these animation variants
+const productCardVariants = {
+  hidden: { 
+    opacity: 0,
+    y: 20,
+    scale: 0.95
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 12
+    }
+  },
+  hover: {
+    y: -5,
+    scale: 1.02,
+    transition: {
+      type: "spring",
+      stiffness: 400,
+      damping: 10
+    }
+  }
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
 const Home = () => {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
@@ -41,7 +79,7 @@ const Home = () => {
     }
   }, [userData]);
 
-  // Fetch categories and their best rated product
+  // Fetch categories and their products
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -49,44 +87,41 @@ const Home = () => {
         if (response.data.success) {
           const uniqueCategories = response.data.categories;
           
-          // For each category, fetch most ordered product
+          // For each category, fetch limited products
           const categoriesWithData = await Promise.all(
             uniqueCategories.map(async (category) => {
               try {
-                // Get most ordered product for this category
-                const productsResponse = await axios.get(`/api/products/most-ordered-by-category/${category}`);
+                // Get 8 products for this category using new API
+                const productsResponse = await axios.get(`/api/products/limited-by-category/${category}`, {
+                  params: {
+                    city: userCity || userData?.city
+                  }
+                });
 
                 if (productsResponse.data.success) {
-                  const product = productsResponse.data.product;
                   return {
                     id: category.toLowerCase().replace(/\s+/g, '-'),
                     title: category,
                     description: `Explore our ${category} collection`,
-                    image: getCategoryImage(category), // Keep original background image
+                    image: getCategoryImage(category),
                     color: getRandomGradient(),
                     slug: category.toLowerCase().replace(/\s+/g, '-'),
-                    featuredProduct: {
-                      _id: product._id,
-                      name: product.name,
-                      price: product.price,
-                      rating: product.rating,
-                      totalOrders: product.totalOrders,
-                      images: product.images,
-                      seller: product.seller
-                    }
+                    products: productsResponse.data.products,
+                    featuredProduct: productsResponse.data.products[0] // Use first product as featured
                   };
                 }
                 return null;
               } catch (err) {
-                console.error(`Error fetching most ordered product for ${category}:`, err);
-                // Fallback to default category data
+                console.error(`Error fetching products for ${category}:`, err);
+                // Fallback to default category data without products
                 return {
                   id: category.toLowerCase().replace(/\s+/g, '-'),
                   title: category,
                   description: `Explore our ${category} collection`,
                   image: getCategoryImage(category),
                   color: getRandomGradient(),
-                  slug: category.toLowerCase().replace(/\s+/g, '-')
+                  slug: category.toLowerCase().replace(/\s+/g, '-'),
+                  products: []
                 };
               }
             })
@@ -104,7 +139,7 @@ const Home = () => {
     };
 
     fetchCategories();
-  }, []);
+  }, [userCity, userData?.city]);
 
   // Get random gradient for category backgrounds
   const getRandomGradient = () => {
@@ -487,15 +522,77 @@ const Home = () => {
               </Link>
             </div>
             <div className="bg-white rounded-xl shadow-sm mb-2">
-              <CategoryProducts
-                key={`${category.title}-${userData?.city}`}
-                category={category.title}
-                title=""
-                description={category.description}
-                city={userData?.city}
-                hideViewAll={true}
-                showFilters={false}
-              />
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4"
+              >
+                {category.products?.slice(0, 10).map((product) => (
+                  <motion.div
+                    key={product._id}
+                    variants={productCardVariants}
+                    whileHover="hover"
+                    className="cursor-pointer w-full"
+                    style={{
+                      gridColumn: category.products.indexOf(product) >= 5 ? `span 1` : `span 1`,
+                      gridRow: category.products.indexOf(product) >= 5 ? '2' : '1'
+                    }}
+                  >
+                    <Link 
+                      to={`/product/${product._id}`}
+                      className="block h-full"
+                    >
+                      <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+                        <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                          />
+                          {product.stock <= 0 && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                              <span className="text-white text-sm font-medium">Out of Stock</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-1.5 sm:p-3 flex flex-col flex-grow">
+                          <h3 className="text-[11px] sm:text-sm font-medium text-gray-900 mb-0.5 sm:mb-1 line-clamp-2">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                            <div className="flex items-baseline gap-0.5 sm:gap-1">
+                              <span className="text-xs sm:text-base font-bold">₹{product.price}</span>
+                              <span className="text-[8px] sm:text-xs text-gray-500">per {product.unitType || 'piece'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+                            <div className="flex">
+                              {[...Array(5)].map((_, index) => (
+                                <FaStar
+                                  key={index}
+                                  className={`w-2 h-2 sm:w-3 sm:h-3 ${
+                                    index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-[8px] sm:text-xs text-gray-600">
+                              ({product.numReviews || 0})
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[8px] sm:text-xs">
+                            <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                            </span>
+                            <span className="text-gray-500">Stock: {product.stock}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
             </div>
           </div>
         </div>

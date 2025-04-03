@@ -1808,4 +1808,108 @@ export const getMostOrderedProductByCategory = async (req, res) => {
   }
 };
 
+// Add this new controller function at the end before export default
+export const getLimitedProductsByCategory = async (req, res) => {
+  try {
+    const { city } = req.query;
+    const { category } = req.params;
+    const PRODUCTS_PER_CATEGORY = 10;
+
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category parameter is required'
+      });
+    }
+
+    // Build query
+    let query = {
+      category: { $regex: new RegExp(`^${category}$`, 'i') },
+      platformType: 'b2c',
+      stock: { $gt: 0 }
+    };
+
+    // Add city filter if provided
+    if (city) {
+      query.availableLocations = {
+        $regex: new RegExp(city, 'i')
+      };
+    }
+
+    // Get products for this category
+    const products = await Product.aggregate([
+      { $match: query },
+      // Lookup seller information
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'seller',
+          foreignField: '_id',
+          as: 'sellerInfo'
+        }
+      },
+      // Unwind seller array
+      {
+        $unwind: {
+          path: '$sellerInfo',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Sort by rating and creation date
+      {
+        $sort: {
+          rating: -1,
+          createdAt: -1
+        }
+      },
+      // Limit to 8 products
+      { $limit: PRODUCTS_PER_CATEGORY },
+      // Project only needed fields
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          price: 1,
+          images: 1,
+          stock: 1,
+          rating: 1,
+          numReviews: 1,
+          unitSize: 1,
+          unitType: 1,
+          seller: {
+            _id: '$sellerInfo._id',
+            name: {
+              $concat: ['$sellerInfo.firstname', ' ', '$sellerInfo.lastname']
+            },
+            city: '$sellerInfo.city'
+          }
+        }
+      }
+    ]);
+
+    if (products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No products found for category: ${category}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      category,
+      totalProducts: products.length,
+      products
+    });
+
+  } catch (error) {
+    console.error('Error in getLimitedProductsByCategory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching limited products by category',
+      error: error.message
+    });
+  }
+};
+
 export default router;
