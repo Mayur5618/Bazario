@@ -1620,4 +1620,192 @@ export const getProductsByFormattedCategory = async (req, res) => {
     }
 };
 
+// Get most ordered products by category
+export const getMostOrderedProductsByCategory = async (req, res) => {
+  try {
+    // First get all unique categories
+    const categories = await Product.distinct('category');
+    
+    // For each category, find the product with most orders
+    const mostOrderedProducts = await Promise.all(
+      categories.map(async (category) => {
+        const product = await Product.aggregate([
+          // Match products in this category
+          { $match: { category: category } },
+          
+          // Lookup orders for each product
+          {
+            $lookup: {
+              from: 'orders',
+              localField: '_id',
+              foreignField: 'items.product',
+              as: 'orders'
+            }
+          },
+          
+          // Calculate total orders for each product
+          {
+            $addFields: {
+              totalOrders: { $size: '$orders' }
+            }
+          },
+          
+          // Sort by total orders (descending)
+          { $sort: { totalOrders: -1 } },
+          
+          // Take only the first product (most ordered)
+          { $limit: 1 },
+          
+          // Project only needed fields
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              description: 1,
+              price: 1,
+              images: 1,
+              category: 1,
+              subcategory: 1,
+              rating: 1,
+              totalOrders: 1,
+              seller: 1,
+              stock: 1
+            }
+          }
+        ]);
+
+        return product[0] || null;
+      })
+    );
+
+    // Filter out any null values and categories with no products
+    const validProducts = mostOrderedProducts.filter(product => product !== null);
+
+    res.status(200).json({
+      success: true,
+      products: validProducts
+    });
+
+  } catch (error) {
+    console.error('Error in getMostOrderedProductsByCategory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching most ordered products',
+      error: error.message
+    });
+  }
+};
+
+// Get most ordered product by specific category
+export const getMostOrderedProductByCategory = async (req, res) => {
+  try {
+    const { categoryName } = req.params;
+
+    if (!categoryName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category name is required'
+      });
+    }
+
+    // Find the most ordered product in this category
+    const product = await Product.aggregate([
+      // Match products in this specific category
+      { 
+        $match: { 
+          category: { 
+            $regex: new RegExp(`^${categoryName}$`, 'i') 
+          } 
+        } 
+      },
+      
+      // Lookup orders for each product
+      {
+        $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'items.product',
+          as: 'orders'
+        }
+      },
+      
+      // Lookup seller information
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'seller',
+          foreignField: '_id',
+          as: 'sellerInfo'
+        }
+      },
+
+      // Unwind seller array to object
+      {
+        $unwind: {
+          path: '$sellerInfo',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      
+      // Calculate total orders for each product
+      {
+        $addFields: {
+          totalOrders: { $size: '$orders' }
+        }
+      },
+      
+      // Sort by total orders (descending)
+      { $sort: { totalOrders: -1 } },
+      
+      // Take only the first product (most ordered)
+      { $limit: 1 },
+      
+      // Project only needed fields
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          price: 1,
+          images: 1,
+          category: 1,
+          subcategory: 1,
+          rating: 1,
+          totalOrders: 1,
+          stock: 1,
+          unitSize: 1,
+          unitType: 1,
+          seller: {
+            _id: '$sellerInfo._id',
+            name: {
+              $concat: ['$sellerInfo.firstname', ' ', '$sellerInfo.lastname']
+            },
+            city: '$sellerInfo.city'
+          }
+        }
+      }
+    ]);
+
+    if (!product || product.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No products found in category: ${categoryName}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      product: product[0]
+    });
+
+  } catch (error) {
+    console.error('Error in getMostOrderedProductByCategory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching most ordered product',
+      error: error.message
+    });
+  }
+};
+
 export default router;

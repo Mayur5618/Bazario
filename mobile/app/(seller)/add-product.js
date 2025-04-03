@@ -32,7 +32,8 @@ const categories = [
   'Pure Honey & Natural Sweeteners',
   'Handmade Beauty & Wellness Products',
   'Eco-Friendly & Recycled Products',
-  'Creative & Artistic Products'
+  'Creative & Artistic Products',
+  'Other'
 ];
 
 const getSubcategories = (category) => {
@@ -46,7 +47,8 @@ const getSubcategories = (category) => {
     'Pure Honey & Natural Sweeteners': ['Honey', 'Jaggery', 'Natural Syrups'],
     'Handmade Beauty & Wellness Products': ['Skincare', 'Haircare', 'Wellness'],
     'Eco-Friendly & Recycled Products': ['Home Decor', 'Accessories', 'Stationery'],
-    'Creative & Artistic Products': ['Art', 'Crafts', 'Decor']
+    'Creative & Artistic Products': ['Art', 'Crafts', 'Decor'],
+    'Other': []
   };
   return subcategories[category] || [];
 };
@@ -843,7 +845,7 @@ const AddProductScreen = () => {
               style={styles.input}
               value={customCategoryInput}
               onChangeText={setCustomCategoryInput}
-              placeholder={t.fields.category.placeholder || "Enter your category"}
+              placeholder={t.fields.category.customPlaceholder || "Enter your category"}
               onSubmitEditing={() => {
                 if (customCategoryInput.trim()) {
                   setFormData(prev => ({ ...prev, category: customCategoryInput.trim() }));
@@ -875,7 +877,6 @@ const AddProductScreen = () => {
                   value={category} 
                 />
               ))}
-              <Picker.Item label={getCategoryLabel('Other')} value="Other" />
             </Picker>
           </View>
         )}

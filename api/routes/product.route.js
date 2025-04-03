@@ -24,7 +24,9 @@ import {
   getB2BProductsByCategory,
   getB2BProductById,
   getProductsByFormattedCategory,
-  getBuyerCity
+  getBuyerCity,
+  getMostOrderedProductsByCategory,
+  getMostOrderedProductByCategory
 } from "../controllers/product.controller.js";
 import { 
   createReview, 
@@ -159,5 +161,11 @@ router.get('/web/category/:formattedCategory', getProductsByFormattedCategory);
 
 // Get buyer's city
 router.get('/buyer-city', verifyToken, getBuyerCity);
+
+// Get most ordered products by category
+router.get('/most-ordered-by-category', getMostOrderedProductsByCategory);
+
+// Get most ordered product by specific category
+router.get('/most-ordered-by-category/:categoryName', getMostOrderedProductByCategory);
 
 export default router;

@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { translations } from '../../src/translations/b2bProductCreate';
 import { Picker } from '@react-native-picker/picker';
 import axios from '../../src/config/axios';
 
@@ -43,6 +44,18 @@ const unitTypes = [
   { value: 'set', label: 'Set' }
 ];
 
+// Categories and subcategories mapping
+const categoryKeys = ['organic', 'soaps', 'other'];
+
+const getSubcategoryKeys = (categoryKey) => {
+  const subcategoryMap = {
+    'organic': ['vegetables', 'fruits', 'leafy', 'root'],
+    'soaps': ['body', 'face', 'handmade'],
+    'other': ['other']
+  };
+  return subcategoryMap[categoryKey] || [];
+};
+
 const AddB2BProduct = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -52,10 +65,12 @@ const AddB2BProduct = () => {
   const [selectedPreviewImage, setSelectedPreviewImage] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [youtubeLink, setYoutubeLink] = useState('');
-  const { language } = useLanguage();
+  const { t } = useLanguage(translations);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [customSubcategory, setCustomSubcategory] = useState('');
 
   // Form data
   const [formData, setFormData] = useState({
@@ -168,7 +183,6 @@ const AddB2BProduct = () => {
       // Upload images first
       const imageUrls = await Promise.all(
         images.map(async (image) => {
-          // Convert image to base64
           const response = await fetch(image.uri);
           const blob = await response.blob();
           const base64Data = await new Promise((resolve) => {
@@ -177,13 +191,9 @@ const AddB2BProduct = () => {
             reader.readAsDataURL(blob);
           });
 
-          console.log(`Uploading image to server...`);
-          // Upload to server
           const uploadResponse = await axios.post('/api/products/upload', {
             image: base64Data
           });
-          
-          console.log('Upload response:', uploadResponse.data);
           
           if (!uploadResponse.data.success) {
             throw new Error(uploadResponse.data.message || 'Image upload failed');
@@ -193,8 +203,6 @@ const AddB2BProduct = () => {
         })
       );
 
-      console.log('All images uploaded successfully:', imageUrls);
-
       // Convert date from DD/MM/YYYY to ISO format
       const [day, month, year] = formData.auctionEndDate.split('/');
       const auctionEndDate = new Date(year, month - 1, day).toISOString();
@@ -202,19 +210,17 @@ const AddB2BProduct = () => {
       // Prepare product data
       const productData = {
         name: formData.name,
-        category: formData.category,
-        subcategory: formData.subcategory,
+        category: formData.category === 'other' ? formData.customCategory : formData.category,
+        subcategory: formData.category === 'other' ? formData.customSubcategory : formData.subcategory,
         minPrice: parseFloat(formData.minPrice),
         maxPrice: parseFloat(formData.maxPrice),
         unitType: formData.unitType,
-        Price: parseFloat(formData.unitPrice), // Using Price instead of unitPrice
-        Stock: parseInt(formData.totalStock), // Using Stock instead of totalStock
+        Price: parseFloat(formData.unitPrice),
+        Stock: parseInt(formData.totalStock),
         auctionEndDate: auctionEndDate,
         negotiationEnabled: formData.negotiationEnabled,
         images: imageUrls
       };
-
-      console.log('Sending product data:', productData);
 
       const response = await axios.post('/api/products/b2b/products/create', productData);
 
@@ -241,15 +247,15 @@ const AddB2BProduct = () => {
 
   const renderStep1 = () => (
     <View>
-      <Text style={styles.stepTitle}>बेसिक जानकारी</Text>
+      <Text style={styles.stepTitle}>{t.basicInfo}</Text>
       
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>प्रोडक्ट का नाम *</Text>
+        <Text style={styles.label}>{t.productName.label}</Text>
         <TextInput
           mode="flat"
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-          placeholder="प्रोडक्ट का नाम दर्ज करें"
+          placeholder={t.productName.placeholder}
           style={styles.input}
           theme={{ colors: { primary: '#E8E8E8' } }}
           underlineColor="#E8E8E8"
@@ -258,42 +264,92 @@ const AddB2BProduct = () => {
 
       <View style={styles.categoryContainer}>
         <View style={styles.categoryBox}>
-          <Text style={styles.label}>श्रेणी *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.category}
-              onValueChange={(value) => {
+          <Text style={styles.label}>{t.category.label}</Text>
+          {formData.category === 'other' ? (
+            <TextInput
+              mode="flat"
+              value={customCategory}
+              onChangeText={(text) => {
+                setCustomCategory(text);
                 setFormData(prev => ({ 
                   ...prev, 
-                  category: value,
-                  subcategory: getSubcategories(value)[0] || '' // Set first subcategory as default
+                  category: 'other',
+                  customCategory: text
                 }));
               }}
-              style={styles.picker}
-            >
-              <Picker.Item label="श्रेणी चुनें" value="" />
-              {categories.map((category) => (
-                <Picker.Item key={category} label={category} value={category} />
-              ))}
-            </Picker>
-          </View>
+              placeholder={t.category.customPlaceholder || "Enter custom category"}
+              style={styles.input}
+              theme={{ colors: { primary: '#E8E8E8' } }}
+              underlineColor="#E8E8E8"
+            />
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.category}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    category: value,
+                    subcategory: value ? getSubcategoryKeys(value)[0] || '' : '',
+                    customCategory: '',
+                    customSubcategory: ''
+                  }));
+                  setCustomCategory('');
+                  setCustomSubcategory('');
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label={t.category.placeholder} value="" />
+                {categoryKeys.map((key) => (
+                  <Picker.Item 
+                    key={key} 
+                    label={t.category.options[key]} 
+                    value={key} 
+                  />
+                ))}
+              </Picker>
+            </View>
+          )}
         </View>
 
         <View style={styles.categoryBox}>
-          <Text style={styles.label}>उपश्रेणी *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.subcategory}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
-              style={styles.picker}
-              enabled={formData.category !== ''}
-            >
-              <Picker.Item label="उपश्रेणी चुनें" value="" />
-              {getSubcategories(formData.category).map((subcategory) => (
-                <Picker.Item key={subcategory} label={subcategory} value={subcategory} />
-              ))}
-            </Picker>
-          </View>
+          <Text style={styles.label}>{t.subcategory.label}</Text>
+          {formData.category === 'other' ? (
+            <TextInput
+              mode="flat"
+              value={customSubcategory}
+              onChangeText={(text) => {
+                setCustomSubcategory(text);
+                setFormData(prev => ({ 
+                  ...prev, 
+                  subcategory: 'other',
+                  customSubcategory: text
+                }));
+              }}
+              placeholder={t.subcategory.customPlaceholder || "Enter custom subcategory"}
+              style={styles.input}
+              theme={{ colors: { primary: '#E8E8E8' } }}
+              underlineColor="#E8E8E8"
+            />
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.subcategory}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                style={styles.picker}
+                enabled={formData.category !== ''}
+              >
+                <Picker.Item label={t.subcategory.placeholder} value="" />
+                {formData.category && getSubcategoryKeys(formData.category).map((key) => (
+                  <Picker.Item 
+                    key={key} 
+                    label={t.category.subcategories[formData.category][key]} 
+                    value={key} 
+                  />
+                ))}
+              </Picker>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -301,124 +357,57 @@ const AddB2BProduct = () => {
 
   const renderStep2 = () => (
     <View>
-      <Text style={styles.stepTitle}>मीडिया अपलोड</Text>
-      <Text style={styles.stepDescription}>अपने प्रोडक्ट की 5 तक फोटो अपलोड करें</Text>
+      <Text style={styles.stepTitle}>{t.images.label}</Text>
       
       <TouchableOpacity style={styles.imageUpload} onPress={handleImageSource}>
-        {images.length > 0 ? (
-          <View style={styles.uploadedImagesContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {images.map((image, index) => (
-                <View key={index} style={styles.imageContainer}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedPreviewImage(image.uri);
-                      setShowImagePreview(true);
-                    }}
-                  >
-                    <Image source={{ uri: image.uri }} style={styles.previewImage} />
-                    <Text style={styles.imageNumber}>फोटो {index + 1}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={() => {
-                      Alert.alert(
-                        'फोटो हटाएं',
-                        'क्या आप इस फोटो को हटाना चाहते हैं?',
-                        [
-                          { text: 'नहीं', style: 'cancel' },
-                          { 
-                            text: 'हां', 
-                            onPress: () => {
-                              setImages(prev => prev.filter((_, i) => i !== index));
-                              setFormData(prev => ({
-                                ...prev,
-                                images: prev.images.filter((_, i) => i !== index)
-                              }));
-                            }
-                          }
-                        ]
-                      );
-                    }}
-                  >
-                    <View style={styles.removeImageButtonInner}>
-                      <Ionicons name="trash-outline" size={20} color="#FFF" />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-            {images.length < 5 && (
-              <TouchableOpacity 
-                style={styles.addMoreButton}
-                onPress={handleImageSource}
-              >
-                <Ionicons name="add-circle" size={24} color="#6C63FF" />
-                <Text style={styles.addMoreButtonText}>और फोटो जोड़ें</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <>
-            <Ionicons name="camera-outline" size={40} color="#666" />
-            <Text style={styles.imageUploadText}>फोटो अपलोड करने के लिए टैप करें</Text>
-          </>
-        )}
+        <Ionicons name="cloud-upload-outline" size={48} color="#6C63FF" />
+        <Text style={styles.imageUploadText}>{t.images.add}</Text>
+        <Text style={[styles.imageUploadText, { fontSize: 14 }]}>{t.images.max}</Text>
       </TouchableOpacity>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>यूट्यूब वीडियो लिंक (वैकल्पिक)</Text>
-        <TextInput
-          mode="outlined"
-          value={youtubeLink}
-          onChangeText={(text) => {
-            if (validateYoutubeUrl(text) || text === '') {
-              setYoutubeLink(text);
-              setFormData(prev => ({ ...prev, youtubeLink: text }));
-            }
-          }}
-          placeholder="https://youtube.com/..."
-          style={styles.input}
-        />
-      </View>
-
-      <Modal
-        visible={showImagePreview}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.fullScreenPreview}>
-          <TouchableOpacity 
-            style={styles.closePreviewButton}
-            onPress={() => setShowImagePreview(false)}
-          >
-            <Ionicons name="close" size={30} color="#FFF" />
-          </TouchableOpacity>
-          {selectedPreviewImage && (
-            <Image 
-              source={{ uri: selectedPreviewImage }} 
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
+      {images.length > 0 && (
+        <FlatList
+          data={images}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item, index }) => (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: item.uri }} style={styles.previewImage} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => {
+                  const newImages = [...images];
+                  newImages.splice(index, 1);
+                  setImages(newImages);
+                  setFormData(prev => ({
+                    ...prev,
+                    images: newImages.map(img => img.uri)
+                  }));
+                }}
+              >
+                <Ionicons name="close-circle" size={24} color="#FF4444" />
+              </TouchableOpacity>
+            </View>
           )}
-        </View>
-      </Modal>
+        />
+      )}
     </View>
   );
 
   const renderStep3 = () => (
     <View>
-      <Text style={styles.stepTitle}>कीमत और स्टॉक</Text>
+      <Text style={styles.stepTitle}>{t.pricing.title}</Text>
 
       <View style={styles.priceContainer}>
         <View style={styles.priceBox}>
-          <Text style={styles.label}>न्यूनतम कीमत (₹) *</Text>
+          <Text style={styles.label}>{t.pricing.mrp.label}</Text>
           <TextInput
             mode="flat"
             value={formData.minPrice}
             onChangeText={(text) => setFormData(prev => ({ ...prev, minPrice: text }))}
             keyboardType="numeric"
-            placeholder="न्यूनतम"
+            placeholder={t.pricing.mrp.placeholder}
             style={[styles.input, styles.priceInput]}
             theme={{ colors: { primary: '#E8E8E8' } }}
             underlineColor="#E8E8E8"
@@ -426,17 +415,17 @@ const AddB2BProduct = () => {
         </View>
 
         <View style={styles.priceSeparator}>
-          <Text style={styles.priceSeparatorText}>से</Text>
+          <Text style={styles.priceSeparatorText}>-</Text>
         </View>
 
         <View style={styles.priceBox}>
-          <Text style={styles.label}>अधिकतम कीमत (₹) *</Text>
+          <Text style={styles.label}>{t.pricing.sellingPrice.label}</Text>
           <TextInput
             mode="flat"
             value={formData.maxPrice}
             onChangeText={(text) => setFormData(prev => ({ ...prev, maxPrice: text }))}
             keyboardType="numeric"
-            placeholder="अधिकतम"
+            placeholder={t.pricing.sellingPrice.placeholder}
             style={[styles.input, styles.priceInput]}
             theme={{ colors: { primary: '#E8E8E8' } }}
             underlineColor="#E8E8E8"
@@ -446,7 +435,7 @@ const AddB2BProduct = () => {
 
       <View style={styles.unitContainer}>
         <View style={styles.unitBox}>
-          <Text style={styles.label}>यूनिट टाइप *</Text>
+          <Text style={styles.label}>{t.unit.label}</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.unitType}
@@ -454,20 +443,20 @@ const AddB2BProduct = () => {
               style={styles.picker}
             >
               {unitTypes.map((type) => (
-                <Picker.Item key={type.value} label={type.label} value={type.value} />
+                <Picker.Item key={type.value} label={t.unit.types[type.value]} value={type.value} />
               ))}
             </Picker>
           </View>
         </View>
 
         <View style={styles.unitBox}>
-          <Text style={styles.label}>1 {formData.unitType} की कीमत (₹) *</Text>
+          <Text style={styles.label}>{t.pricing.minQuantity.label}</Text>
           <TextInput
             mode="flat"
             value={formData.unitPrice}
             onChangeText={(text) => setFormData(prev => ({ ...prev, unitPrice: text }))}
             keyboardType="numeric"
-            placeholder={`1 ${formData.unitType} की कीमत`}
+            placeholder={t.pricing.minQuantity.placeholder}
             style={styles.input}
             theme={{ colors: { primary: '#E8E8E8' } }}
             underlineColor="#E8E8E8"
@@ -477,61 +466,18 @@ const AddB2BProduct = () => {
 
       <View style={styles.stockContainer}>
         <View style={styles.stockBox}>
-          <Text style={styles.label}>कुल स्टॉक *</Text>
+          <Text style={styles.label}>{t.stock.label}</Text>
           <TextInput
             mode="flat"
             value={formData.totalStock}
             onChangeText={(text) => setFormData(prev => ({ ...prev, totalStock: text }))}
             keyboardType="numeric"
-            placeholder="कुल स्टॉक दर्ज करें"
+            placeholder={t.stock.placeholder}
             style={styles.input}
             theme={{ colors: { primary: '#E8E8E8' } }}
             underlineColor="#E8E8E8"
           />
         </View>
-
-        <View style={styles.stockBox}>
-          <Text style={styles.label}>नीलामी की अंतिम तिथि *</Text>
-          <TextInput
-            mode="flat"
-            value={formData.auctionEndDate}
-            onChangeText={(text) => {
-              const formatted = text.replace(/[^0-9/]/g, '');
-              if (formatted.length === 2 && !formatted.includes('/') && formData.auctionEndDate.length < formatted.length) {
-                setFormData(prev => ({ ...prev, auctionEndDate: formatted + '/' }));
-              } else if (formatted.length === 5 && formatted.split('/').length === 2 && formData.auctionEndDate.length < formatted.length) {
-                setFormData(prev => ({ ...prev, auctionEndDate: formatted + '/' }));
-              } else {
-                setFormData(prev => ({ ...prev, auctionEndDate: formatted }));
-              }
-            }}
-            maxLength={10}
-            placeholder="DD/MM/YYYY"
-            style={styles.input}
-            theme={{ colors: { primary: '#E8E8E8' } }}
-            underlineColor="#E8E8E8"
-            keyboardType="numeric"
-          />
-        </View>
-      </View>
-
-      <View style={styles.negotiationContainer}>
-        <Text style={styles.label}>बातचीत की अनुमति दें</Text>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            formData.negotiationEnabled && styles.toggleButtonActive
-          ]}
-          onPress={() => setFormData(prev => ({ 
-            ...prev, 
-            negotiationEnabled: !prev.negotiationEnabled 
-          }))}
-        >
-          <View style={[
-            styles.toggleCircle,
-            formData.negotiationEnabled && styles.toggleCircleActive
-          ]} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -542,7 +488,7 @@ const AddB2BProduct = () => {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>B2B प्रोडक्ट जोड़ें</Text>
+        <Text style={styles.headerTitle}>{t.title}</Text>
       </View>
 
       <View style={styles.stepIndicator}>
@@ -570,7 +516,7 @@ const AddB2BProduct = () => {
             disabled={loading}
           >
             <Text style={styles.submitButtonText}>
-              {step === 3 ? 'समीक्षा करें' : 'अगला'}
+              {step === 3 ? t.buttons.submit : t.buttons.next}
             </Text>
           </TouchableOpacity>
         </View>
@@ -583,49 +529,35 @@ const AddB2BProduct = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>प्रोडक्ट की जानकारी की समीक्षा करें</Text>
+            <Text style={styles.modalTitle}>{t.validation.required}</Text>
             
             <View style={styles.confirmationItem}>
-              <Text style={styles.confirmationLabel}>प्रोडक्ट</Text>
+              <Text style={styles.confirmationLabel}>{t.productName.label}</Text>
               <Text style={styles.confirmationValue}>{formData.name}</Text>
             </View>
 
             <View style={styles.confirmationItem}>
-              <Text style={styles.confirmationLabel}>कीमत सीमा</Text>
+              <Text style={styles.confirmationLabel}>{t.pricing.title}</Text>
               <Text style={styles.confirmationValue}>₹{formData.minPrice} - ₹{formData.maxPrice}</Text>
             </View>
 
             <View style={styles.confirmationItem}>
-              <Text style={styles.confirmationLabel}>यूनिट कीमत</Text>
+              <Text style={styles.confirmationLabel}>{t.unit.label}</Text>
               <Text style={styles.confirmationValue}>₹{formData.unitPrice}/{formData.unitType}</Text>
             </View>
 
             <View style={styles.confirmationItem}>
-              <Text style={styles.confirmationLabel}>स्टॉक</Text>
+              <Text style={styles.confirmationLabel}>{t.stock.label}</Text>
               <Text style={styles.confirmationValue}>{formData.totalStock} {formData.unitType}</Text>
             </View>
 
-            <View style={styles.confirmationItem}>
-              <Text style={styles.confirmationLabel}>नीलामी की अंतिम तिथि</Text>
-              <Text style={styles.confirmationValue}>{formData.auctionEndDate}</Text>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setShowConfirmation(false)}
-              >
-                <Text style={styles.modalButtonTextSecondary}>वापस जाएं</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonPrimary]}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
-                <Text style={styles.modalButtonTextPrimary}>
-                  {loading ? 'जोड़ा जा रहा है...' : 'पुष्टि करें'}
-                </Text>
+                <Text style={styles.submitButtonText}>{t.buttons.submit}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -639,7 +571,7 @@ const AddB2BProduct = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>फोटो कैसे लेना चाहेंगे?</Text>
+            <Text style={styles.modalTitle}>{t.imageModal.title}</Text>
             
             <TouchableOpacity 
               style={styles.modalOption}
@@ -660,7 +592,7 @@ const AddB2BProduct = () => {
               }}
             >
               <Ionicons name="camera" size={24} color="#6C63FF" />
-              <Text style={styles.modalOptionText}>कैमरा से फोटो लें</Text>
+              <Text style={styles.modalOptionText}>{t.imageModal.camera}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -671,14 +603,14 @@ const AddB2BProduct = () => {
               }}
             >
               <Ionicons name="images" size={24} color="#6C63FF" />
-              <Text style={styles.modalOptionText}>गैलरी से फोटो चुनें</Text>
+              <Text style={styles.modalOptionText}>{t.imageModal.gallery}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.modalOption, styles.cancelOption]}
               onPress={() => setShowImageSourceModal(false)}
             >
-              <Text style={styles.cancelOptionText}>रद्द करें</Text>
+              <Text style={styles.cancelOptionText}>{t.imageModal.cancel}</Text>
             </TouchableOpacity>
           </View>
         </View>

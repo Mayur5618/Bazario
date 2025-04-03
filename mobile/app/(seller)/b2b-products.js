@@ -15,12 +15,75 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { sellerApi } from '../../src/api/sellerApi';
 import { formatDistanceToNow } from 'date-fns';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2; // 48 = padding (16) * 2 + gap between cards (16)
 
+// Translations
+const translations = {
+  en: {
+    title: "Your B2B Products",
+    noProducts: "No B2B products found",
+    stock: "Stock",
+    ends: "Ends",
+    currentBid: "Current Bid",
+    noBids: "No bids yet",
+    auctionStatuses: {
+      ended: "Auction Ended",
+      cancelled: "Auction Cancelled",
+      expired: "Auction Expired",
+      active: "Auction Active"
+    }
+  },
+  hi: {
+    title: "आपके B2B प्रोडक्ट्स",
+    noProducts: "कोई B2B प्रोडक्ट नहीं मिला",
+    stock: "स्टॉक",
+    ends: "समाप्ति",
+    currentBid: "वर्तमान बोली",
+    noBids: "कोई बोली नहीं",
+    auctionStatuses: {
+      ended: "नीलामी समाप्त",
+      cancelled: "नीलामी रद्द",
+      expired: "नीलामी समय समाप्त",
+      active: "नीलामी सक्रिय"
+    }
+  },
+  mr: {
+    title: "तुमचे B2B प्रॉडक्ट्स",
+    noProducts: "कोणतेही B2B प्रॉडक्ट्स सापडले नाहीत",
+    stock: "स्टॉक",
+    ends: "समाप्ती",
+    currentBid: "सध्याची बोली",
+    noBids: "कोणतीही बोली नाही",
+    auctionStatuses: {
+      ended: "लिलाव संपला",
+      cancelled: "लिलाव रद्द",
+      expired: "लिलाव कालबाह्य",
+      active: "लिलाव सुरू"
+    }
+  },
+  gu: {
+    title: "તમારા B2B પ્રોડક્ટ્સ",
+    noProducts: "કોઈ B2B પ્રોડક્ટ્સ મળ્યા નથી",
+    stock: "સ્ટોક",
+    ends: "સમાપ્તિ",
+    currentBid: "વર્તમાન બોલી",
+    noBids: "કોઈ બોલી નથી",
+    auctionStatuses: {
+      ended: "હરાજી સમાપ્ત",
+      cancelled: "હરાજી રદ",
+      expired: "હરાજી સમય પૂર્ણ",
+      active: "હરાજી ચાલુ"
+    }
+  }
+};
+
 const B2BProductsScreen = () => {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,13 +119,13 @@ const B2BProductsScreen = () => {
     const endDate = new Date(product.auctionEndDate);
     
     if (product.auctionStatus === 'ended') {
-      return { text: 'Auction Ended', color: '#FF4444' };
+      return { text: t.auctionStatuses.ended, color: '#FF4444' };
     } else if (product.auctionStatus === 'cancelled') {
-      return { text: 'Auction Cancelled', color: '#666666' };
+      return { text: t.auctionStatuses.cancelled, color: '#666666' };
     } else if (endDate < now) {
-      return { text: 'Auction Expired', color: '#FF4444' };
+      return { text: t.auctionStatuses.expired, color: '#FF4444' };
     } else {
-      return { text: 'Auction Active', color: '#4CAF50' };
+      return { text: t.auctionStatuses.active, color: '#4CAF50' };
     }
   };
 
@@ -90,22 +153,22 @@ const B2BProductsScreen = () => {
         <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
 
         <View style={styles.stockContainer}>
-          <Text style={styles.stockLabel}>Stock:</Text>
+          <Text style={styles.stockLabel}>{t.stock}:</Text>
           <Text style={styles.stockValue}>{item.stock} {item.unitType}</Text>
         </View>
 
         <View style={styles.auctionContainer}>
           <View style={styles.auctionInfo}>
-            <Text style={styles.auctionLabel}>Ends: </Text>
+            <Text style={styles.auctionLabel}>{t.ends}: </Text>
             <Text style={styles.auctionValue}>{getTimeRemaining(item.auctionEndDate)}</Text>
           </View>
 
           <View style={styles.bidInfo}>
-            <Text style={styles.bidLabel}>Current Bid: </Text>
+            <Text style={styles.bidLabel}>{t.currentBid}: </Text>
             <Text style={styles.bidValue}>
               {item.currentHighestBid > 0 
                 ? `₹${item.currentHighestBid}/${item.unitType}`
-                : 'No bids yet'
+                : t.noBids
               }
             </Text>
           </View>
@@ -132,7 +195,7 @@ const B2BProductsScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your B2B Products</Text>
+        <Text style={styles.title}>{t.title}</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => router.push('/(seller)/add-b2b-product')}
@@ -154,7 +217,7 @@ const B2BProductsScreen = () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="cube-outline" size={48} color="#666" />
-            <Text style={styles.emptyText}>No B2B products found</Text>
+            <Text style={styles.emptyText}>{t.noProducts}</Text>
           </View>
         }
       />

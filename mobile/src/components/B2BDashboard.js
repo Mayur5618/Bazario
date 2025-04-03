@@ -9,11 +9,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useLanguage } from '../context/LanguageContext';
+import { translations } from '../translations/b2bDashboard';
 
 const { width } = Dimensions.get('window');
 
 const B2BDashboard = () => {
   const router = useRouter();
+  const { t } = useLanguage(translations);
 
   const BulkOrderCard = ({ title, value, icon, color }) => (
     <View style={[styles.card, { borderLeftColor: color }]}>
@@ -31,13 +34,13 @@ const B2BDashboard = () => {
     <ScrollView style={styles.container}>
       <View style={styles.statsContainer}>
         <BulkOrderCard
-          title="Connected Business Agencies"
+          title={t.stats.connectedAgencies}
           value="0"
           icon="people-outline"
           color="#0052CC"
         />
         <BulkOrderCard
-          title="B2B Revenue"
+          title={t.stats.revenue}
           value="₹0"
           icon="cash-outline"
           color="#0747A6"
@@ -45,42 +48,42 @@ const B2BDashboard = () => {
       </View>
 
       <View style={styles.actionsContainer}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t.quickActions}</Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/add-bulk-product')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FFB80015' }]}>
               <Ionicons name="add-circle-outline" size={24} color="#FFB800" />
             </View>
-            <Text style={styles.actionText}>Add Bulk Product</Text>
+            <Text style={styles.actionText}>{t.actions.addBulkProduct}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/b2b-products')}>
             <View style={[styles.actionIcon, { backgroundColor: '#4CAF5015' }]}>
               <Ionicons name="cube-outline" size={24} color="#4CAF50" />
             </View>
-            <Text style={styles.actionText}>View Products</Text>
+            <Text style={styles.actionText}>{t.actions.viewProducts}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/business-clients')}>
             <View style={[styles.actionIcon, { backgroundColor: '#0052CC15' }]}>
               <Ionicons name="people-outline" size={24} color="#0052CC" />
             </View>
-            <Text style={styles.actionText}>View Business Clients</Text>
+            <Text style={styles.actionText}>{t.actions.viewClients}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/b2b-analytics')}>
             <View style={[styles.actionIcon, { backgroundColor: '#0747A615' }]}>
               <Ionicons name="bar-chart-outline" size={24} color="#0747A6" />
             </View>
-            <Text style={styles.actionText}>B2B Analytics</Text>
+            <Text style={styles.actionText}>{t.actions.analytics}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={[styles.emptyState, { backgroundColor: '#FFFDF7' }]}>
         <Ionicons name="business" size={64} color="#FFB800" />
-        <Text style={[styles.emptyTitle, { color: '#0052CC' }]}>Welcome to B2B Mode!</Text>
-        <Text style={styles.emptyText}>Start adding bulk products and connect with business clients</Text>
+        <Text style={[styles.emptyTitle, { color: '#0052CC' }]}>{t.welcome} {t.dashboard}!</Text>
+        <Text style={styles.emptyText}>{t.emptyState.message}</Text>
       </View>
     </ScrollView>
   );

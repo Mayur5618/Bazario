@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from '../../../src/config/axios';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useAuth } from '../../../src/context/AuthContext';
 
 const translations = {
   en: {
@@ -43,18 +45,50 @@ const translations = {
     subcategory: 'उपश्रेणी',
     bidChange: 'बोली परिवर्तन'
   },
+  mr: {
+    title: 'लाइव्ह लिलाव',
+    noAuctions: 'कोणतेही सक्रिय लिलाव उपलब्ध नाहीत',
+    currentBid: 'सध्याची बोली',
+    totalBids: 'एकूण बोली',
+    endingIn: 'संपण्यास',
+    days: 'दिवस',
+    bidNow: 'बोली लावा',
+    perKg: '/किलो',
+    stock: 'साठा',
+    category: 'श्रेणी',
+    subcategory: 'उपश्रेणी',
+    bidChange: 'बोली बदल'
+  },
+  gu: {
+    title: 'લાઈવ હરાજી',
+    noAuctions: 'કોઈ સક્રિય હરાજી ઉપલબ્ધ નથી',
+    currentBid: 'વર્તમાન બોલી',
+    totalBids: 'કુલ બોલી',
+    endingIn: 'સમાપ્ત થવામાં',
+    days: 'દિવસ',
+    bidNow: 'બોલી લગાવો',
+    perKg: '/કિલો',
+    stock: 'સ્ટોક',
+    category: 'શ્રેણી',
+    subcategory: 'ઉપશ્રેણી',
+    bidChange: 'બોલી બદલાવ'
+  }
 };
 
 const LiveAuctions = () => {
   const router = useRouter();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const t = translations[language] || translations.en;
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchAuctions();
-  }, []);
+    if (user?._id) {
+      fetchAuctions();
+    }
+  }, [user]);
 
   const fetchAuctions = async () => {
     try {
@@ -68,6 +102,12 @@ const LiveAuctions = () => {
       setLoading(false);
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchAuctions();
+    setRefreshing(false);
+  }, []);
 
   const calculateDaysLeft = (endDate) => {
     return Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
@@ -93,15 +133,15 @@ const LiveAuctions = () => {
 
   const renderAuctionCard = (auction) => (
     <TouchableOpacity
-      key={auction.productId}
+      key={auction._id}
       style={styles.auctionCard}
       onPress={() => router.push({
         pathname: '/product/[id]',
-        params: { id: auction.productId }
+        params: { id: auction._id }
       })}
     >
       <Image
-        source={{ uri: auction.image }}
+        source={{ uri: auction.images[0] }}
         style={styles.productImage}
         resizeMode="cover"
       />
@@ -132,7 +172,7 @@ const LiveAuctions = () => {
         <View style={styles.detailsRow}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>{t.totalBids}</Text>
-            <Text style={styles.totalBidsValue}>{auction.totalBids}</Text>
+            <Text style={styles.totalBidsValue}>{auction.totalBids || 0}</Text>
           </View>
 
           <View style={styles.detailItem}>
@@ -145,7 +185,7 @@ const LiveAuctions = () => {
           style={styles.bidButton}
           onPress={() => router.push({
             pathname: '/product/[id]',
-            params: { id: auction.productId }
+            params: { id: auction._id }
           })}
         >
           <Text style={styles.bidButtonText}>{t.bidNow}</Text>
@@ -153,6 +193,22 @@ const LiveAuctions = () => {
       </View>
     </TouchableOpacity>
   );
+
+  if (!user?._id) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{
+            title: t.title,
+            headerShown: true,
+          }} 
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C63FF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -168,7 +224,12 @@ const LiveAuctions = () => {
           <ActivityIndicator size="large" color="#6C63FF" />
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
           <View style={styles.auctionsContainer}>
             {auctions.length > 0 ? (
               auctions.map(renderAuctionCard)

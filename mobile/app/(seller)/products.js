@@ -13,9 +13,41 @@ import {
 import { useRouter } from 'expo-router';
 import { sellerApi } from '../../src/api/sellerApi';
 import { Ionicons } from '@expo/vector-icons';
+import axios from '../../src/config/axios';
+import { useLanguage } from '../../src/context/LanguageContext';
+
+// Translations
+const translations = {
+  en: {
+    availableProducts: "Available Products",
+    outOfStockProducts: "Out of Stock Products",
+    myProducts: "My Products",
+    stock: "Stock"
+  },
+  hi: {
+    availableProducts: "उपलब्ध प्रोडक्ट्स",
+    outOfStockProducts: "स्टॉक खत्म प्रोडक्ट्स",
+    myProducts: "मेरे प्रोडक्ट्स",
+    stock: "स्टॉक"
+  },
+  mr: {
+    availableProducts: "उपलब्ध उत्पादने",
+    outOfStockProducts: "स्टॉक संपलेली उत्पादने",
+    myProducts: "माझी उत्पादने",
+    stock: "स्टॉक"
+  },
+  gu: {
+    availableProducts: "ઉપલબ્ધ ઉત્પાદનો",
+    outOfStockProducts: "સ્ટોક ખતમ ઉત્પાદનો",
+    myProducts: "મારા ઉત્પાદનો",
+    stock: "સ્ટોક"
+  }
+};
 
 const ProductsScreen = () => {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [products, setProducts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -96,7 +128,7 @@ const ProductsScreen = () => {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Products</Text>
+        <Text style={styles.headerTitle}>{t.myProducts}</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => router.push('/(seller)/add-product')}
@@ -124,7 +156,7 @@ const ProductsScreen = () => {
           <View style={styles.productList}>
             {inStockProducts.length > 0 && (
               <>
-                {renderSectionHeader('उपलब्ध प्रोडक्ट्स')}
+                {renderSectionHeader(t.availableProducts)}
                 {inStockProducts.map((item) => (
                   <View key={item._id}>
                     {renderProduct({ item })}
@@ -135,7 +167,7 @@ const ProductsScreen = () => {
             
             {outOfStockProducts.length > 0 && (
               <>
-                {renderSectionHeader('स्टॉक खत्म प्रोडक्ट्स')}
+                {renderSectionHeader(t.outOfStockProducts)}
                 {outOfStockProducts.map((item) => (
                   <View key={item._id}>
                     {renderProduct({ item })}

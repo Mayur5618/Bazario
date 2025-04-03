@@ -56,6 +56,7 @@ export default function SellerLayout() {
             backgroundColor: '#6B46C1',
           },
           headerTintColor: '#fff',
+          headerShown: false,
           headerTitleStyle: {
             fontWeight: 'bold',
           },

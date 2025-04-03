@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart, FaStore, FaArrowRight } from "react-icons/fa";
+import { FaStar, FaShoppingCart, FaMinus, FaPlus, FaPlay, FaHeart, FaRegHeart, FaStore, FaArrowRight, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { cartAdd, cartRemove } from "../store/cartSlice";
@@ -11,6 +11,75 @@ import YouTube from "react-youtube";
 import ReviewItem from '../components/ReviewItem';
 import { addToWishlist, removeFromWishlist } from "../store/wishlistSlice";
 import ReviewEditModal from '../components/ReviewEditModal';
+
+const ImageViewerModal = ({ images, startIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'ArrowLeft') handlePrevious();
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
+      <div className="relative w-full h-full flex items-center justify-center">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white hover:text-gray-300 z-50"
+        >
+          <FaTimes className="w-6 h-6" />
+        </button>
+
+        {/* Navigation buttons */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={handlePrevious}
+              className="absolute left-4 text-white hover:text-gray-300 p-2"
+            >
+              <FaChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-4 text-white hover:text-gray-300 p-2"
+            >
+              <FaChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
+
+        {/* Image counter */}
+        {images.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm">
+            {currentIndex + 1} / {images.length}
+          </div>
+        )}
+
+        {/* Main image */}
+        <img
+          src={images[currentIndex]}
+          alt={`Review image ${currentIndex + 1}`}
+          className="max-h-[90vh] max-w-[90vw] object-contain"
+        />
+      </div>
+    </div>
+  );
+};
 
 const ReviewForm = ({ onSubmit, onClose, orderId }) => {
   const [rating, setRating] = useState(0);
@@ -35,13 +104,16 @@ const ReviewForm = ({ onSubmit, onClose, orderId }) => {
 
       try {
         const base64 = await convertToBase64(file);
+        // Store the base64 string directly
         newImages.push({
-          url: base64,
+          url: base64, // Store the base64 string
           name: file.name
         });
+        
+        toast.success(`${file.name} ready to upload`);
       } catch (error) {
-        console.error('Error converting image:', error);
-        toast.error(`Failed to process ${file.name}`);
+        console.error('Error processing image:', error);
+        toast.error(`Failed to process ${file.name}: ${error.message}`);
       }
     }
 
@@ -259,6 +331,9 @@ const ProductDetail = () => {
 
   // Add review prompt state
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+
+  const [selectedReviewImages, setSelectedReviewImages] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -539,8 +614,14 @@ const ProductDetail = () => {
         rating: formData.rating,
         comment: formData.comment,
         orderId: checkData.orderId,
-        images: formData.images ? formData.images.map(img => img.url) : []
+        images: formData.images ? formData.images.map(img => img.url) : [] // Send base64 strings directly
       };
+
+      console.log('Sending review data:', {
+        ...reviewData,
+        hasImages: reviewData.images.length > 0,
+        imagesCount: reviewData.images.length
+      });
 
       const response = await fetch(`/api/reviews/products/${id}`, {
         method: 'POST',
@@ -552,10 +633,19 @@ const ProductDetail = () => {
       });
 
       const data = await response.json();
+      console.log('Review response:', data);
 
       if (data.success) {
-        // Update reviews list immediately
-        setReviews(prevReviews => [data.review, ...prevReviews]);
+        // Update reviews list immediately with the new review including images
+        const newReview = {
+          ...data.review,
+          buyer: userData,
+          createdAt: new Date().toISOString(),
+          likes: [],
+          likesCount: 0
+        };
+
+        setReviews(prevReviews => [newReview, ...prevReviews]);
         
         // Update product stats
         setProductStats(prev => ({
@@ -574,8 +664,8 @@ const ProductDetail = () => {
         // Update review status
         setHasReviewed(true);
         setCanReview(false);
-        setEditingReview(false); // Close the review form
-        setShowReviewPrompt(false); // Hide the review prompt
+        setEditingReview(false);
+        setShowReviewPrompt(false);
 
         toast.success('Review submitted successfully!');
         
@@ -604,51 +694,53 @@ const ProductDetail = () => {
 
   const handleReviewDelete = async (reviewId) => {
     try {
-        // Find the review before deleting
-        const reviewToDelete = reviews.find(review => review._id === reviewId);
-        if (!reviewToDelete) {
-            throw new Error('Review not found');
-        }
+      // Find the review before deleting
+      const reviewToDelete = reviews.find(review => review._id === reviewId);
+      if (!reviewToDelete) {
+        throw new Error('Review not found');
+      }
 
-        // Update UI first
+      // Make API call first
+      const response = await axios.delete(`/api/reviews/${reviewId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.data.success) {
+        // Update UI after successful API call
         setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+        
+        // Update product stats
         setProductStats(prev => ({
-            ...prev,
-            totalReviews: prev.totalReviews - 1,
-            ratingCounts: {
-                ...prev.ratingCounts,
-                [reviewToDelete.rating]: prev.ratingCounts[reviewToDelete.rating] - 1
-            }
+          ...prev,
+          totalReviews: prev.totalReviews - 1,
+          ratingCounts: {
+            ...prev.ratingCounts,
+            [reviewToDelete.rating]: prev.ratingCounts[reviewToDelete.rating] - 1
+          }
         }));
         
-        // Reset review status
+        // Reset review status immediately
         setHasReviewed(false);
         setCanReview(true);
-
-        // Make API call
-        const response = await axios.delete(`/api/reviews/${reviewId}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        if (response.data.success) {
-            // Refresh data in background
-            fetchReviews();
-            checkUserReview();
-            return true;
-        } else {
-            // Revert UI changes if API call fails
-            await fetchReviews();
-            await checkUserReview();
-            return false;
-        }
+        
+        // Show success message
+        toast.success('Review deleted successfully');
+        
+        // Refresh data in background
+        fetchReviews();
+        return true;
+      } else {
+        throw new Error(response.data.message || 'Failed to delete review');
+      }
     } catch (error) {
-        console.error('Error deleting review:', error);
-        // Revert UI changes if API call fails
-        await fetchReviews();
-        await checkUserReview();
-        throw new Error(error.response?.data?.message || 'Failed to delete review');
+      console.error('Error deleting review:', error);
+      toast.error(error.message || 'Failed to delete review');
+      // Revert UI changes if API call fails
+      await fetchReviews();
+      await checkUserReview();
+      return false;
     }
   };
 
@@ -1368,7 +1460,11 @@ const ProductDetail = () => {
                                         key={index}
                                         src={image}
                                         alt={`Review ${index + 1}`}
-                                        className="w-16 h-16 object-cover rounded-lg"
+                                        className="w-16 h-16 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => {
+                                          setSelectedReviewImages(review.images);
+                                          setSelectedImageIndex(index);
+                                        }}
                                       />
                                     ))}
                                   </div>
@@ -1581,6 +1677,14 @@ const ProductDetail = () => {
           onSubmit={handleReviewSubmit}
           onClose={() => setEditingReview(false)}
           orderId={orderId}
+        />
+      )}
+
+      {selectedReviewImages && (
+        <ImageViewerModal
+          images={selectedReviewImages}
+          startIndex={selectedImageIndex}
+          onClose={() => setSelectedReviewImages(null)}
         />
       )}
     </div>

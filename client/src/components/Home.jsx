@@ -49,43 +49,45 @@ const Home = () => {
         if (response.data.success) {
           const uniqueCategories = response.data.categories;
           
-          // For each category, fetch best rated product
+          // For each category, fetch most ordered product
           const categoriesWithData = await Promise.all(
             uniqueCategories.map(async (category) => {
               try {
-                // First try to get best rated product
-                const productsResponse = await axios.get('/api/products', {
-                  params: {
-                    category,
-                    sort: 'rating',
-                    limit: 1
-                  }
-                });
+                // Get most ordered product for this category
+                const productsResponse = await axios.get(`/api/products/most-ordered-by-category/${category}`);
 
-                if (productsResponse.data.success && productsResponse.data.products.length > 0) {
-                  const product = productsResponse.data.products[0];
+                if (productsResponse.data.success) {
+                  const product = productsResponse.data.product;
                   return {
                     id: category.toLowerCase().replace(/\s+/g, '-'),
                     title: category,
                     description: `Explore our ${category} collection`,
-                    image: product.images[0] || '/placeholder-image.jpg',
+                    image: getCategoryImage(category), // Keep original background image
                     color: getRandomGradient(),
                     slug: category.toLowerCase().replace(/\s+/g, '-'),
-                    totalProducts: productsResponse.data.total,
                     featuredProduct: {
                       _id: product._id,
                       name: product.name,
                       price: product.price,
                       rating: product.rating,
-                      reviews: product.reviews?.length || 0,
-                      images: product.images
+                      totalOrders: product.totalOrders,
+                      images: product.images,
+                      seller: product.seller
                     }
                   };
                 }
                 return null;
               } catch (err) {
-                console.error(`Error fetching products for ${category}:`, err);
-                return null;
+                console.error(`Error fetching most ordered product for ${category}:`, err);
+                // Fallback to default category data
+                return {
+                  id: category.toLowerCase().replace(/\s+/g, '-'),
+                  title: category,
+                  description: `Explore our ${category} collection`,
+                  image: getCategoryImage(category),
+                  color: getRandomGradient(),
+                  slug: category.toLowerCase().replace(/\s+/g, '-')
+                };
               }
             })
           );
@@ -319,7 +321,7 @@ const Home = () => {
                 <div 
                   className="absolute inset-0 opacity-60 bg-center bg-cover transition-opacity duration-500"
                   style={{
-                    backgroundImage: `url(${getCategoryImage(categories[activeCategory].title)})`,
+                    backgroundImage: `url(${categories[activeCategory].image})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     filter: 'brightness(0.7)'
@@ -425,36 +427,44 @@ const Home = () => {
 
       {/* Dynamic Categories Grid */}
       {categories.length > 0 && (
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {categories.map((category, index) => (
-            <motion.div
+              <motion.div
                 key={category.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group relative overflow-hidden rounded-2xl shadow-lg cursor-pointer"
-              onClick={() => handleCategoryClick(category.slug)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleCategoryClick(category.slug);
-                }
-              }}
-            >
-              <div className="aspect-w-3 aspect-h-4">
-                <img
-                  src={category.image}
-                  alt={category.title}
-                  className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3 sm:p-6">
-                <div className="w-full">
-                  <h3 className="text-base sm:text-xl font-semibold text-white text-center">{category.title}</h3>
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group relative overflow-hidden rounded-2xl shadow-lg cursor-pointer"
+                onClick={() => handleCategoryClick(category.slug)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCategoryClick(category.slug);
+                  }
+                }}
+              >
+                <div className="aspect-w-3 aspect-h-4">
+                  {category.featuredProduct ? (
+                    <img
+                      src={category.featuredProduct.images[0]}
+                      alt={category.title}
+                      className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <img
+                      src={category.image}
+                      alt={category.title}
+                      className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500"
+                    />
+                  )}
                 </div>
-              </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3 sm:p-6">
+                  <div className="w-full">
+                    <h3 className="text-base sm:text-xl font-semibold text-white text-center">{category.title}</h3>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
