@@ -598,13 +598,11 @@ const Home = () => {
         </div>
       ))}
 
-      {/* Featured Products Section */}
+      {/* Featured Products */}
       <div className="py-8 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Featured Products
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Featured Products</h2>
           </div>
           <div className="bg-white rounded-xl shadow-sm">
             <ProductCatalog />

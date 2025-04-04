@@ -22,6 +22,7 @@ import OrdersTab from './OrdersTab';
 import ReviewsTab from './ReviewsTab';
 import ProfileTab from './profile';
 import B2BDashboard from '../../src/components/B2BDashboard';
+import B2BProductsTab from '../../src/components/b2b-productTab';
 
 // Translations for all UI text
 const translations = {
@@ -394,56 +395,35 @@ const SellerDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return businessMode === 'business' ? (
-          <B2BDashboard />
-        ) : (
-          <View style={styles.container}>
-            {renderDashboardContent()}
-          </View>
-        );
+        return businessMode === 'business' ? <B2BDashboard /> : renderDashboardContent();
       case 'products':
-        return (
-          <View style={styles.container}>
-            <ProductsTab mode={businessMode} />
-          </View>
-        );
+        return businessMode === 'business' ? <B2BProductsTab /> : <ProductsTab />;
+        //return <ProductsTab />;
       case 'orders':
-        return (
-          <View style={styles.container}>
-            <OrdersTab mode={businessMode} />
-          </View>
-        );
+        return businessMode === 'business' ? null : <OrdersTab />;
       case 'reviews':
-        return (
-          <View style={styles.container}>
-            <ReviewsTab mode={businessMode} />
-          </View>
-        );
+        return <ReviewsTab />;
       case 'profile':
-        return (
-          <View style={styles.container}>
-            <ProfileTab />
-          </View>
-        );
+        return <ProfileTab />;
       default:
         return null;
     }
   };
 
   return (
-    <View style={styles.mainContainer}>
-      {/* Common Header for all tabs */}
+    <View style={styles.container}>
+      {/* Header */}
       {renderHeader()}
 
-      {/* Content Area */}
-      <View style={styles.contentContainer}>
+      {/* Content */}
+      <View style={styles.content}>
         {renderContent()}
       </View>
 
-      {/* Bottom Tab Bar */}
-      <View style={styles.tabBar}>
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
         <TouchableOpacity
-          style={styles.tabItem}
+          style={[styles.navItem, activeTab === 'dashboard' && styles.activeNavItem]}
           onPress={() => setActiveTab('dashboard')}
         >
           <Ionicons
@@ -451,13 +431,13 @@ const SellerDashboard = () => {
             size={24}
             color={activeTab === 'dashboard' ? '#6C63FF' : '#666'}
           />
-          <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.activeTabLabel]}>
+          <Text style={[styles.navText, activeTab === 'dashboard' && styles.activeNavText]}>
             {t.dashboard}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.tabItem}
+          style={[styles.navItem, activeTab === 'products' && styles.activeNavItem]}
           onPress={() => setActiveTab('products')}
         >
           <Ionicons
@@ -465,27 +445,29 @@ const SellerDashboard = () => {
             size={24}
             color={activeTab === 'products' ? '#6C63FF' : '#666'}
           />
-          <Text style={[styles.tabLabel, activeTab === 'products' && styles.activeTabLabel]}>
+          <Text style={[styles.navText, activeTab === 'products' && styles.activeNavText]}>
             {t.products}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('orders')}
-        >
-          <Ionicons
-            name={activeTab === 'orders' ? 'cart' : 'cart-outline'}
-            size={24}
-            color={activeTab === 'orders' ? '#6C63FF' : '#666'}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'orders' && styles.activeTabLabel]}>
-            {t.orders}
-          </Text>
-        </TouchableOpacity>
+        {businessMode !== 'business' && (
+          <TouchableOpacity
+            style={[styles.navItem, activeTab === 'orders' && styles.activeNavItem]}
+            onPress={() => setActiveTab('orders')}
+          >
+            <Ionicons
+              name={activeTab === 'orders' ? 'cart' : 'cart-outline'}
+              size={24}
+              color={activeTab === 'orders' ? '#6C63FF' : '#666'}
+            />
+            <Text style={[styles.navText, activeTab === 'orders' && styles.activeNavText]}>
+              {t.orders}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
-          style={styles.tabItem}
+          style={[styles.navItem, activeTab === 'reviews' && styles.activeNavItem]}
           onPress={() => setActiveTab('reviews')}
         >
           <Ionicons
@@ -493,23 +475,21 @@ const SellerDashboard = () => {
             size={24}
             color={activeTab === 'reviews' ? '#6C63FF' : '#666'}
           />
-          <Text style={[styles.tabLabel, activeTab === 'reviews' && styles.activeTabLabel]}>
+          <Text style={[styles.navText, activeTab === 'reviews' && styles.activeNavText]}>
             {t.reviews}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => {
-            setActiveTab('profile');
-          }}
+          style={[styles.navItem, activeTab === 'profile' && styles.activeNavItem]}
+          onPress={() => setActiveTab('profile')}
         >
           <Ionicons
             name={activeTab === 'profile' ? 'person' : 'person-outline'}
             size={24}
             color={activeTab === 'profile' ? '#6C63FF' : '#666'}
           />
-          <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
+          <Text style={[styles.navText, activeTab === 'profile' && styles.activeNavText]}>
             {t.profile}
           </Text>
         </TouchableOpacity>
@@ -832,14 +812,10 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
-  mainContainer: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  contentContainer: {
+  content: {
     flex: 1,
   },
-  tabBar: {
+  bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingVertical: 8,
@@ -853,17 +829,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  tabItem: {
+  navItem: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
   },
-  tabLabel: {
+  navText: {
     fontSize: 12,
     marginTop: 4,
     color: '#666',
   },
-  activeTabLabel: {
+  activeNavItem: {
+    color: '#6C63FF',
+    fontWeight: '500',
+  },
+  activeNavText: {
     color: '#6C63FF',
     fontWeight: '500',
   },

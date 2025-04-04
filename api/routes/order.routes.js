@@ -2,6 +2,7 @@ import express from 'express';
 import { protect, verifyToken } from '../middleware/authMiddleware.js';
 import {
     createOrder,
+    createDirectOrder,
     getMyOrders,
     getOrderDetails,
     cancelOrder,
@@ -20,6 +21,7 @@ router.use(protect);
 
 // Buyer routes
 router.post('/create', createOrder);
+router.post('/create-direct', createDirectOrder);
 router.get('/my-orders', getMyOrders);
 router.get('/my-orders-details', getBuyerOrdersWithDetails);
 

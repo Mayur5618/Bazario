@@ -624,9 +624,8 @@ export const getSellerData = async (req, res) => {
 
     // Get seller's products with essential details
     const products = await Product.find({ seller: sellerId })
-      .select('name images price stock rating numReviews')
-      .sort('-createdAt')
-      .limit(10); // Limit to 10 recent products
+      .select('name images price stock rating numReviews category subCategory')
+      .sort('-createdAt');
 
     // Get seller's stats
     const stats = {
@@ -647,13 +646,44 @@ export const getSellerData = async (req, res) => {
       stats.totalReviews = reviews.length;
     }
 
+    // Categorize products by their category and subcategory
+    const categorizedProducts = {
+      all: products,
+      byCategory: {}
+    };
+
+    // Group products by their main category
+    products.forEach(product => {
+      if (product.category) {
+        const category = product.category.toLowerCase();
+        if (!categorizedProducts.byCategory[category]) {
+          categorizedProducts.byCategory[category] = [];
+        }
+        categorizedProducts.byCategory[category].push(product);
+      }
+    });
+
+    // Group products by subcategory if available
+    if (products.some(p => p.subCategory)) {
+      categorizedProducts.bySubCategory = {};
+      products.forEach(product => {
+        if (product.subCategory) {
+          const subCategory = product.subCategory.toLowerCase();
+          if (!categorizedProducts.bySubCategory[subCategory]) {
+            categorizedProducts.bySubCategory[subCategory] = [];
+          }
+          categorizedProducts.bySubCategory[subCategory].push(product);
+        }
+      });
+    }
+
     res.status(200).json({ 
       success: true,
       seller: {
         ...seller.toObject(),
         stats
       },
-      products 
+      categorizedProducts
     });
   } catch (error) {
     console.error('Error fetching seller data:', error);

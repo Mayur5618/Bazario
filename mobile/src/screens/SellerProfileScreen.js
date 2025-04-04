@@ -19,10 +19,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 const SellerProfileScreen = () => {
   const { id } = useLocalSearchParams();
   const [seller, setSeller] = useState(null);
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('trending'); // trending, all, about
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [categorizedProducts, setCategorizedProducts] = useState({});
+  const [tabs, setTabs] = useState(['all']);
 
   useEffect(() => {
     fetchSellerDetails();
@@ -33,11 +35,38 @@ const SellerProfileScreen = () => {
       setLoading(true);
       const response = await axios.get(`/api/users/sellers/${id}`);
       if (response.data.success) {
-        setSeller(response.data.seller);
-        setProducts(response.data.products || []);
+        const { seller, categorizedProducts } = response.data;
+        setSeller(seller);
+        setCategorizedProducts(categorizedProducts);
+
+        // Generate tabs from categories
+        const generatedTabs = ['all'];
+        
+        // Add category tabs
+        if (categorizedProducts.byCategory) {
+          Object.keys(categorizedProducts.byCategory).forEach(category => {
+            if (categorizedProducts.byCategory[category].length > 0) {
+              generatedTabs.push(`category_${category}`);
+            }
+          });
+        }
+
+        // Add subcategory tabs
+        if (categorizedProducts.bySubCategory) {
+          Object.keys(categorizedProducts.bySubCategory).forEach(subCategory => {
+            if (categorizedProducts.bySubCategory[subCategory].length > 0) {
+              generatedTabs.push(`subcategory_${subCategory}`);
+            }
+          });
+        }
+
+        setTabs(generatedTabs);
+      } else {
+        setError('Failed to fetch seller data');
       }
     } catch (error) {
       console.error('Error fetching seller details:', error);
+      setError(error.response?.data?.message || 'Failed to fetch seller data');
     } finally {
       setLoading(false);
     }
@@ -49,15 +78,49 @@ const SellerProfileScreen = () => {
     setRefreshing(false);
   };
 
-  const getTrendingProducts = () => {
-    // Sort products by rating and return top products
-    return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
+  // Function to get products based on active tab
+  const getFilteredProducts = () => {
+    if (!categorizedProducts) return [];
+
+    if (activeTab === 'all') {
+      return categorizedProducts.all || [];
+    }
+
+    const [type, category] = activeTab.split('_');
+    
+    if (type === "category" && categorizedProducts.byCategory) {
+      return categorizedProducts.byCategory[category] || [];
+    }
+
+    if (type === "subcategory" && categorizedProducts.bySubCategory) {
+      return categorizedProducts.bySubCategory[category] || [];
+    }
+
+    return [];
+  };
+
+  // Function to format tab label
+  const getTabLabel = (tabId) => {
+    if (tabId === "all") return "All Products";
+
+    const [type, category] = tabId.split('_');
+    return category.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4169E1" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
@@ -69,68 +132,6 @@ const SellerProfileScreen = () => {
       </View>
     );
   }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'trending':
-        return (
-          <View style={styles.productsGrid}>
-            {getTrendingProducts().map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                onPress={() => router.push(`/product/${product._id}`)}
-              />
-            ))}
-            {getTrendingProducts().length === 0 && (
-              <View style={styles.noProductsContainer}>
-                <Ionicons name="trending-up" size={48} color="#666" />
-                <Text style={styles.noProductsText}>No trending products yet</Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'all':
-        return (
-          <View style={styles.productsGrid}>
-            {products.map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                onPress={() => router.push(`/product/${product._id}`)}
-              />
-            ))}
-            {products.length === 0 && (
-              <View style={styles.noProductsContainer}>
-                <Ionicons name="cube-outline" size={48} color="#666" />
-                <Text style={styles.noProductsText}>No products found</Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'about':
-        return (
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>About {seller.shopName}</Text>
-            <Text style={styles.descriptionText}>
-              {seller.description || 'No description available'}
-            </Text>
-            {seller.businessType && (
-              <View style={styles.businessInfo}>
-                <Text style={styles.businessInfoTitle}>Business Type</Text>
-                <Text style={styles.businessInfoText}>{seller.businessType}</Text>
-              </View>
-            )}
-            {seller.city && seller.state && (
-              <View style={styles.businessInfo}>
-                <Text style={styles.businessInfoTitle}>Location</Text>
-                <Text style={styles.businessInfoText}>{`${seller.city}, ${seller.state}`}</Text>
-              </View>
-            )}
-          </View>
-        );
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -171,55 +172,69 @@ const SellerProfileScreen = () => {
               </View>
               <View style={styles.sellerDetails}>
                 <Text style={styles.sellerName}>{seller.shopName}</Text>
+                <Text style={styles.sellerSubName}>
+                  {seller.firstname} {seller.lastname}
+                </Text>
                 <View style={styles.sellerStats}>
                   <View style={styles.statItem}>
                     <Ionicons name="star" size={20} color="#FFD700" />
                     <Text style={styles.statText}>
-                      {seller.rating || "New"}
+                      {seller.stats.averageRating} ({seller.stats.totalReviews})
                     </Text>
                   </View>
                   <View style={styles.statItem}>
                     <Ionicons name="cube-outline" size={20} color="#fff" />
                     <Text style={styles.statText}>
-                      {products.length} Products
+                      {seller.stats.totalProducts} Products
                     </Text>
                   </View>
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactText}>📱 {seller.mobileno}</Text>
+                  <Text style={styles.contactText}>📍 {seller.city}, {seller.state}</Text>
                 </View>
               </View>
             </View>
           </LinearGradient>
         </View>
 
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'trending' && styles.activeTab]}
-            onPress={() => setActiveTab('trending')}
-          >
-            <Text style={[styles.tabText, activeTab === 'trending' && styles.activeTabText]}>
-              Trending
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-            onPress={() => setActiveTab('all')}
-          >
-            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-              All Products
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'about' && styles.activeTab]}
-            onPress={() => setActiveTab('about')}
-          >
-            <Text style={[styles.tabText, activeTab === 'about' && styles.activeTabText]}>
-              About
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Category Tabs */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScrollView}
+        >
+          <View style={styles.tabsContainer}>
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.activeTab]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                  {getTabLabel(tab)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
-        {/* Content based on active tab */}
-        {renderContent()}
+        {/* Products Grid */}
+        <View style={styles.productsGrid}>
+          {getFilteredProducts().map((product) => (
+            <ProductCard
+              key={product._id}
+              product={product}
+              onPress={() => router.push(`/product/${product._id}`)}
+            />
+          ))}
+          {getFilteredProducts().length === 0 && (
+            <View style={styles.noProductsContainer}>
+              <Ionicons name="cube-outline" size={48} color="#666" />
+              <Text style={styles.noProductsText}>No products found</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -264,7 +279,7 @@ const styles = StyleSheet.create({
   },
   sellerInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   sellerImageContainer: {
     width: 80,
@@ -298,11 +313,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     color: '#fff',
+    marginBottom: 4,
+  },
+  sellerSubName: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.9,
     marginBottom: 8,
   },
   sellerStats: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   statItem: {
     flexDirection: 'row',
@@ -310,50 +332,38 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   statText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff',
     marginLeft: 4,
   },
-  descriptionContainer: {
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+  contactInfo: {
+    marginTop: 4,
   },
-  descriptionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  descriptionText: {
+  contactText: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    color: '#fff',
+    opacity: 0.9,
+    marginBottom: 2,
+  },
+  tabsScrollView: {
+    marginBottom: 8,
   },
   tabsContainer: {
     flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderRadius: 20,
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 4,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
   },
   activeTab: {
     backgroundColor: '#4169E1',
@@ -381,12 +391,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   errorText: {
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
   },
   noProductsContainer: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -395,20 +408,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 16,
-  },
-  businessInfo: {
-    marginTop: 16,
-  },
-  businessInfoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  businessInfoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
   },
 });
 

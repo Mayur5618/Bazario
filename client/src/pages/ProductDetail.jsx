@@ -1206,58 +1206,63 @@ const ProductDetail = () => {
 
             {/* Shop Now Button */}
             <div className="mb-4 md:mb-6">
-                <Link 
-                    to={`/sellers/${product.seller._id}`}
-                className="w-full bg-violet-600 text-white py-2.5 md:py-3 px-4 rounded-xl hover:bg-violet-700 transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base font-medium"
+                <button 
+                    onClick={() => {
+                        if (!userData) {
+                            toast.error("Please login to continue shopping");
+                            navigate('/login');
+                            return;
+                        }
+                        if (product.stock <= 0) {
+                            toast.error("Product is out of stock");
+                            return;
+                        }
+                        // Navigate to checkout with properly structured product details
+                        navigate('/checkout', {
+                            state: {
+                                items: [{
+                                    product: {
+                                        _id: product._id
+                                    },
+                                    quantity: 1
+                                }],
+                                totalAmount: product.price,
+                                buyNow: true,
+                                directOrder: true
+                            }
+                        });
+                    }}
+                    className="w-full bg-violet-600 text-white py-2.5 md:py-3 px-4 rounded-xl hover:bg-violet-700 transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base font-medium"
+                    disabled={product.stock <= 0}
                 >
-                <FaStore className="text-base md:text-lg" />
-                    Shop Now
-                </Link>
+                    <FaStore className="text-base md:text-lg" />
+                    {product.stock <= 0 ? 'Out of Stock' : 'Shop Now'}
+                </button>
             </div>
 
             {/* Seller Info - Compact */}
-            <div 
-                onClick={() => navigate(`/sellers/${product.seller._id}`)}
-                className="mb-6 bg-white rounded-lg border border-gray-100 overflow-hidden cursor-pointer hover:border-blue-200 hover:shadow-md transition-all duration-200"
+            <Link 
+              to={`/users/sellers/${product.seller._id}`}
+              className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 mb-4"
             >
-                <div className="p-4">
-                    <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                            {product.seller.profileImage ? (
-                                <img 
-                                    src={product.seller.profileImage} 
-                                    alt={product.seller.shopName}
-                                    className="w-12 h-12 rounded-full object-cover border border-gray-100"
-                                />
-                            ) : (
-                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-                                    <span className="text-lg font-medium text-blue-600">
-                                        {product.seller.shopName.charAt(0)}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600">
-                                {product.seller.shopName}
-                            </h3>
-                            <div className="flex items-center text-sm text-gray-500 mt-0.5">
-                                <span className="flex items-center">
-                                    <FaStar className="text-yellow-400 w-4 h-4 mr-1" />
-                                    {product.seller.rating || "New"}
-                                </span>
-                                <span className="mx-2">•</span>
-                                <span>{product.seller.productsCount || product.seller.totalProducts || 4} Products</span>
-                            </div>
-                        </div>
-                        <div className="text-blue-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                    </div>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 flex-shrink-0">
+                  <img 
+                    src={product.seller.profileImage || '/default-shop.png'} 
+                    alt={product.seller.shopName}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
                 </div>
-            </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">{product.seller.shopName}</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>• {product.seller.productsCount} Products</span>
+                  </div>
+                </div>
+              </div>
+              <FaArrowRight className="text-gray-400" />
+            </Link>
+
 
             {/* Product Description and Reviews Accordion for Mobile */}
             <div className="mt-4 md:mt-8">

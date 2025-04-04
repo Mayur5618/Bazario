@@ -1,5 +1,6 @@
 import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
+import Product from '../models/product.model.js';
 
 
 // Create new order from cart
@@ -192,8 +193,6 @@ import Cart from '../models/cart.model.js';
 //         });
 //     }
 // };
-
-import Product from '../models/product.model.js';
 
 export const createOrder = async (req, res) => {
     try {
@@ -862,6 +861,109 @@ export const getSellerOrderStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Error fetching order statistics'
+        });
+    }
+};
+
+// Create direct order (Shop Now)
+export const createDirectOrder = async (req, res) => {
+    try {
+        const { shippingAddress, paymentMethod, items } = req.body;
+        const buyer = req.user._id;
+
+        // Validate required fields
+        if (!shippingAddress || !paymentMethod || !items || !Array.isArray(items)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid request data'
+            });
+        }
+
+        // Validate and get product details
+        const orderItems = [];
+        for (const item of items) {
+            const product = await Product.findById(item.product._id)
+                .populate('seller', 'firstname lastname email shopName');
+            
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Product not found: ${item.product._id}`
+                });
+            }
+
+            // Check stock
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${product.name} is out of stock`
+                });
+            }
+
+            orderItems.push({
+                product: product._id,
+                seller: product.seller._id,
+                quantity: item.quantity,
+                price: product.price,
+                subtotal: product.price * item.quantity
+            });
+
+            // Update product stock
+            await Product.findByIdAndUpdate(
+                product._id,
+                { $inc: { stock: -item.quantity } }
+            );
+        }
+
+        // Calculate totals
+        const subtotal = orderItems.reduce((total, item) => total + item.subtotal, 0);
+        const shippingCost = 0; // Free shipping for direct orders
+        const total = subtotal + shippingCost;
+
+        // Create order
+        const order = new Order({
+            buyer,
+            items: orderItems,
+            payment: {
+                method: paymentMethod.toUpperCase(),
+                status: paymentMethod.toUpperCase() === 'COD' ? 'pending' : 'processing'
+            },
+            shippingAddress: {
+                fullName: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+                email: shippingAddress.email,
+                phone: shippingAddress.phone,
+                street: shippingAddress.street,
+                city: shippingAddress.city,
+                state: shippingAddress.state,
+                pincode: shippingAddress.pincode,
+                country: shippingAddress.country || 'India'
+            },
+            subtotal,
+            shippingCost,
+            total,
+            status: 'pending'
+        });
+
+        await order.save();
+
+        // Populate order details
+        await order.populate([
+            { path: 'buyer', select: 'firstname lastname email' },
+            { path: 'items.product', select: 'name images price' },
+            { path: 'items.seller', select: 'firstname lastname email shopName' }
+        ]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Order created successfully',
+            order
+        });
+
+    } catch (error) {
+        console.error('Direct order creation error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to create order'
         });
     }
 };

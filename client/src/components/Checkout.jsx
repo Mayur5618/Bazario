@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import { selectCartItems, selectCartTotal, clearCart } from '../store/cartSlice';
@@ -9,9 +9,11 @@ import { getStates, getCities } from '../services/locationService';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const cart = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
+  const { userData } = useSelector(state => state.user);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -21,12 +23,17 @@ const Checkout = () => {
   const [citySearchTerm, setCitySearchTerm] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(-1);
   
+  // Get items either from location state (direct purchase) or cart (normal checkout)
+  const orderItems = location.state?.items || cart;
+  const totalAmount = location.state?.totalAmount || cartTotal;
+  const isBuyNow = location.state?.buyNow || false;
+
   const [formData, setFormData] = useState({
     shippingAddress: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
+      firstName: userData?.firstname || '',
+      lastName: userData?.lastname || '',
+      email: userData?.email || '',
+      phone: userData?.mobile || '',
       street: '',
       city: '',
       state: '',
@@ -42,8 +49,8 @@ const Checkout = () => {
   // Add new state for profile loading
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
+  // Initialize component
   useEffect(() => {
-    // Initialize component
     const initializeCheckout = async () => {
       try {
         setIsInitializing(true);
@@ -58,7 +65,15 @@ const Checkout = () => {
     };
 
     initializeCheckout();
-  }, [cart, navigate, loading]);
+  }, []);
+
+  // Check for items and redirect if empty
+  // useEffect(() => {
+  //   if (!location.state?.items && (!cart || cart.length === 0)) {
+  //     toast.error('Cart is empty');
+  //     navigate('/cart');
+  //   }
+  // }, [location.state, cart, navigate]);
 
   useEffect(() => {
     if (formData.shippingAddress.state) {
@@ -215,54 +230,115 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateShippingDetails()) {
-      return;
+    // Validate if we have items to order
+    if (!orderItems || orderItems.length === 0) {
+        toast.error('No items to checkout');
+        navigate('/cart');
+        return;
+    }
+
+    // Check if all required fields are filled
+    const { shippingAddress } = formData;
+    if (!shippingAddress.firstName || !shippingAddress.lastName || !shippingAddress.email || 
+        !shippingAddress.phone || !shippingAddress.street || !shippingAddress.city || 
+        !shippingAddress.state || !shippingAddress.pincode) {
+        toast.error('Please fill all required fields');
+        return;
+    }
+
+    if (!formData.paymentMethod) {
+        toast.error('Please select a payment method');
+        return;
     }
 
     setLoading(true);
 
     try {
-      // Calculate subtotal from cart items
-      const subtotal = cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+        // Create order payload
+        const orderData = {
+            shippingAddress: {
+                firstName: formData.shippingAddress.firstName,
+                lastName: formData.shippingAddress.lastName,
+                email: formData.shippingAddress.email,
+                phone: formData.shippingAddress.phone,
+                street: formData.shippingAddress.street,
+                city: formData.shippingAddress.city,
+                state: formData.shippingAddress.state,
+                pincode: formData.shippingAddress.pincode,
+                country: 'India'
+            },
+            paymentMethod: formData.paymentMethod,
+            buyNow: location.state?.directOrder || false
+        };
 
-      const response = await axios.post('/api/orders/create', {
-        shippingAddress: formData.shippingAddress,
-        paymentMethod: formData.paymentMethod,
-        items: cart.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: item.product.price,
-          subtotal: item.product.price * item.quantity
-        })),
-        subtotal: subtotal,
-        total: subtotal // You can add shipping cost here if needed
-      }, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
+        // Add items based on order type
+        if (location.state?.directOrder) {
+            // For direct orders (Shop Now)
+            orderData.items = orderItems.map(item => ({
+                product: {
+                    _id: item.product._id
+                },
+                quantity: item.quantity
+            }));
+        } else {
+            // For cart orders
+            orderData.items = cart.map(item => ({
+                product: item.product._id,
+                quantity: item.quantity,
+                price: item.product.price
+            }));
         }
-      });
 
-      if (response.data.success && response.data.orders && response.data.orders.length > 0) {
-        const orderId = response.data.orders[0]._id;
+        // Choose API endpoint based on order type
+        const endpoint = location.state?.directOrder ? '/api/orders/create-direct' : '/api/orders/create';
         
-        // Clear cart first
-        await dispatch(clearCart());
-        
-        // Navigate to success page with replace:true to prevent back navigation
-        navigate(`/order-success/${orderId}`, { replace: true });
-        
-        // Show success message after navigation
-        toast.success('Order placed successfully!');
-        return;
-      }
-      
-      throw new Error(response.data.message || 'Failed to place order');
+        const response = await axios.post(endpoint, orderData, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        console.log('Order Response:', response.data); // Debug log
+
+        if (response.data.success) {
+            // Clear cart only for cart orders
+            if (!location.state?.directOrder) {
+                await dispatch(clearCart());
+            }
+
+            // Get order ID based on response structure
+            let orderId;
+            if (location.state?.directOrder) {
+                orderId = response.data.order?._id;
+            } else {
+                orderId = response.data.orders?.[0]?._id;
+            }
+
+            if (orderId) {
+                toast.success('Order placed successfully!');
+                // Navigate to OrderSuccess page and prevent going back
+                navigate(`/order-success/${orderId}`, { replace: true });
+                return; // Exit after successful navigation
+            }
+            
+            // If no order ID found
+            console.error('No order ID in response:', response.data);
+            toast.error('Order placed but could not get order details');
+            navigate('/orders');
+        } else {
+            toast.error(response.data.message || 'Failed to create order');
+            if (!location.state?.directOrder) {
+                navigate('/cart');
+            }
+        }
     } catch (error) {
-      console.error('Order creation error:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to place order');
+        console.error('Order creation error:', error);
+        toast.error(error.response?.data?.message || 'Failed to create order');
+        if (!location.state?.directOrder) {
+            navigate('/cart');
+        }
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
@@ -620,7 +696,7 @@ const Checkout = () => {
                 <FaShoppingBag className="mr-3 text-blue-600" /> Order Summary
               </h2>
               <div className="space-y-2">
-                {cart.map(item => (
+                {orderItems.map(item => (
                   <div key={item.product._id} className="flex justify-between">
                     <span>{item.product.name} x {item.quantity}</span>
                     <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>
@@ -629,7 +705,7 @@ const Checkout = () => {
                 <div className="border-t pt-2 font-semibold">
                   <div className="flex justify-between">
                     <span>Total</span>
-                    <span>₹{cartTotal.toFixed(2)}</span>
+                    <span>₹{totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

@@ -19,7 +19,7 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import axios from '../config/axios';
 import Toast from 'react-native-toast-message';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useDispatch } from 'react-redux';
@@ -29,10 +29,12 @@ const { width } = Dimensions.get('window');
 
 const CheckoutScreen = () => {
   const router = useRouter();
-  const { cartItems, cartTotal, getCart, setCartItems } = useCart();
+  const params = useLocalSearchParams();
+  const { cartItems, cartTotal, getCart } = useCart();
   const { user } = useAuth();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const [cart, setCart] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -48,6 +50,32 @@ const CheckoutScreen = () => {
     pincode: '',
     paymentMethod: 'COD'
   });
+
+  // Fetch cart data when component mounts
+  useEffect(() => {
+    fetchCartData();
+  }, []);
+
+  const fetchCartData = async () => {
+    try {
+      const response = await axios.get('/api/cart/getCartItems');
+      if (response.data.success) {
+        setCart(response.data.cart);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to load cart items'
+      });
+    }
+  };
+
+  // Parse items from params for direct order
+  const orderItems = params.items ? JSON.parse(params.items) : null;
+  const totalAmount = params.totalAmount ? parseFloat(params.totalAmount) : 0;
+  const isBuyNow = params.buyNow === 'true';
+  const isDirectOrder = params.directOrder === 'true';
 
   // Fetch saved addresses
   const fetchSavedAddresses = async () => {
@@ -204,112 +232,156 @@ const CheckoutScreen = () => {
     }
   };
 
+  // Add this function to get items to display
+  const getOrderItems = () => {
+    if (isDirectOrder && orderItems) {
+      return orderItems;
+    }
+    // Return cart items from the fetched cart
+    return cart?.items || [];
+  };
+
+  // Update calculate total function
+  const calculateTotal = () => {
+    if (isDirectOrder && orderItems) {
+      return totalAmount;
+    }
+    
+    const items = getOrderItems();
+    if (!items || items.length === 0) return 0;
+
+    return items.reduce((total, item) => {
+      const price = item.product?.price || 0;
+      const quantity = item.quantity || 0;
+      return total + (price * quantity);
+    }, 0);
+  };
+
   const handlePlaceOrder = async () => {
-    // First validate if cart has items
-    if (!cartItems || Object.keys(cartItems).length === 0) {
+    if (!user) {
       Toast.show({
         type: 'error',
-        text1: 'Your cart is empty',
-        text2: 'Please add items to cart before placing order'
+        text1: 'Please login to place order',
+        visibilityTime: 2000,
+        autoHide: true,
+        topOffset: 30,
+        position: 'top'
       });
+      router.push('/login');
       return;
     }
 
-    // Convert cart items object to array
-    const cartItemsArray = Object.values(cartItems);
-
-    // Validate all fields
-    const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'street', 'city', 'state', 'pincode'];
-    const emptyFields = requiredFields.filter(field => !formData[field]);
-    
-    if (emptyFields.length > 0) {
+    // Validate form data
+    const { firstName, lastName, email, phone, street, city, state, pincode } = formData;
+    if (!firstName || !lastName || !email || !phone || !street || !city || !state || !pincode) {
       Toast.show({
         type: 'error',
         text1: 'Please fill all required fields',
-        text2: `Missing: ${emptyFields.join(', ')}`
+        visibilityTime: 2000,
+        autoHide: true,
+        topOffset: 30,
+        position: 'top'
       });
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(formData.email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter a valid email address'
-      });
-      return;
-    }
-
-    // Validate phone number (assuming Indian format)
-    if (!/^\d{10}$/.test(formData.phone)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter a valid 10-digit phone number'
-      });
-      return;
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Format shipping address according to the API requirements
+      // Create order payload
       const orderData = {
         shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
           street: formData.street,
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
-          country: 'India',
-          fullName: `${formData.firstName} ${formData.lastName}`.trim(),
-          email: formData.email,
-          phone: formData.phone
+          country: 'India'
         },
         paymentMethod: formData.paymentMethod,
-        items: cartItemsArray.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: item.price
-        }))
+        buyNow: isDirectOrder
       };
 
-      console.log('Sending order data:', orderData);
-
-      const response = await axios.post('/api/orders/create', orderData);
-
-      if (response.data && response.data.success) {
-        // Clear cart after successful order
-        if (setCartItems) {
-          setCartItems({});
+      // Add items based on order type
+      if (isDirectOrder) {
+        // For direct orders (Shop Now)
+        orderData.items = orderItems.map(item => ({
+          product: {
+            _id: item.product._id
+          },
+          quantity: item.quantity
+        }));
+      } else {
+        // For cart orders
+        if (!cart || !cart.items) {
+          throw new Error('Cart is empty');
         }
-        dispatch(clearReduxCart());
+        orderData.items = cart.items.map(item => ({
+          product: item.product._id,
+          quantity: item.quantity
+        }));
+      }
+
+      // Choose API endpoint based on order type
+      const endpoint = isDirectOrder ? '/api/orders/create-direct' : '/api/orders/create';
+      
+      const response = await axios.post(endpoint, orderData, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
+      if (response.data.success) {
+        // Clear cart only for cart orders
+        if (!isDirectOrder) {
+          await dispatch(clearReduxCart());
+        }
+
+        // Get order ID from response
+        const orderId = isDirectOrder ? 
+          response.data.order?._id : 
+          response.data.orders?.[0]?._id;
+
+        if (orderId) {
+          Toast.show({
+            type: 'success',
+            text1: 'Order placed successfully!',
+            visibilityTime: 2000,
+            autoHide: true,
+            topOffset: 30,
+            position: 'top'
+          });
+          
+          // Add a small delay before navigation
+          setTimeout(() => {
+            router.replace(`/order-success/${orderId}`);
+          }, 1500);
+          return;
+        }
         
         Toast.show({
-          type: 'success',
-          text1: 'Order placed successfully!',
-          text2: `Order ID: ${response.data.orders[0].orderId}`
+          type: 'error',
+          text1: 'Order placed but could not get order details',
+          visibilityTime: 2000,
+          autoHide: true,
+          topOffset: 30,
+          position: 'top'
         });
-        
-        // Navigate to order success page with the order ID
-        router.push({
-          pathname: '/order-success/[orderId]',
-          params: { orderId: response.data.orders[0]._id }
-        });
+        router.push('/orders');
+      } else {
+        throw new Error(response.data.message || 'Failed to create order');
       }
     } catch (error) {
-      console.error('Order placement error:', error);
-      let errorMessage = 'Please try again';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      console.error('Order creation error:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to place order',
-        text2: errorMessage
+        text1: error.response?.data?.message || 'Failed to create order',
+        visibilityTime: 2000,
+        autoHide: true,
+        topOffset: 30,
+        position: 'top'
       });
     } finally {
       setLoading(false);
@@ -423,23 +495,68 @@ const CheckoutScreen = () => {
           {/* Order Summary */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
-            <View style={styles.summaryItem}>
-              <Text>Ganpati Bappa with Hanuman (x1)</Text>
-              <Text>₹3500</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text>Delivery:</Text>
-              <Text>Free</Text>
-            </View>
-            <View style={[styles.summaryItem, styles.totalAmount]}>
-              <Text style={styles.totalText}>Total Amount:</Text>
-              <Text style={styles.totalText}>₹3500</Text>
-            </View>
+            
+            {getOrderItems().length > 0 ? (
+              <>
+                {/* Products List */}
+                {getOrderItems().map((item, index) => (
+                  <View key={index} style={styles.orderItem}>
+                    <View style={styles.productInfo}>
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName} numberOfLines={2}>
+                          {item.product?.name || 'Product'}
+                        </Text>
+                        <Text style={styles.productMeta}>
+                          Quantity: {item.quantity || 0}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.productPrice}>
+                      ₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+
+                {/* Divider */}
+                <View style={styles.divider} />
+
+                {/* Price Details */}
+                <View style={styles.priceDetails}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Subtotal:</Text>
+                    <Text style={styles.summaryValue}>₹{calculateTotal().toFixed(2)}</Text>
+                  </View>
+                  
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Delivery:</Text>
+                    <Text style={styles.summaryValue}>Free</Text>
+                  </View>
+
+                  <View style={[styles.summaryItem, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>Total Amount:</Text>
+                    <Text style={styles.totalAmount}>₹{calculateTotal().toFixed(2)}</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.emptyCartText}>No items in cart</Text>
+            )}
           </View>
 
           {/* Place Order Button */}
-          <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder}>
-            <Text style={styles.placeOrderText}>Place Order</Text>
+          <TouchableOpacity 
+            style={[
+              styles.placeOrderButton,
+              loading && styles.disabledButton
+            ]} 
+            onPress={handlePlaceOrder}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.placeOrderText}>Place Order</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -636,6 +753,70 @@ const styles = StyleSheet.create({
     color: 'white',
     marginLeft: 8,
     fontSize: 16,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  productDetails: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  productMeta: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 15,
+  },
+  priceDetails: {
+    gap: 10,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '500',
+  },
+  totalRow: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  emptyCartText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 14,
+    paddingVertical: 20,
   },
 });
 

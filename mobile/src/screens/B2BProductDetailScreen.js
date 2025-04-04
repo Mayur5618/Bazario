@@ -11,13 +11,14 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import axios from '../config/axios';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
+import { sellerApi } from '../api/sellerApi';
 
 const { width } = Dimensions.get('window');
 
@@ -423,6 +424,23 @@ const B2BProductDetailScreen = () => {
     );
   };
 
+  const getAuctionStatus = () => {
+    if (!product) return { text: '', color: '' };
+    
+    const now = new Date();
+    const endDate = new Date(product.auctionEndDate);
+    
+    if (product.auctionStatus === 'ended') {
+      return { text: 'Auction Ended', color: '#FF4444' };
+    } else if (product.auctionStatus === 'cancelled') {
+      return { text: 'Cancelled', color: '#666666' };
+    } else if (endDate < now) {
+      return { text: 'Expired', color: '#FF4444' };
+    } else {
+      return { text: 'Active', color: '#4CAF50' };
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -447,10 +465,24 @@ const B2BProductDetailScreen = () => {
     );
   }
 
+  const status = getAuctionStatus();
+  const isAuctionEnded = status.text === 'Auction Ended' || status.text === 'Expired';
+
   return (
     <ScrollView style={styles.container}>
       <BidModal />
       
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Product Details</Text>
+      </View>
+
       {/* Product Images with Gradient Overlay */}
       <View style={styles.imageContainer}>
         <Image
@@ -542,6 +574,20 @@ const B2BProductDetailScreen = () => {
 
         {/* Bottom Padding View */}
         <View style={styles.bottomPadding} />
+
+        {/* Auction Winner Information */}
+        {isAuctionEnded && product.winningBid && (
+          <View style={styles.winnerContainer}>
+            <Text style={styles.winnerLabel}>Auction Winner:</Text>
+            <View style={styles.winnerInfo}>
+              <Ionicons name="trophy-outline" size={20} color="#FFD700" />
+              <Text style={styles.winnerName}>{product.winningBid.bidderName}</Text>
+              <Text style={styles.winningBid}>
+                Winning Bid: ₹{product.winningBid.amount}/{product.unitType}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -960,7 +1006,52 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  }
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 16,
+  },
+  winnerContainer: {
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  winnerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 8,
+  },
+  winnerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  winnerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginLeft: 8,
+    marginRight: 12,
+  },
+  winningBid: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
 });
 
 export default B2BProductDetailScreen; 

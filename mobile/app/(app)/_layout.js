@@ -107,6 +107,12 @@ export default function AppLayout() {
             }
           }}
         />
+        <Stack.Screen 
+          name="seller/[id]"
+          options={{
+            headerShown: false
+          }}
+        />
       </Stack>
       {shouldShowTabs && <BottomTabs />}
     </View>

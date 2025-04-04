@@ -27,7 +27,8 @@ import {
   getBuyerCity,
   getMostOrderedProductsByCategory,
   getMostOrderedProductByCategory,
-  getLimitedProductsByCategory
+  getLimitedProductsByCategory,
+  getSellerB2BProductsByStatus
 } from "../controllers/product.controller.js";
 import { 
   createReview, 
@@ -137,6 +138,15 @@ router.get(
   sellerOrAgency,
   checkPlatformAccess("b2b"),
   getSellerB2BProducts
+);
+
+// Get seller's B2B products by status
+router.get(
+  "/seller/b2b-products/status",
+  verifyToken,
+  sellerOrAgency,
+  checkPlatformAccess("b2b"),
+  getSellerB2BProductsByStatus
 );
 
 // Get B2B categories

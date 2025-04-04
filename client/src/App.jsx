@@ -60,6 +60,7 @@ const App = () => {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/all-products" element={<AllProducts />} />
               <Route path="/products" element={<AllProducts />} />
+              <Route path="/users/sellers/:sellerId" element={<SellerAccount />} />
               <Route path="/sellers/:sellerId" element={<SellerProfile />} />
               <Route path="/seller/:sellerId" element={<SellerProfile />} />
               <Route path="/products/category/:category" element={<CategoryProducts showFilters={true} />} />

@@ -1363,7 +1363,7 @@ export const getB2BProductById = async (req, res) => {
       .limit(5)
       .populate({
         path: 'bidder',
-        match: { userType: 'agency' },
+        model: 'agency',
         select: 'agencyName city'
       });
 
@@ -1907,6 +1907,83 @@ export const getLimitedProductsByCategory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching limited products by category',
+      error: error.message
+    });
+  }
+};
+
+// Get seller's B2B products filtered by status
+export const getSellerB2BProductsByStatus = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+    const { status } = req.query; // 'all', 'active', or 'closed'
+    
+    let query = {
+      seller: sellerId,
+      platformType: 'b2b'
+    };
+
+    // Add status filter if not 'all'
+    if (status && status !== 'all') {
+      query.auctionStatus = status;
+    }
+
+    const products = await Product.find(query)
+      .select('name description minPrice maxPrice totalStock stock images auctionEndDate auctionStatus currentHighestBid currentHighestBidder createdAt')
+      .populate('currentHighestBidder', 'agencyName email mobileno address city state pincode businessType')
+      .sort({ createdAt: -1 });
+
+    if (!products || products.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: status === 'active' 
+          ? "कोई सक्रिय नीलामी नहीं मिली" 
+          : status === 'closed' 
+          ? "कोई बंद नीलामी नहीं मिली" 
+          : "कोई उत्पाद नहीं मिला",
+        data: []
+      });
+    }
+
+    // Format the response data
+    const formattedProducts = products.map(product => ({
+      _id: product._id,
+      name: product.name,
+      description: product.description,
+      minPrice: product.minPrice,
+      maxPrice: product.maxPrice,
+      totalStock: product.totalStock,
+      stock: product.stock || product.totalStock,
+      images: product.images,
+      auctionEndDate: product.auctionEndDate,
+      auctionStatus: product.auctionStatus,
+      currentHighestBid: product.currentHighestBid,
+      currentHighestBidder: product.currentHighestBidder ? {
+        _id: product.currentHighestBidder._id,
+        agencyName: product.currentHighestBidder.agencyName,
+        email: product.currentHighestBidder.email,
+        phone: product.currentHighestBidder.mobileno,
+        address: product.currentHighestBidder.address,
+        city: product.currentHighestBidder.city,
+        state: product.currentHighestBidder.state,
+        pincode: product.currentHighestBidder.pincode,
+        businessType: product.currentHighestBidder.businessType
+      } : null,
+      createdAt: product.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: "उत्पाद सफलतापूर्वक प्राप्त किए गए",
+      data: formattedProducts,
+      totalProducts: formattedProducts.length
+    });
+
+  } catch (error) {
+    console.error('Error in getSellerB2BProductsByStatus:', error);
+    res.status(500).json({
+      success: false,
+      message: "उत्पाद प्राप्त करने में त्रुटि हुई",
       error: error.message
     });
   }

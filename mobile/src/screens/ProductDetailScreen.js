@@ -1168,6 +1168,45 @@ const ProductDetailScreen = () => {
     );
   };
 
+  // Add handleShopNow function
+  const handleShopNow = async () => {
+    if (!user) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to continue shopping'
+      });
+      router.push('/login');
+      return;
+    }
+
+    if (product.stock <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Product is out of stock'
+      });
+      return;
+    }
+
+    // Navigate to checkout with direct order data
+    router.push({
+      pathname: '/checkout',
+      params: {
+        items: JSON.stringify([{
+          product: {
+            _id: product._id,
+            name: product.name,
+            price: product.price,
+            images: product.images
+          },
+          quantity: 1
+        }]),
+        totalAmount: product.price,
+        buyNow: true,
+        directOrder: true
+      }
+    });
+  };
+
   if (loading || !product) {
     return (
       <View style={styles.loadingContainer}>
@@ -1313,11 +1352,17 @@ const ProductDetailScreen = () => {
             )}
 
             <TouchableOpacity 
-              style={[styles.actionButton, styles.shopNowButton]}
-              onPress={() => router.push('/checkout')}
+              style={[
+                styles.shopNowButton,
+                product.stock <= 0 && styles.disabledButton
+              ]}
+              onPress={handleShopNow}
+              disabled={product.stock <= 0}
             >
-              <Ionicons name="storefront-outline" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.actionButtonText}>Shop Now</Text>
+              <Ionicons name="cart" size={24} color="#fff" />
+              <Text style={styles.shopNowButtonText}>
+                {product.stock <= 0 ? 'Out of Stock' : 'Shop Now'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2121,12 +2166,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#4169E1',
   },
   shopNowButton: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#6B46C1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
-  actionButtonText: {
+  shopNowButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
   quantityControlsContainer: {
     flexDirection: 'row',

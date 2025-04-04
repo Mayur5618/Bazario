@@ -50,7 +50,7 @@ const B2BDashboard = () => {
       <View style={styles.actionsContainer}>
         <Text style={styles.sectionTitle}>{t.quickActions}</Text>
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/add-bulk-product')}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(seller)/add-b2b-product')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FFB80015' }]}>
               <Ionicons name="add-circle-outline" size={24} color="#FFB800" />
             </View>

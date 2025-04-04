@@ -168,6 +168,31 @@ productSchema.index({
     collation: { locale: 'en', strength: 2 }
 });
 
+// Pre-save middleware to update auction status
+productSchema.pre('save', function(next) {
+    // Only check auction status for B2B products
+    if (this.platformType.includes('b2b') && this.auctionEndDate) {
+        const now = new Date();
+        const endDate = new Date(this.auctionEndDate);
+        
+        // If auction end date has passed and status is still active
+        if (endDate <= now && this.auctionStatus === 'active') {
+            this.auctionStatus = 'ended';
+            
+            // If there's a highest bidder, record them as winner
+            if (this.currentHighestBidder && this.currentHighestBid > 0) {
+                console.log('Auction ended with winner:', {
+                    bidder: this.currentHighestBidder,
+                    amount: this.currentHighestBid
+                });
+            } else {
+                console.log('Auction ended without any bids');
+            }
+        }
+    }
+    next();
+});
+
 const Product = mongoose.model('Product', productSchema);
 
 export default Product;

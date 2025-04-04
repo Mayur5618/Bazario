@@ -315,4 +315,34 @@ export const sellerApi = {
             };
         }
     },
+
+    // Get B2B product details
+    getB2BProductDetails: async (productId) => {
+        try {
+            const response = await axios.get(`/api/products/b2b/products/${productId}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching B2B product details:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error fetching B2B product details'
+            };
+        }
+    },
+
+    // Get seller's B2B products by status
+    getSellerProductsByStatus: async ({ status }) => {
+        try {
+            const response = await axios.get('/api/products/seller/b2b-products/status', {
+                params: { status }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching B2B products by status:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error fetching B2B products'
+            };
+        }
+    },
 }; 

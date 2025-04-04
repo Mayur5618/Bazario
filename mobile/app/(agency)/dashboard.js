@@ -231,6 +231,7 @@ const AgencyDashboard = () => {
     won: 0,
     investment: 0
   });
+  const [totalActiveAuctions, setTotalActiveAuctions] = useState(0);
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -238,6 +239,21 @@ const AgencyDashboard = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const fetchTotalActiveAuctions = async () => {
+      try {
+        const response = await axios.get(`/api/bids/active-auctions/${user._id}`);
+        if (response.data.success) {
+          setTotalActiveAuctions(response.data.totalActiveAuctions || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching total active auctions:', error);
+      }
+    };
+    
+    fetchTotalActiveAuctions();
+  }, [user._id]);
 
   useEffect(() => {
     if (activeTab === 'auctions') {
@@ -317,21 +333,23 @@ const AgencyDashboard = () => {
 
   const fetchActiveAuctions = async () => {
     try {
-      console.log('Fetching all active auctions...');
-      const response = await axios.get('/api/bids/active-auctions');
+      console.log('Fetching active auctions for agency...');
+      const response = await axios.get(`/api/bids/active-auctions/${user._id}`);
       console.log('Active auctions response:', response.data);
       
       if (response.data.success) {
-        setLiveAuctions(response.data.auctions.map(auction => ({
-          id: auction.productId,
+        setLiveAuctions(response.data.activeAuctions.map(auction => ({
+          id: auction._id,
           name: auction.name,
-          image: auction.image,
+          image: auction.images[0],
           currentBid: auction.currentHighestBid || 0,
-          yourLastBid: auction.myLastBid || 0,
-          isHighestBidder: auction.isHighestBidder,
+          yourLastBid: auction.bidChange || 0,
+          isHighestBidder: auction.isCurrentAgencyHighestBidder || false,
           auctionEndDate: auction.auctionEndDate,
-          stock: auction.stock || 0,
-          unitType: auction.unitType || 'kg',
+          category: auction.category,
+          subcategory: auction.subcategory,
+          totalBids: auction.totalBids,
+          images: auction.images,
           daysLeft: Math.ceil((new Date(auction.auctionEndDate) - new Date()) / (1000 * 60 * 60 * 24))
         })));
       }
@@ -371,7 +389,7 @@ const AgencyDashboard = () => {
           />
           <StatsCard
             icon="timer"
-            number={stats.active}
+            number={totalActiveAuctions}
             label={t.stats.activeAuctions}
             color="#2196F3"
             onPress={() => setActiveTab('auctions')}
