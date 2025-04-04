@@ -313,14 +313,14 @@ const AgencyDashboard = () => {
         }));
 
         setLiveAuctions(response.data.products.map(auction => ({
-          id: auction._id,
+          id: auction.productId,
           name: auction.name,
           image: auction.image,
           currentBid: auction.currentHighestBid || 0,
           yourLastBid: auction.myLastBid || 0,
           isHighestBidder: auction.isHighestBidder,
           auctionEndDate: auction.auctionEndDate,
-          stock: auction.quantity || 0,
+          stock: auction.stock || 0,
           unitType: auction.unitType || 'kg',
           daysLeft: Math.ceil((new Date(auction.auctionEndDate) - new Date()) / (1000 * 60 * 60 * 24))
         })));
@@ -343,13 +343,15 @@ const AgencyDashboard = () => {
           name: auction.name,
           image: auction.images[0],
           currentBid: auction.currentHighestBid || 0,
-          yourLastBid: auction.bidChange || 0,
+          yourLastBid: auction.myLastBid || 0,
           isHighestBidder: auction.isCurrentAgencyHighestBidder || false,
           auctionEndDate: auction.auctionEndDate,
           category: auction.category,
           subcategory: auction.subcategory,
           totalBids: auction.totalBids,
           images: auction.images,
+          stock: auction.stock || 0,
+          unitType: auction.unitType || 'kg',
           daysLeft: Math.ceil((new Date(auction.auctionEndDate) - new Date()) / (1000 * 60 * 60 * 24))
         })));
       }
@@ -358,6 +360,42 @@ const AgencyDashboard = () => {
       setLiveAuctions([]);
     }
   };
+
+  const fetchMyBids = async () => {
+    try {
+      console.log('Fetching my bids...');
+      const response = await axios.get(`/api/bids/agency-active-bids/${user._id}`);
+      console.log('My bids response:', response.data);
+      
+      if (response.data.success) {
+        setLiveAuctions(response.data.products.map(auction => ({
+          id: auction.productId,
+          name: auction.name,
+          image: auction.image,
+          currentBid: auction.currentHighestBid || 0,
+          yourLastBid: auction.myLastBid || 0,
+          isHighestBidder: auction.isHighestBidder,
+          auctionEndDate: auction.auctionEndDate,
+          stock: auction.stock || 0,
+          unitType: auction.unitType || 'kg',
+          daysLeft: Math.ceil((new Date(auction.auctionEndDate) - new Date()) / (1000 * 60 * 60 * 24))
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching my bids:', error);
+      setLiveAuctions([]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'auctions') {
+      fetchActiveAuctions();
+    } else if (activeTab === 'myBids') {
+      fetchMyBids();
+    } else if (activeTab === 'dashboard') {
+      fetchAuctions();
+    }
+  }, [activeTab]);
 
   const handleLogout = async () => {
     try {
@@ -906,6 +944,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
+    marginBottom: 4,
+    fontWeight: '500'
   },
   bidButton: {
     backgroundColor: '#6C63FF',
@@ -1184,6 +1224,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF3B30',
     textAlign: 'center',
+  },
+  stockInfo: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    marginBottom: 8
   },
 });
 

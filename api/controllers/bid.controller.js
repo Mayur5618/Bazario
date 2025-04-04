@@ -177,14 +177,14 @@ export const getMyBids = async (req, res) => {
         // Calculate skip for pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        // Get bids
+        // Get bids with expanded product details including stock and unitType
         const bids = await Bid.find(query)
             .sort({ bidTime: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .populate({
                 path: 'product',
-                select: 'name images minPrice maxPrice auctionEndDate currentHighestBid'
+                select: 'name images minPrice maxPrice auctionEndDate currentHighestBid stock quantity unitType'
             });
 
         // Get total bids count
@@ -399,19 +399,25 @@ export const getActiveAuctions = async (req, res) => {
 export const getActiveAuctionsProducts = async (req, res) => {
     try {
         const currentTime = new Date();
-        const { agencyId } = req.params; // Get agencyId from URL params
+        const { agencyId } = req.params;
 
         // Find all products with active auctions
         const activeProducts = await Product.find({
             auctionStatus: 'active',
             auctionEndDate: { $gt: currentTime }
-        }).select('name category subcategory images currentHighestBid currentHighestBidder auctionEndDate seller');
+        }).select('name category subcategory images currentHighestBid currentHighestBidder auctionEndDate seller stock quantity unitType');
 
         // Get total bids and bid changes for each active auction
         const productsWithDetails = await Promise.all(
             activeProducts.map(async (product) => {
                 // Get total bids for this product
                 const totalBids = await Bid.countDocuments({ product: product._id });
+
+                // Get agency's last bid for this product
+                const agencyLastBid = await Bid.findOne({ 
+                    product: product._id,
+                    bidder: agencyId 
+                }).sort({ bidTime: -1 });
 
                 // Get the last two bids to calculate bid change
                 const lastTwoBids = await Bid.find({ product: product._id })
@@ -436,7 +442,10 @@ export const getActiveAuctionsProducts = async (req, res) => {
                     totalBids: totalBids,
                     isCurrentAgencyHighestBidder: product.currentHighestBidder && 
                         product.currentHighestBidder.toString() === agencyId.toString(),
-                    bidChange: bidChange
+                    bidChange: bidChange,
+                    myLastBid: agencyLastBid ? agencyLastBid.amount : 0,
+                    stock: product.quantity || product.stock || 0,
+                    unitType: product.unitType || 'kg'
                 };
             })
         );

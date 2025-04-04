@@ -100,17 +100,10 @@ const B2BProductDetailScreen = () => {
 
   const handlePlaceBid = async () => {
     try {
-      let bid;
+      const numericBidAmount = parseFloat(bidAmount);
       
-      // For first bid, use unitPrice
-      if (isFirstBid) {
-        bid = product.unitPrice;
-      } else {
-        bid = parseFloat(bidAmount);
-      }
-      
-      // Validation for first bidder
-      if (isFirstBid && bid !== product.unitPrice) {
+      // Validation for first bid
+      if (isFirstBid && numericBidAmount !== product.unitPrice) {
         Toast.show({
           type: 'error',
           text1: 'Invalid Bid',
@@ -120,7 +113,7 @@ const B2BProductDetailScreen = () => {
       }
 
       // Validation for subsequent bidders
-      if (!isFirstBid && bid <= product.currentHighestBid) {
+      if (!isFirstBid && numericBidAmount <= product.currentHighestBid) {
         Toast.show({
           type: 'error',
           text1: 'Invalid Bid',
@@ -132,7 +125,7 @@ const B2BProductDetailScreen = () => {
       const response = await axios.post(`/api/bids/place`, {
         productId: id,
         agencyId: user._id,
-        amount: bid
+        amount: numericBidAmount
       });
 
       // After successful bid, set this user as highest bidder
@@ -261,87 +254,149 @@ const B2BProductDetailScreen = () => {
     );
   };
 
-  const BidModal = () => (
-    <Modal
-      visible={showBidModal}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          {isFirstBid ? (
-            // First Bid Modal Content
-            <>
-              <Text style={styles.modalTitle}>Accept Base Price</Text>
-              <View style={styles.modalBasePriceInfo}>
-                <Text style={styles.modalBasePrice}>₹{product.unitPrice}</Text>
-                <Text style={styles.modalPerUnit}>per {product.unitType}</Text>
-              </View>
-              <View style={styles.modalInfoBox}>
-                <Ionicons name="information-circle" size={24} color="#0066cc" />
-                <Text style={styles.modalInfoText}>
-                  You'll be the first bidder for this product. The bid amount must match the base price set by the seller.
-                </Text>
-              </View>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setShowBidModal(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.confirmButton]}
-                  onPress={handlePlaceBid}
-                >
-                  <Text style={styles.modalButtonText}>Accept & Place Bid</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            // Subsequent Bid Modal Content
-            <>
-              <Text style={styles.modalTitle}>Place Your Bid</Text>
-              <View style={styles.currentBidInfo}>
-                <Text style={styles.modalLabel}>Current Highest Bid</Text>
-                <Text style={styles.modalCurrentBid}>₹{product.currentHighestBid}</Text>
-              </View>
-              <View style={styles.bidInputContainer}>
-                <Text style={styles.modalLabel}>Your Bid Amount</Text>
-                <TextInput
-                  style={styles.bidInput}
-                  value={bidAmount}
-                  onChangeText={setBidAmount}
-                  keyboardType="numeric"
-                  placeholder={`Enter amount higher than ₹${product.currentHighestBid}`}
-                />
-              </View>
-              <View style={styles.modalInfoBox}>
-                <Ionicons name="arrow-up-circle" size={24} color="#0066cc" />
-                <Text style={styles.modalInfoText}>
-                  Your bid must be higher than the current highest bid of ₹{product.currentHighestBid}
-                </Text>
-              </View>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setShowBidModal(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.confirmButton]}
-                  onPress={handlePlaceBid}
-                >
-                  <Text style={styles.modalButtonText}>Place Bid</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+  const BidModal = () => {
+    const [localBidAmount, setLocalBidAmount] = useState(bidAmount);
+
+    const handlePlaceBidClick = async () => {
+      try {
+        const numericBidAmount = parseFloat(localBidAmount);
+        
+        // Validation for first bidder
+        if (isFirstBid && numericBidAmount !== product.unitPrice) {
+          Toast.show({
+            type: 'error',
+            text1: 'Invalid Bid',
+            text2: `First bid must be ₹${product.unitPrice}`
+          });
+          return;
+        }
+
+        // Validation for subsequent bidders
+        if (!isFirstBid && numericBidAmount <= product.currentHighestBid) {
+          Toast.show({
+            type: 'error',
+            text1: 'Invalid Bid',
+            text2: `Bid must be higher than ₹${product.currentHighestBid}`
+          });
+          return;
+        }
+
+        // If validation passes, make the API call directly
+        const response = await axios.post(`/api/bids/place`, {
+          productId: id,
+          agencyId: user._id,
+          amount: numericBidAmount
+        });
+
+        // After successful bid, set this user as highest bidder
+        setIsHighestBidder(true);
+        setShowBidModal(false);
+        setBidAmount(localBidAmount); // Update state after successful bid
+
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Bid placed successfully!'
+        });
+
+        // Refresh product details
+        fetchProductDetails();
+      } catch (error) {
+        console.error('Error placing bid:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error.response?.data?.message || 'Failed to place bid'
+        });
+      }
+    };
+
+    return (
+      <Modal
+        visible={showBidModal}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {isFirstBid ? (
+              // First Bid Modal Content
+              <>
+                <Text style={styles.modalTitle}>Accept Base Price</Text>
+                <View style={styles.modalBasePriceInfo}>
+                  <Text style={styles.modalBasePrice}>₹{product.unitPrice}</Text>
+                  <Text style={styles.modalPerUnit}>per {product.unitType}</Text>
+                </View>
+                <View style={styles.modalInfoBox}>
+                  <Ionicons name="information-circle" size={24} color="#0066cc" />
+                  <Text style={styles.modalInfoText}>
+                    You'll be the first bidder for this product. The bid amount must match the base price set by the seller.
+                  </Text>
+                </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setShowBidModal(false)}
+                  >
+                    <Text style={styles.modalButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={handlePlaceBid}
+                  >
+                    <Text style={styles.modalButtonText}>Accept & Place Bid</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              // Subsequent Bid Modal Content with local state
+              <>
+                <Text style={styles.modalTitle}>Place Your Bid</Text>
+                <View style={styles.currentBidInfo}>
+                  <Text style={styles.modalLabel}>Current Highest Bid</Text>
+                  <Text style={styles.modalCurrentBid}>₹{product.currentHighestBid}</Text>
+                </View>
+                <View style={styles.bidInputContainer}>
+                  <Text style={styles.modalLabel}>Your Bid Amount</Text>
+                  <TextInput
+                    style={styles.bidInput}
+                    value={localBidAmount}
+                    onChangeText={(text) => {
+                      // Only allow numeric input
+                      const numericValue = text.replace(/[^0-9]/g, '');
+                      setLocalBidAmount(numericValue);
+                    }}
+                    keyboardType="numeric"
+                    placeholder={`Enter amount higher than ₹${product.currentHighestBid}`}
+                  />
+                </View>
+                <View style={styles.modalInfoBox}>
+                  <Ionicons name="arrow-up-circle" size={24} color="#0066cc" />
+                  <Text style={styles.modalInfoText}>
+                    Your bid must be higher than the current highest bid of ₹{product.currentHighestBid}
+                  </Text>
+                </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setShowBidModal(false)}
+                  >
+                    <Text style={styles.modalButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={handlePlaceBidClick}
+                  >
+                    <Text style={styles.modalButtonText}>Place Bid</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   const renderCurrentBidSection = () => {
     // If no bids yet (first bid)
