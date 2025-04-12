@@ -121,7 +121,7 @@ export const protect = async (req, res, next) => {
         }
 
         // Verify token
-        const decoded = await promisify(jwt.verify)(token, 'your-temporary-secret-key');
+        const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
         // Find complete user based on type
         let user = null;
@@ -356,7 +356,7 @@ export const verifyToken = async (req, res, next) => {
         }
 
         // Verify token
-        const decoded = jwt.verify(token, 'your-temporary-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         console.log('Decoded token:', decoded); // Debug log
 
         // Find user based on token data with platformType field

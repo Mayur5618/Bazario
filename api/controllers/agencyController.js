@@ -54,7 +54,7 @@ export const signin = async (req, res) => {
                 userId: user._id,
                 userType: 'agency'
             },
-            process.env.JWT_SECRET || 'your-temporary-secret-key',
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 

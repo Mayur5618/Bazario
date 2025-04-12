@@ -520,11 +520,8 @@ export const sellerSignin = async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { 
-                id: seller._id, 
-                userType: 'seller' 
-            },
-            'your-temporary-secret-key',
+            { id: seller._id, userType: 'seller' },
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 

@@ -18,14 +18,17 @@ import uploadRoutes from './routes/upload.route.js';
 import agencyRoutes from './routes/agencyRoutes.js';
 import b2bProductRoutes from './routes/b2bProduct.routes.js';
 import bidRoutes from './routes/bid.route.js';
+import dotenv from 'dotenv';
 import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
-import './models/agency.model.js'; // Import Agency model to register it
+import './models/agency.model.js';// Import Agency model to register it
 import buyerRoutes from './routes/buyer.route.js';
 
+// Load environment variables
+dotenv.config();
+
 mongoose
-  .connect("mongodb+srv://mayur:mayur566@bazario.vhylnpt.mongodb.net/test?retryWrites=true&w=majority&appName=Bazario")
-  // .connect("mongodb://localhost:27017/Purity-Path")
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("mongodb is connected");
   })
@@ -72,7 +75,7 @@ app.use('/api/bids', bidRoutes);
 app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
-app.listen(5000, () => {
+app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 

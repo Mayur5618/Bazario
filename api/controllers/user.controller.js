@@ -356,11 +356,8 @@ export const signin = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { 
-                id: user._id, 
-                userType: user.userType 
-            },
-            'your-temporary-secret-key',
+            { id: user._id, userType: user.userType },
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
@@ -446,7 +443,7 @@ export const verifyUser = async (req, res) => {
         });
       }
   
-      const decoded = jwt.verify(token, 'your-temporary-secret-key');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Find user based on decoded token
       let user = null;
@@ -611,10 +608,10 @@ export const getSellerData = async (req, res) => {
   try {
     const sellerId = req.params.id;
     
-    // Find seller and populate necessary fields
-    const seller = await Seller.findById(sellerId)
+    // Try to find seller in Seller model first
+    let seller = await Seller.findById(sellerId)
       .select('firstname lastname shopName profileImage businessType city state createdAt rating mobileno address pincode userType');
-    
+
     if (!seller) {
       return res.status(404).json({ 
         success: false, 
@@ -622,26 +619,26 @@ export const getSellerData = async (req, res) => {
       });
     }
 
-    // Get seller's products excluding B2B products
+    // Get seller's products
     const products = await Product.find({ 
       seller: sellerId,
-      platformType: { $ne: 'b2b' } // Exclude B2B products
+      platformType: { $in: ['b2c'] }  // Find products that have b2c in their platformType array
     })
-      .select('name images price stock rating numReviews category subCategory negotiationEnabled currentHighestBid auctionStatus auctionEndDate minPrice maxPrice unitPrice currentHighestBidder')
+      .select('name images price stock rating numReviews category subCategory')
       .sort('-createdAt');
 
-    // Get seller's stats (excluding B2B products)
+    // Get seller's stats
     const stats = {
       totalProducts: await Product.countDocuments({ 
         seller: sellerId,
-        platformType: { $ne: 'b2b' }
+        platformType: { $in: ['b2c'] }
       }),
       totalOrders: await Order.countDocuments({ 'items.seller': sellerId }),
       averageRating: 0,
       totalReviews: 0
     };
 
-    // Calculate average rating from reviews (for non-B2B products only)
+    // Calculate average rating from reviews
     const reviews = await Review.find({ 
       product: { $in: products.map(p => p._id) }
     });
@@ -652,13 +649,13 @@ export const getSellerData = async (req, res) => {
       stats.totalReviews = reviews.length;
     }
 
-    // Categorize products by their category and subcategory (B2C products only)
+    // Categorize products
     const categorizedProducts = {
       all: products,
       byCategory: {}
     };
 
-    // Group products by their main category
+    // Group products by category
     products.forEach(product => {
       if (product.category) {
         const category = product.category.toLowerCase();
@@ -667,6 +664,13 @@ export const getSellerData = async (req, res) => {
         }
         categorizedProducts.byCategory[category].push(product);
       }
+    });
+
+    // Log the response for debugging
+    console.log('Sending seller data:', {
+      seller: seller.toObject(),
+      productsCount: products.length,
+      stats
     });
 
     res.status(200).json({ 
