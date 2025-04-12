@@ -1003,11 +1003,19 @@ const ProductDetailScreen = () => {
                 {/* User Info */}
                 <View style={styles.reviewHeader}>
                   <View style={styles.reviewerInfo}>
-                    <View style={styles.avatarContainer}>
-                      <Text style={styles.avatarText}>
-                        {review.buyer.firstname[0].toUpperCase()}
-                      </Text>
-                    </View>
+                    {review.buyer?.profileImage ? (
+                      <Image 
+                        source={{ uri: review.buyer.profileImage }}
+                        style={styles.reviewerImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.avatarContainer}>
+                        <Text style={styles.avatarText}>
+                          {review.buyer?.firstname?.[0]?.toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                     <View>
                       <Text style={styles.reviewerName}>
                         {review.buyer.firstname} {review.buyer.lastname}
@@ -1029,6 +1037,48 @@ const ProductDetailScreen = () => {
 
                 {/* Review Content */}
                 <Text style={styles.reviewComment}>{review.comment}</Text>
+
+                {/* Seller Reply Section */}
+                {review.replies && review.replies.length > 0 && (
+                  <View style={styles.replySection}>
+                    {review.replies.map((reply, replyIndex) => (
+                      <View key={replyIndex} style={styles.replyCard}>
+                        <View style={styles.replyHeader}>
+                          <View style={styles.replyUserInfo}>
+                            {product.seller.profileImage ? (
+                              <Image 
+                                source={{ uri: product.seller.profileImage }}
+                                style={styles.replyUserImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={[styles.avatarContainer, { backgroundColor: '#4CAF50' }]}>
+                                <Text style={styles.avatarText}>
+                                  {product.seller.shopName?.[0]?.toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
+                            <View style={styles.replyUserDetails}>
+                              <View style={styles.replyUserNameContainer}>
+                                <Text style={styles.replyUserName}>
+                                  {product.seller.shopName}
+                                </Text>
+                                <View style={styles.sellerBadge}>
+                                  <Ionicons name="shield-checkmark" size={12} color="#fff" />
+                                  <Text style={styles.sellerBadgeText}>Seller</Text>
+                                </View>
+                              </View>
+                              <Text style={styles.replyDate}>
+                                {new Date(reply.createdAt).toLocaleDateString()}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        <Text style={styles.replyComment}>{reply.comment}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 {/* Review Images */}
                 {review.images && review.images.length > 0 && (
@@ -1168,7 +1218,7 @@ const ProductDetailScreen = () => {
     );
   };
 
-  // Add handleShopNow function
+  // Update handleShopNow function
   const handleShopNow = async () => {
     if (!user) {
       Toast.show({
@@ -1187,22 +1237,27 @@ const ProductDetailScreen = () => {
       return;
     }
 
+    // Create the order item with all necessary product details
+    const orderItem = {
+      product: {
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        images: product.images
+      },
+      quantity: 1
+    };
+
+    console.log('Shop Now - Order Item:', orderItem); // Debug log
+
     // Navigate to checkout with direct order data
     router.push({
-      pathname: '/checkout',
+      pathname: '/(app)/checkout',
       params: {
-        items: JSON.stringify([{
-          product: {
-            _id: product._id,
-            name: product.name,
-            price: product.price,
-            images: product.images
-          },
-          quantity: 1
-        }]),
-        totalAmount: product.price,
-        buyNow: true,
-        directOrder: true
+        items: JSON.stringify([orderItem]),
+        totalAmount: product.price.toString(),
+        buyNow: 'true',
+        directOrder: 'true'
       }
     });
   };
@@ -2215,6 +2270,82 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  replySection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  replyCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  replyUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  replyUserImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  replyUserDetails: {
+    flex: 1,
+  },
+  replyUserNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  replyUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  sellerBadge: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 4,
+  },
+  sellerBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  replyDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  replyComment: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    backgroundColor: '#fff',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  reviewerImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 8,
   },
 });
 

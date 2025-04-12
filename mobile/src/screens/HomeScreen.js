@@ -106,9 +106,22 @@ const HomeScreen = () => {
       if (response.data.success) {
         const uniqueCategories = response.data.categories;
         
+        // Define the 4 main categories we want to show
+        const mainCategories = [
+          'Creative & Artistic Products',
+          'Eco-Friendly & Recycled Products',
+          'Home-Made',
+          'Organic Vegetables & Fruits'
+        ];
+
+        // Filter categories to only include main categories
+        const filteredCategories = uniqueCategories.filter(category => 
+          mainCategories.includes(category)
+        );
+        
         // For each category, fetch best rated product
         const categoriesWithData = await Promise.all(
-          uniqueCategories.map(async (category) => {
+          filteredCategories.map(async (category) => {
             try {
               const productsResponse = await axios.get('/api/products', {
                 params: {
@@ -400,44 +413,30 @@ const HomeScreen = () => {
     }
   };
 
-  // Update getCategoryImage function with AI-generated backgrounds
+  // Update getCategoryImage function with specific images for main categories
   const getCategoryImage = (category) => {
-    // Get current date to use as seed for image selection
-    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-
-    // Multiple image options for each category that will rotate daily
     const categoryImages = {
-      'Home Made Food': [
-        'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1493770348161-369560ae357d?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=2070&auto=format&fit=crop'
-      ],
       'Creative & Artistic Products': [
         'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2070&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2070&auto=format&fit=crop'
       ],
-      'Cakes': [
-        'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=2089&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1562777717-dc6984f65a63?q=80&w=2070&auto=format&fit=crop'
-      ],
-      'Handicrafts': [
+      'Eco-Friendly & Recycled Products': [
         'https://images.unsplash.com/photo-1528805639423-c9818ad54888?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1590422749897-47c47673ba0b?q=80&w=2070&auto=format&fit=crop'
+        'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?q=80&w=2070&auto=format&fit=crop'
       ],
-      'Paintings': [
-        'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=2070&auto=format&fit=crop'
+      'Home-Made': [
+        'https://images.unsplash.com/photo-1606787366850-de6330128bfc?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1493770348161-369560ae357d?q=80&w=2070&auto=format&fit=crop'
+      ],
+      'Organic Vegetables & Fruits': [
+        'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=2074&auto=format&fit=crop'
       ]
     };
 
     // Get image array for the category
     const images = categoryImages[category] || [
-      'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=2070&auto=format&fit=crop'
+      'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop'
     ];
 
     // Use the date string to select an image

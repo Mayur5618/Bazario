@@ -2,33 +2,18 @@ import { Stack } from 'expo-router';
 
 export default function AgencyLayout() {
   return (
-    <Stack 
-      screenOptions={{
-        headerShown: false,
-        animation: 'slide_from_right'
-      }}
-    >
-      <Stack.Screen 
+    <Stack>
+      <Stack.Screen
         name="dashboard"
         options={{
           headerShown: false
         }}
       />
-      <Stack.Screen 
-        name="index"
-        options={{
-          headerShown: false
-        }}
-      />
-      <Stack.Screen 
-        name="product/[id]"
+      <Stack.Screen
+        name="won-auctions"
         options={{
           headerShown: true,
-          headerTitle: "Product Details",
-          headerTintColor: "#000",
-          headerStyle: {
-            backgroundColor: '#fff'
-          }
+          title: "Won Auctions"
         }}
       />
     </Stack>

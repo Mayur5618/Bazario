@@ -334,47 +334,6 @@ const ProfileScreen = () => {
           {renderField(t.fields.pincode, profileData.pincode, 'pincode', 'numeric')}
         </View>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t.sections.recentProducts}</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.productsScroll}
-        >
-          {products.map((product) => (
-            <TouchableOpacity 
-              key={product._id}
-              style={styles.productCard}
-              onPress={() => router.push(`/(seller)/product-details/${product._id}`)}
-            >
-              <Image 
-                source={{ uri: product.images[0] }}
-                style={styles.productImage}
-              />
-              <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={1}>
-                  {product.name}
-                </Text>
-                <Text style={styles.productPrice}>₹{product.price}</Text>
-                <View style={styles.productStats}>
-                  <Text style={styles.productStock}>{t.products.stock}: {product.stock}</Text>
-                  <View style={styles.productRating}>
-                    <MaterialIcons 
-                      name="star" 
-                      size={14} 
-                      color={product.rating > 0 ? "#FFD700" : "#666"}
-                    />
-                    <Text style={styles.ratingText}>
-                      {product.rating > 0 ? product.rating.toFixed(1) : t.products.new}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
     </ScrollView>
   );
 };

@@ -64,22 +64,12 @@ const productSchema = new mongoose.Schema({
         }
     },
     // B2B specific fields
-    // minOrderQuantity: {
-    //     type: Number,
-    //     required: function() {
-    //         return this.platformType.includes('b2b');
-    //     }
-    // },
-    // maxOrderQuantity: {
-    //     type: Number,
-    //     required: function() {
-    //         return this.platformType.includes('b2b');
-    //     }
-    // },
-    // New B2B Auction fields
     auctionEndDate: {
         type: Date,
         required: function() {
+            return this.platformType.includes('b2b');
+        },
+        select: function() {
             return this.platformType.includes('b2b');
         }
     },
@@ -87,11 +77,17 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: function() {
             return this.platformType.includes('b2b');
+        },
+        select: function() {
+            return this.platformType.includes('b2b');
         }
     },
     maxPrice: {
         type: Number,
         required: function() {
+            return this.platformType.includes('b2b');
+        },
+        select: function() {
             return this.platformType.includes('b2b');
         }
     },
@@ -99,24 +95,36 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: function() {
             return this.platformType.includes('b2b');
+        },
+        select: function() {
+            return this.platformType.includes('b2b');
         }
     },
     negotiationEnabled: {
         type: Boolean,
-        default: false
+        select: function() {
+            return this.platformType.includes('b2b');
+        }
     },
     currentHighestBid: {
         type: Number,
-        default: 0
+        select: function() {
+            return this.platformType.includes('b2b');
+        }
     },
     currentHighestBidder: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'agency'
+        ref: 'agency',
+        select: function() {
+            return this.platformType.includes('b2b');
+        }
     },
     auctionStatus: {
         type: String,
         enum: ['active', 'ended', 'cancelled'],
-        default: 'active'
+        select: function() {
+            return this.platformType.includes('b2b');
+        }
     },
     rating: {
         type: Number,

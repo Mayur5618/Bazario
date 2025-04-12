@@ -10,7 +10,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and Description */}
           <div>
-            <img src="/images/bazario-logo.png" alt="Bazario Logo" className="h-8 mb-4" />
+            {/* <img src="/images/bazario-logo.png" alt="Bazario Logo" className="h-8 mb-4" /> */}
+            <h5 className='text-xl font-bold'>Bazario</h5>
             <p className="text-gray-600 mb-4">
               Your trusted destination for quality food products. We bring the best of local flavors to your doorstep.
             </p>
@@ -48,11 +49,6 @@ const Footer = () => {
               <li>
                 <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">
                   Products
-                </Link>
-              </li>
-              <li>
-                <Link to="/blog" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  Blog
                 </Link>
               </li>
             </ul>

@@ -1,196 +1,17 @@
-// import React, { useState, useEffect } from 'react';
-// import { useParams, Link } from 'react-router-dom';
-// import axios from 'axios';
-// // import { format } from 'date-fns';
-// import { format } from 'date-fns';
-// import { FaBox, FaTruck, FaCheck, FaMapMarkerAlt, FaUser, FaPhone } from 'react-icons/fa';
-
-// const OrderDetail = () => {
-//   const { id } = useParams();
-//   const [order, setOrder] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-
-//   useEffect(() => {
-//     fetchOrderDetails();
-//   }, [id]);
-
-//   const fetchOrderDetails = async () => {
-//     try {
-//       const response = await axios.get(`/api/orders/${id}`);
-//       setOrder(response.data.order);
-//       setLoading(false);
-//     } catch (err) {
-//       setError('Failed to fetch order details');
-//       setLoading(false);
-//     }
-//   };
-
-//   const getStatusSteps = () => {
-//     const steps = [
-//       { status: 'pending', label: 'Order Placed', icon: FaBox },
-//       { status: 'processing', label: 'Processing', icon: FaBox },
-//       { status: 'shipped', label: 'Shipped', icon: FaTruck },
-//       { status: 'delivered', label: 'Delivered', icon: FaCheck }
-//     ];
-
-//     const currentStepIndex = steps.findIndex(step => step.status === order.status);
-
-//     return steps.map((step, index) => ({
-//       ...step,
-//       completed: index <= currentStepIndex,
-//     }));
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center min-h-screen">
-//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="text-center text-red-600">
-//           <p className="text-xl font-semibold mb-4">{error}</p>
-//           <button
-//             onClick={fetchOrderDetails}
-//             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-//           >
-//             Retry
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="container mx-auto px-4 py-8">
-//       <div className="max-w-4xl mx-auto">
-//         <div className="flex justify-between items-center mb-8">
-//           <h1 className="text-2xl font-bold">
-//             Order Details #{order._id.slice(-8)}
-//           </h1>
-//           <Link
-//             to="/orders"
-//             className="text-blue-600 hover:text-blue-800"
-//           >
-//             Back to Orders
-//           </Link>
-//         </div>
-
-//         {/* Order Status Timeline */}
-//         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-//           <h2 className="text-lg font-semibold mb-4">Order Status</h2>
-//           <div className="flex justify-between items-center">
-//             {getStatusSteps().map((step, index) => (
-//               <div key={step.status} className="flex flex-col items-center">
-//                 <div
-//                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-//                     step.completed ? 'bg-blue-600 text-white' : 'bg-gray-200'
-//                   }`}
-//                 >
-//                   <step.icon />
-//                 </div>
-//                 <p className="text-sm mt-2">{step.label}</p>
-//                 {index < getStatusSteps().length - 1 && (
-//                   <div
-//                     className={`h-1 w-24 ${
-//                       step.completed ? 'bg-blue-600' : 'bg-gray-200'
-//                     }`}
-//                   />
-//                 )}
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-
-//         {/* Shipping Details */}
-//         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-//           <h2 className="text-lg font-semibold mb-4">Shipping Details</h2>
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <div className="flex items-start gap-2">
-//               <FaUser className="mt-1 text-gray-600" />
-//               <div>
-//                 <p className="font-medium">
-//                   {order.shippingDetails.firstName} {order.shippingDetails.lastName}
-//                 </p>
-//                 <p className="text-gray-600">{order.shippingDetails.email}</p>
-//               </div>
-//             </div>
-//             <div className="flex items-start gap-2">
-//               <FaPhone className="mt-1 text-gray-600" />
-//               <p>{order.shippingDetails.phone}</p>
-//             </div>
-//             <div className="flex items-start gap-2 md:col-span-2">
-//               <FaMapMarkerAlt className="mt-1 text-gray-600" />
-//               <div>
-//                 <p>{order.shippingDetails.address}</p>
-//                 <p>
-//                   {order.shippingDetails.city}, {order.shippingDetails.state} {order.shippingDetails.pincode}
-//                 </p>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Order Items */}
-//         <div className="bg-white rounded-lg shadow-md p-6">
-//           <h2 className="text-lg font-semibold mb-4">Order Items</h2>
-//           <div className="space-y-4">
-//             {order.items.map((item) => (
-//               <div
-//                 key={item.productId}
-//                 className="flex items-center gap-4 border-b pb-4"
-//               >
-//                 <img
-//                   src={item.image}
-//                   alt={item.name}
-//                   className="w-16 h-16 object-cover rounded"
-//                 />
-//                 <div className="flex-1">
-//                   <h4 className="font-medium">{item.name}</h4>
-//                   <p className="text-sm text-gray-600">
-//                     Quantity: {item.quantity}
-//                   </p>
-//                   <p className="text-sm text-gray-600">
-//                     Price: ₹{item.price} per {item.unitType}
-//                   </p>
-//                 </div>
-//                 <div className="text-right">
-//                   <p className="font-medium">
-//                     ₹{(item.price * item.quantity).toFixed(2)}
-//                   </p>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-
-//           <div className="mt-6 border-t pt-4">
-//             <div className="flex justify-between items-center">
-//               <p className="font-medium">Total Amount</p>
-//               <p className="text-2xl font-bold">₹{order.totalAmount.toFixed(2)}</p>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default OrderDetail;
-
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { FaTimes } from 'react-icons/fa';
 
 const OrderDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [customReason, setCustomReason] = useState('');
 
     useEffect(() => {
         fetchOrderDetails();
@@ -210,6 +31,37 @@ const OrderDetails = () => {
             toast.error(error.response?.data?.message || 'Failed to fetch order details');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCancelOrder = () => {
+        setShowCancelModal(true);
+    };
+
+    const handleConfirmCancel = async () => {
+        const finalReason = cancelReason === 'Other' ? customReason : cancelReason;
+        
+        if (!finalReason.trim()) {
+            toast.error('Please provide a reason for cancellation');
+            return;
+        }
+
+        try {
+            const response = await axios.put(`/api/orders/cancel/${id}`, {
+                reason: finalReason
+            }, {
+                withCredentials: true
+            });
+
+            if (response.data.success) {
+                toast.success('Order cancelled successfully');
+                setShowCancelModal(false);
+                setCancelReason('');
+                setCustomReason('');
+                navigate('/orders'); // Navigate to orders page after successful cancellation
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to cancel order');
         }
     };
 
@@ -320,7 +172,7 @@ const OrderDetails = () => {
                     {order.status === 'pending' && (
                         <div className="mt-4 sm:mt-6 text-right">
                             <button
-                                onClick={() => handleCancelOrder(order._id)}
+                                onClick={handleCancelOrder}
                                 className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm text-red-600 border border-red-600 rounded hover:bg-red-50"
                             >
                                 Cancel Order
@@ -329,6 +181,79 @@ const OrderDetails = () => {
                     )}
                 </div>
             </div>
+
+            {/* Cancel Order Modal */}
+            {showCancelModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-96 max-w-[90%]">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Cancel Order</h3>
+                            <button 
+                                onClick={() => {
+                                    setShowCancelModal(false);
+                                    setCancelReason('');
+                                    setCustomReason('');
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Please provide a reason for cancellation
+                            </label>
+                            <select
+                                value={cancelReason}
+                                onChange={(e) => {
+                                    setCancelReason(e.target.value);
+                                    if (e.target.value !== 'Other') {
+                                        setCustomReason('');
+                                    }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select a reason</option>
+                                <option value="Changed my mind">Changed my mind</option>
+                                <option value="Found better price elsewhere">Found better price elsewhere</option>
+                                <option value="Ordered by mistake">Ordered by mistake</option>
+                                <option value="Shipping time too long">Shipping time too long</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            
+                            {cancelReason === 'Other' && (
+                                <textarea
+                                    placeholder="Please specify your reason"
+                                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={customReason}
+                                    onChange={(e) => setCustomReason(e.target.value)}
+                                    rows="3"
+                                />
+                            )}
+                        </div>
+                        
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowCancelModal(false);
+                                    setCancelReason('');
+                                    setCustomReason('');
+                                }}
+                                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmCancel}
+                                className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
+                            >
+                                Confirm Cancellation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    ScrollView, 
-    TouchableOpacity,
-    Image,
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
   ActivityIndicator,
-    Dimensions,
+  Dimensions,
+  SafeAreaView,
+  StatusBar,
   RefreshControl
 } from 'react-native';
 import { router } from 'expo-router';
@@ -62,8 +64,8 @@ const CategoriesScreen = () => {
       }
     } catch (err) {
       console.error('Error fetching categories:', err);
-        } finally {
-            setLoading(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,81 +87,99 @@ const CategoriesScreen = () => {
     );
   }
 
-    return (
-        <ScrollView 
-            style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-        >
-            <Text style={styles.header}>Categories</Text>
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Categories</Text>
+      </View>
 
-            <View style={styles.categoriesGrid}>
-        {categories.map((category, index) => (
-          <Animatable.View
-            key={category.id}
-            animation="fadeInUp"
-            delay={index * 100}
-            style={styles.categoryWrapper}
-          >
-            <TouchableOpacity
-              style={styles.categoryCard}
-              onPress={() => router.push(`/(app)/category/${category.id}`)}
-              activeOpacity={0.8}
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.categoriesGrid}>
+          {categories.map((category, index) => (
+            <Animatable.View
+              key={category.id}
+              animation="fadeInUp"
+              delay={index * 100}
+              style={styles.categoryWrapper}
             >
-              <Image
-                source={{ uri: category.image }}
-                style={styles.categoryImage}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.9)']}
-                locations={[0, 0.5, 0.8, 1]}
-                style={styles.categoryNameContainer}
+              <TouchableOpacity
+                style={styles.categoryCard}
+                onPress={() => router.push(`/(app)/category/${encodeURIComponent(category.title)}`)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.categoryTitle}>{category.title}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animatable.View>
-                ))}
-            </View>
-        </ScrollView>
-    );
+                <Image
+                  source={{ uri: category.image }}
+                  style={styles.categoryImage}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.9)']}
+                  locations={[0, 0.5, 0.8, 1]}
+                  style={styles.categoryNameContainer}
+                >
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
-    },
-    header: {
-    fontSize: 28,
-        fontWeight: 'bold',
-    color: '#1F2937',
+  },
+  header: {
     paddingHorizontal: 16,
-    paddingTop: 20,
-    marginBottom: 16,
-    },
-    categoriesGrid: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
+    justifyContent: 'space-between',
   },
   categoryWrapper: {
     width: '50%',
     padding: 8,
-    },
-    categoryCard: {
+  },
+  categoryCard: {
     width: '100%',
     aspectRatio: 1,
-        borderRadius: 12,
-        overflow: 'hidden',
+    borderRadius: 12,
+    overflow: 'hidden',
     backgroundColor: '#f5f5f5',
     elevation: 2,
     shadowColor: '#000',
@@ -192,10 +212,10 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 5,
   },
-    categoryDescription: {
+  categoryDescription: {
     fontSize: 12,
-        color: '#fff',
-        opacity: 0.9,
+    color: '#fff',
+    opacity: 0.9,
     marginBottom: 8,
   },
   productsCount: {
@@ -209,7 +229,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: '500',
-    },
+  },
 });
 
 export default CategoriesScreen; 

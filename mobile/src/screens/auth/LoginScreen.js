@@ -117,7 +117,7 @@ const LoginScreen = () => {
             <View style={styles.logoBox}>
               <Ionicons name="shield-checkmark" size={40} color="#6C63FF" />
             </View>
-            <Text style={styles.headerTitle}>Welcome to MyApp</Text>
+            <Text style={styles.headerTitle}>Welcome to Bazario</Text> 
             <Text style={styles.headerSubtitle}>Your trusted service partner</Text>
           </View>
 

@@ -466,9 +466,10 @@ export const getOrderDetails = async (req, res) => {
 // };
 export const cancelOrder = async (req, res) => {
     try {
-        const { cancellationReason } = req.body;
+        const { reason, cancellationReason } = req.body;
+        const finalReason = reason || cancellationReason;
 
-        if (!cancellationReason) {
+        if (!finalReason) {
             return res.status(400).json({
                 success: false,
                 message: 'Cancellation reason is required'
@@ -498,7 +499,7 @@ export const cancelOrder = async (req, res) => {
 
         // Update order status to cancelled
         order.status = 'cancelled';
-        order.cancellationReason = cancellationReason;
+        order.cancellationReason = finalReason;
         order.cancelledAt = new Date();
         await order.save();
 
@@ -793,12 +794,62 @@ export const getSellerOrderStats = async (req, res) => {
     try {
         const sellerId = req.user._id;
         
+        // Get current month's start and end dates
+        const currentDate = new Date();
+        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+        // Get last month's start and end dates
+        const lastMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+
+        // Get orders for current month
+        const currentMonthOrders = await Order.find({
+            'items.seller': sellerId,
+            status: { $in: ['pending', 'completed', 'delivered'] },
+            createdAt: { 
+                $gte: monthStart,
+                $lte: monthEnd
+            }
+        });
+
+        // Get orders for last month
+        const lastMonthOrders = await Order.find({
+            'items.seller': sellerId,
+            status: { $in: ['pending', 'completed', 'delivered'] },
+            createdAt: { 
+                $gte: lastMonthStart,
+                $lte: lastMonthEnd
+            }
+        });
+
+        // Calculate weekly data for current month
+        const currentMonthWeeklyData = [0, 0, 0, 0]; // 4 weeks
+        currentMonthOrders.forEach(order => {
+            const orderDate = new Date(order.createdAt);
+            const weekNumber = Math.floor((orderDate.getDate() - 1) / 7);
+            if (weekNumber < 4) {
+                currentMonthWeeklyData[weekNumber]++;
+            }
+        });
+
+        // Calculate weekly data for last month
+        const lastMonthWeeklyData = [0, 0, 0, 0]; // 4 weeks
+        lastMonthOrders.forEach(order => {
+            const orderDate = new Date(order.createdAt);
+            const weekNumber = Math.floor((orderDate.getDate() - 1) / 7);
+            if (weekNumber < 4) {
+                lastMonthWeeklyData[weekNumber]++;
+            }
+        });
+
         // Get orders for last 6 months
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         
         const orders = await Order.find({
             'items.seller': sellerId,
+            status: { $in: ['pending', 'completed', 'delivered'] },
             createdAt: { $gte: sixMonthsAgo }
         });
 
@@ -807,17 +858,19 @@ export const getSellerOrderStats = async (req, res) => {
             totalOrders: orders.length,
             pendingOrders: orders.filter(o => o.status === 'pending').length,
             completedOrders: orders.filter(o => o.status === 'completed' || o.status === 'delivered').length,
-            cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+            cancelledOrders: 0,
             totalRevenue: orders.reduce((total, order) => {
                 const sellerItems = order.items.filter(item => 
                     item.seller.toString() === sellerId.toString()
                 );
                 return total + sellerItems.reduce((sum, item) => sum + item.subtotal, 0);
             }, 0),
-            monthlyData: []
+            monthlyData: [],
+            currentMonthWeeklyData,
+            lastMonthWeeklyData
         };
 
-        // Get monthly data
+        // Get monthly data for last 6 months
         for (let i = 0; i < 6; i++) {
             const monthStart = new Date();
             monthStart.setMonth(monthStart.getMonth() - i);
@@ -845,8 +898,7 @@ export const getSellerOrderStats = async (req, res) => {
                 }, 0),
                 ordersByStatus: {
                     pending: monthlyOrders.filter(o => o.status === 'pending').length,
-                    completed: monthlyOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length,
-                    cancelled: monthlyOrders.filter(o => o.status === 'cancelled').length
+                    completed: monthlyOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length
                 }
             });
         }

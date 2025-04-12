@@ -99,26 +99,6 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-// router.get('/category/:category', async (req, res) => {
-//   try {
-//     const { category } = req.params;
-//     const products = await Product.find({ 
-//       category: { $regex: new RegExp(category, 'i') }
-//     }).populate('seller', 'name email');
-
-//     res.status(200).json({
-//       success: true,
-//       products
-//     });
-//   } catch (error) {
-//     console.error('Error fetching products:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error fetching products'
-//     });
-//   }
-// });
-
 // B2B Product Routes
 router.post(
   "/b2b/products/create",

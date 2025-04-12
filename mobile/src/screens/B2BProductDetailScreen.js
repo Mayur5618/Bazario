@@ -100,26 +100,45 @@ const B2BProductDetailScreen = () => {
 
   const handlePlaceBid = async () => {
     try {
-      const numericBidAmount = parseFloat(bidAmount);
+      // Convert bid amount to number and ensure it's a valid number
+      const numericBidAmount = Number(bidAmount);
       
-      // Validation for first bid
-      if (isFirstBid && numericBidAmount !== product.unitPrice) {
+      if (isNaN(numericBidAmount)) {
         Toast.show({
           type: 'error',
           text1: 'Invalid Bid',
-          text2: `First bid must be ₹${product.unitPrice}`
+          text2: 'Please enter a valid number'
         });
         return;
       }
 
-      // Validation for subsequent bidders
-      if (!isFirstBid && numericBidAmount <= product.currentHighestBid) {
-        Toast.show({
-          type: 'error',
-          text1: 'Invalid Bid',
-          text2: `Bid must be higher than ₹${product.currentHighestBid}`
+      // For first bid, compare with exact unit price
+      if (isFirstBid) {
+        const basePrice = Number(product.unitPrice);
+        console.log('First Bid - Comparing:', { 
+          numericBidAmount, 
+          basePrice, 
+          isEqual: numericBidAmount === basePrice 
         });
-        return;
+        
+        if (numericBidAmount !== basePrice) {
+          Toast.show({
+            type: 'error',
+            text1: 'Invalid Bid',
+            text2: `First bid must be ₹${basePrice}`
+          });
+          return;
+        }
+      } else {
+        // For subsequent bids, check if higher than current highest bid
+        if (numericBidAmount <= product.currentHighestBid) {
+          Toast.show({
+            type: 'error',
+            text1: 'Invalid Bid',
+            text2: `Bid must be higher than ₹${product.currentHighestBid}`
+          });
+          return;
+        }
       }
 
       const response = await axios.post(`/api/bids/place`, {
@@ -255,43 +274,62 @@ const B2BProductDetailScreen = () => {
   };
 
   const BidModal = () => {
-    const [localBidAmount, setLocalBidAmount] = useState(bidAmount);
+    // Initialize localBidAmount with the correct base price for first bid
+    const [localBidAmount, setLocalBidAmount] = useState(
+      isFirstBid ? product.unitPrice.toString() : bidAmount
+    );
 
     const handlePlaceBidClick = async () => {
       try {
-        const numericBidAmount = parseFloat(localBidAmount);
+        const numericBidAmount = Number(localBidAmount);
         
-        // Validation for first bidder
-        if (isFirstBid && numericBidAmount !== product.unitPrice) {
+        if (isNaN(numericBidAmount)) {
           Toast.show({
             type: 'error',
             text1: 'Invalid Bid',
-            text2: `First bid must be ₹${product.unitPrice}`
+            text2: 'Please enter a valid number'
           });
           return;
         }
 
-        // Validation for subsequent bidders
-        if (!isFirstBid && numericBidAmount <= product.currentHighestBid) {
-          Toast.show({
-            type: 'error',
-            text1: 'Invalid Bid',
-            text2: `Bid must be higher than ₹${product.currentHighestBid}`
+        // For first bid, compare with exact unit price
+        if (isFirstBid) {
+          const basePrice = Number(product.unitPrice);
+          console.log('First Bid - Comparing:', { 
+            numericBidAmount, 
+            basePrice, 
+            isEqual: numericBidAmount === basePrice 
           });
-          return;
+          
+          if (numericBidAmount !== basePrice) {
+            Toast.show({
+              type: 'error',
+              text1: 'Invalid Bid',
+              text2: `First bid must be ₹${basePrice}`
+            });
+            return;
+          }
+        } else {
+          // For subsequent bids
+          if (numericBidAmount <= product.currentHighestBid) {
+            Toast.show({
+              type: 'error',
+              text1: 'Invalid Bid',
+              text2: `Bid must be higher than ₹${product.currentHighestBid}`
+            });
+            return;
+          }
         }
 
-        // If validation passes, make the API call directly
         const response = await axios.post(`/api/bids/place`, {
           productId: id,
           agencyId: user._id,
           amount: numericBidAmount
         });
 
-        // After successful bid, set this user as highest bidder
         setIsHighestBidder(true);
         setShowBidModal(false);
-        setBidAmount(localBidAmount); // Update state after successful bid
+        setBidAmount(localBidAmount);
 
         Toast.show({
           type: 'success',
@@ -299,7 +337,6 @@ const B2BProductDetailScreen = () => {
           text2: 'Bid placed successfully!'
         });
 
-        // Refresh product details
         fetchProductDetails();
       } catch (error) {
         console.error('Error placing bid:', error);
@@ -320,7 +357,6 @@ const B2BProductDetailScreen = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             {isFirstBid ? (
-              // First Bid Modal Content
               <>
                 <Text style={styles.modalTitle}>Accept Base Price</Text>
                 <View style={styles.modalBasePriceInfo}>
@@ -342,14 +378,13 @@ const B2BProductDetailScreen = () => {
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.modalButton, styles.confirmButton]}
-                    onPress={handlePlaceBid}
+                    onPress={handlePlaceBidClick}
                   >
                     <Text style={styles.modalButtonText}>Accept & Place Bid</Text>
                   </TouchableOpacity>
                 </View>
               </>
             ) : (
-              // Subsequent Bid Modal Content with local state
               <>
                 <Text style={styles.modalTitle}>Place Your Bid</Text>
                 <View style={styles.currentBidInfo}>
@@ -399,82 +434,142 @@ const B2BProductDetailScreen = () => {
   };
 
   const renderCurrentBidSection = () => {
-    // If no bids yet (first bid)
-    if (product.currentHighestBid === 0) {
-      return (
-        <View style={styles.currentBidContainer}>
-          <View style={styles.bidAmountSection}>
-            <Text style={styles.currentBidLabel}>Base Price</Text>
-            <Text style={styles.currentBidAmount}>₹{product.unitPrice}</Text>
-            <Text style={styles.perUnitText}>per {product.unitType}</Text>
-            <View style={styles.newBidTag}>
-              <Text style={styles.newBidTagText}>New</Text>
+    const now = new Date();
+    const endDate = new Date(product.auctionEndDate);
+    const isAuctionClosed = endDate < now || product.auctionStatus === 'closed' || product.auctionStatus === 'ended';
+    const isNewProduct = !product.currentHighestBid || product.currentHighestBid === 0;
+
+    // For closed auctions
+    if (isAuctionClosed) {
+      if (isHighestBidder) {
+        // Winner's view
+        return (
+          <View style={styles.winnerMessageContainer}>
+            <LinearGradient
+              colors={['#4CAF50', '#2E7D32']}
+              style={styles.congratsGradient}
+            >
+              <View style={styles.trophyContainer}>
+                <Ionicons name="trophy" size={50} color="#FFD700" />
+              </View>
+              
+              <Text style={styles.congratsTitle}>बधाई हो! 🎉</Text>
+              
+              <Text style={styles.congratsMessage}>
+                आपने यह नीलामी जीत ली है
+              </Text>
+
+              <View style={styles.winningDetailsCard}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>विजयी बोली:</Text>
+                  <Text style={styles.priceValue}>₹{product.currentHighestBid}</Text>
+                </View>
+                
+                <View style={styles.unitRow}>
+                  <Text style={styles.unitLabel}>प्रति इकाई:</Text>
+                  <Text style={styles.unitValue}>{product.unitType}</Text>
+                </View>
+
+                <View style={styles.stockRow}>
+                  <Text style={styles.stockLabel}>कुल मात्रा:</Text>
+                  <Text style={styles.stockValue}>{product.totalStock} {product.unitType}</Text>
+                </View>
+              </View>
+
+              <View style={styles.deliveryInfoContainer}>
+                <Ionicons name="information-circle-outline" size={24} color="#fff" />
+                <Text style={styles.deliveryInfoText}>
+                  जल्द ही आपको इसकी डिलीवरी मिल जाएगी
+                </Text>
+              </View>
+            </LinearGradient>
+          </View>
+        );
+      } else {
+        // Non-winner's view
+        return (
+          <View style={styles.lostAuctionContainer}>
+            <View style={styles.betterLuckHeader}>
+              <Ionicons name="information-circle" size={28} color="#666" />
+              <Text style={styles.betterLuckTitle}>अगली बार बेहतर भाग्य!</Text>
+            </View>
+            <View style={styles.auctionResultCard}>
+              <Text style={styles.resultLabel}>विजयी बोली:</Text>
+              <Text style={styles.resultAmount}>₹{product.currentHighestBid} / {product.unitType}</Text>
+              <Text style={styles.resultInfo}>
+                यह {product.name} ₹{product.currentHighestBid} प्रति {product.unitType} की दर से बिक गया
+              </Text>
             </View>
           </View>
-          <View style={styles.firstBidInfo}>
-            <Ionicons name="information-circle-outline" size={20} color="#0066cc" />
-            <Text style={styles.firstBidInfoText}>
-              आप पहले बोलीदाता होंगे। बोली बेस प्राइस के बराबर होनी चाहिए।
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.acceptBasePriceButton}
-            onPress={() => setShowBidModal(true)}
-          >
-            <Text style={styles.acceptBasePriceButtonText}>Accept Base Price</Text>
-          </TouchableOpacity>
-        </View>
-      );
+        );
+      }
     }
 
-    // If user is highest bidder, show only winning status without bid button
-    if (isHighestBidder) {
-      return (
-        <View style={styles.winningBidContainer}>
-          <View style={styles.winningBidHeader}>
-            <Ionicons name="trophy" size={28} color="#FFD700" />
-            <Text style={styles.winningBidTitle}>आपकी बोली सबसे ऊंची है!</Text>
-          </View>
-          <View style={styles.winningBidDetails}>
-            <Text style={styles.winningBidAmount}>₹{product.currentHighestBid}</Text>
-            <Text style={styles.winningBidUnit}>per {product.unitType}</Text>
-          </View>
-          <View style={styles.winningBidInfo}>
-            <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
-            <Text style={styles.winningBidText}>
-              अगर कोई और उच्च बोली नहीं लगाता है, तो यह {product.totalStock} {product.unitType} {product.name} आपको मिल जाएगा।
-            </Text>
-          </View>
-          <View style={styles.auctionEndInfo}>
-            <Ionicons name="time" size={20} color="#666" />
-            <Text style={styles.auctionEndText}>
-              नीलामी समाप्त: {new Date(product.auctionEndDate).toLocaleDateString('hi-IN', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-    // For other users (not highest bidder), show current bid and place bid button
+    // Rest of the existing conditions remain same...
     return (
-      <View style={styles.currentBidContainer}>
-        <View style={styles.bidAmountSection}>
-          <Text style={styles.currentBidLabel}>वर्तमान उच्चतम बोली</Text>
-          <Text style={styles.currentBidAmount}>₹{product.currentHighestBid}</Text>
-          <Text style={styles.perUnitText}>per {product.unitType}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.placeBidButton}
-          onPress={() => setShowBidModal(true)}
-        >
-          <Text style={styles.placeBidButtonText}>Place Higher Bid</Text>
-        </TouchableOpacity>
+      <View style={styles.bidSection}>
+        {/* New Product - No Bids Yet */}
+        {!isAuctionClosed && isNewProduct && (
+          <View style={styles.currentBidContainer}>
+            <View style={styles.bidAmountSection}>
+              <Text style={styles.currentBidLabel}>Base Price</Text>
+              <Text style={styles.currentBidAmount}>₹{product.unitPrice}</Text>
+              <Text style={styles.perUnitText}>per {product.unitType}</Text>
+              <View style={styles.newBidTag}>
+                <Text style={styles.newBidTagText}>New</Text>
+              </View>
+            </View>
+            <View style={styles.firstBidInfo}>
+              <Ionicons name="information-circle-outline" size={20} color="#0066cc" />
+              <Text style={styles.firstBidInfoText}>
+                आप पहले बोलीदाता होंगे। बोली बेस प्राइस के बराबर होनी चाहिए।
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.acceptBasePriceButton}
+              onPress={() => setShowBidModal(true)}
+            >
+              <Text style={styles.acceptBasePriceButtonText}>Accept Base Price</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Active Auction - User is Highest Bidder */}
+        {!isAuctionClosed && isHighestBidder && !isNewProduct && (
+          <View style={styles.winningBidContainer}>
+            <View style={styles.winningBidHeader}>
+              <Ionicons name="trophy" size={28} color="#FFD700" />
+              <Text style={styles.winningBidTitle}>आपकी बोली सबसे ऊंची है!</Text>
+            </View>
+            <View style={styles.winningBidDetails}>
+              <Text style={styles.winningBidAmount}>₹{product.currentHighestBid}</Text>
+              <Text style={styles.winningBidUnit}>per {product.unitType}</Text>
+            </View>
+            <View style={styles.winningBidInfo}>
+              <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
+              <Text style={styles.winningBidText}>
+                अगर कोई और उच्च बोली नहीं लगाता है, तो यह {product.totalStock} {product.unitType} {product.name} आपको मिल जाएगा।
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Active Product - Others Have Bid Higher */}
+        {!isAuctionClosed && !isNewProduct && !isHighestBidder && (
+          <View style={styles.currentBidContainer}>
+            <View style={styles.bidAmountSection}>
+              <Text style={styles.currentBidLabel}>वर्तमान उच्चतम बोली</Text>
+              <Text style={styles.currentBidAmount}>₹{product.currentHighestBid}</Text>
+              <Text style={styles.perUnitText}>per {product.unitType}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.placeBidButton}
+              onPress={() => setShowBidModal(true)}
+            >
+              <Text style={styles.placeBidButtonText}>Place Higher Bid</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   };
@@ -564,22 +659,24 @@ const B2BProductDetailScreen = () => {
         {/* Current Bid Section */}
         {renderCurrentBidSection()}
 
-        {/* Auction Timer Card */}
-        <View style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: '#e74c3c' }]}>Auction Ends</Text>
-          <View style={[styles.timerContainer, { backgroundColor: '#ffe6e6' }]}>
-            <Ionicons name="time-outline" size={24} color="#e74c3c" />
-            <Text style={[styles.timerText, { color: '#e74c3c' }]}>
-              {new Date(product.auctionEndDate).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </Text>
+        {/* Auction Timer Card - Only show if auction is not closed */}
+        {product.auctionStatus !== 'ended' && product.auctionStatus !== 'closed' && (
+          <View style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: '#e74c3c' }]}>Auction Ends</Text>
+            <View style={[styles.timerContainer, { backgroundColor: '#ffe6e6' }]}>
+              <Ionicons name="time-outline" size={24} color="#e74c3c" />
+              <Text style={[styles.timerText, { color: '#e74c3c' }]}>
+                {new Date(product.auctionEndDate).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Bid History Chart Card - Only show if not first bid */}
         {!isFirstBid && bidHistory.length >= 2 && (
@@ -1065,18 +1162,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 8,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
   },
   backButton: {
-    padding: 8,
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: 16,
+    marginLeft: 12,
   },
   winnerContainer: {
     backgroundColor: '#F8F9FA',
@@ -1106,6 +1204,150 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4CAF50',
     fontWeight: '600',
+  },
+  winnerMessageContainer: {
+    marginVertical: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 5,
+  },
+  congratsGradient: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  trophyContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 40,
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  congratsTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  congratsMessage: {
+    fontSize: 18,
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  winningDetailsCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    marginVertical: 16,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  priceLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  priceValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  unitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  unitLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  unitValue: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  stockRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stockLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  stockValue: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  deliveryInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  deliveryInfoText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontSize: 16,
+    flex: 1,
+  },
+  lostAuctionContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    marginVertical: 16,
+  },
+  betterLuckHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  betterLuckTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666',
+    marginLeft: 12,
+  },
+  auctionResultCard: {
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 8,
+  },
+  resultLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  resultAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 8,
+  },
+  resultInfo: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 22,
+  },
+  bidSection: {
+    // Add any necessary styles for the bid section
   },
 });
 

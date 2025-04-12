@@ -207,7 +207,6 @@ const AddB2BProduct = () => {
       const [day, month, year] = formData.auctionEndDate.split('/');
       const auctionEndDate = new Date(year, month - 1, day).toISOString();
 
-      // Prepare product data
       const productData = {
         name: formData.name,
         category: formData.category === 'other' ? formData.customCategory : formData.category,
@@ -219,15 +218,16 @@ const AddB2BProduct = () => {
         Stock: parseInt(formData.totalStock),
         auctionEndDate: auctionEndDate,
         negotiationEnabled: formData.negotiationEnabled,
-        images: imageUrls
+        images: imageUrls,
+        platformType: 'b2b'
       };
 
       const response = await axios.post('/api/products/b2b/products/create', productData);
 
       if (response.data.success) {
         Alert.alert(
-          'सफल', 
-          'B2B प्रोडक्ट सफलतापूर्वक जोड़ा गया', 
+          'सफल',
+          'B2B प्रोडक्ट सफलतापूर्वक जोड़ा गया',
           [{ text: 'ठीक है', onPress: () => router.back() }]
         );
       } else {
@@ -478,6 +478,20 @@ const AddB2BProduct = () => {
             underlineColor="#E8E8E8"
           />
         </View>
+      </View>
+
+      <View style={styles.auctionContainer}>
+        <Text style={styles.label}>नीलामी समाप्ति तिथि</Text>
+        <TextInput
+          mode="flat"
+          value={formData.auctionEndDate}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, auctionEndDate: text }))}
+          placeholder="DD/MM/YYYY"
+          style={styles.input}
+          theme={{ colors: { primary: '#E8E8E8' } }}
+          underlineColor="#E8E8E8"
+        />
+        <Text style={styles.helperText}>कृपया DD/MM/YYYY फॉर्मेट में तारीख दर्ज करें</Text>
       </View>
     </View>
   );
@@ -957,6 +971,14 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1,
     padding: 10,
+  },
+  auctionContainer: {
+    marginBottom: 16,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
 

@@ -232,8 +232,30 @@ const AgencyDashboard = () => {
     investment: 0
   });
   const [totalActiveAuctions, setTotalActiveAuctions] = useState(0);
+  const [wonAuctions, setWonAuctions] = useState(0);
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Add new useEffect for fetching total auctions
+  useEffect(() => {
+    const fetchTotalAuctions = async () => {
+      try {
+        const response = await axios.get(`/api/bids/category-wise-auctions/${user._id}`);
+        if (response.data.success) {
+          setStats(prevStats => ({
+            ...prevStats,
+            total: response.data.data.totalAuctions || 0
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching total auctions:', error);
+      }
+    };
+
+    if (user?._id) {
+      fetchTotalAuctions();
+    }
+  }, [user?._id]);
 
   // All useEffect hooks together
   useEffect(() => {
@@ -281,6 +303,29 @@ const AgencyDashboard = () => {
       fetchProfileData();
     }
   }, [activeTab, user._id]);
+
+  // Add new useEffect for fetching won auctions
+  useEffect(() => {
+    const fetchWonAuctions = async () => {
+      try {
+        const response = await axios.get(`/api/b2b/won-auctions/${user._id}`);
+        if (response.data.success) {
+          setWonAuctions(response.data.totalWonAuctions);
+          // Also update the stats
+          setStats(prevStats => ({
+            ...prevStats,
+            won: response.data.totalWonAuctions
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching won auctions:', error);
+      }
+    };
+
+    if (user?._id) {
+      fetchWonAuctions();
+    }
+  }, [user._id]);
 
   // Helper functions
   const fetchCategories = async () => {
@@ -343,7 +388,7 @@ const AgencyDashboard = () => {
           name: auction.name,
           image: auction.images[0],
           currentBid: auction.currentHighestBid || 0,
-          yourLastBid: auction.myLastBid || 0,
+          yourLastBid: auction.yourLastBid || 0,
           isHighestBidder: auction.isCurrentAgencyHighestBidder || false,
           auctionEndDate: auction.auctionEndDate,
           category: auction.category,
@@ -424,6 +469,7 @@ const AgencyDashboard = () => {
             number={stats.total}
             label={t.stats.totalAuctions}
             color="#4CAF50"
+            onPress={() => router.push('/(agency)/all-auctions')}
           />
           <StatsCard
             icon="timer"
@@ -434,9 +480,10 @@ const AgencyDashboard = () => {
           />
           <StatsCard
             icon="trophy"
-            number={stats.won}
+            number={wonAuctions}
             label={t.stats.wonAuctions}
             color="#FF9800"
+            onPress={() => router.push('/(agency)/won-auctions')}
           />
           <StatsCard
             icon="wallet"
@@ -484,17 +531,16 @@ const AgencyDashboard = () => {
 
         {liveAuctions.length > 0 ? (
           liveAuctions.map((auction) => (
-            <View key={auction.id} style={styles.auctionCard}>
+            <TouchableOpacity 
+              key={auction.id}
+              style={styles.auctionCard}
+              onPress={() => router.push(`/(agency)/product/${auction.id}`)}
+              activeOpacity={0.7}
+            >
               {!auction.isHighestBidder && (
-                <TouchableOpacity 
-                  style={styles.topRightBidButton}
-                  onPress={() => router.push({
-                    pathname: '/product/[id]',
-                    params: { id: auction.id }
-                  })}
-                >
+                <View style={styles.topRightBidButton}>
                   <Text style={styles.bidButtonText}>{t.bidNow}</Text>
-                </TouchableOpacity>
+                </View>
               )}
               <View style={styles.auctionHeader}>
                 <View style={styles.auctionTitleContainer}>
@@ -532,7 +578,7 @@ const AgencyDashboard = () => {
                   <Text style={styles.highestBidderText}>Current Highest Bidder</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ))
         ) : (
           <View style={styles.noAuctionsContainer}>
@@ -548,14 +594,16 @@ const AgencyDashboard = () => {
       <View style={styles.liveAuctionsContainer}>
         {liveAuctions.length > 0 ? (
           liveAuctions.map((auction) => (
-            <View key={auction.id} style={styles.auctionCard}>
+            <TouchableOpacity 
+              key={auction.id} 
+              style={styles.auctionCard}
+              onPress={() => router.push(`/(agency)/product/${auction.id}`)}
+              activeOpacity={0.7}
+            >
               {!auction.isHighestBidder && (
                 <TouchableOpacity 
                   style={styles.topRightBidButton}
-                  onPress={() => router.push({
-                    pathname: '/product/[id]',
-                    params: { id: auction.id }
-                  })}
+                  onPress={() => router.push(`/(agency)/product/${auction.id}`)}
                 >
                   <Text style={styles.bidButtonText}>{t.bidNow}</Text>
                 </TouchableOpacity>
@@ -596,7 +644,7 @@ const AgencyDashboard = () => {
                   <Text style={styles.highestBidderText}>Current Highest Bidder</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ))
         ) : (
           <View style={styles.noAuctionsContainer}>
@@ -611,17 +659,16 @@ const AgencyDashboard = () => {
     <ScrollView style={styles.content}>
       {liveAuctions.filter(auction => auction.yourLastBid).length > 0 ? (
         liveAuctions.filter(auction => auction.yourLastBid).map((auction) => (
-          <View key={auction.id} style={styles.auctionCard}>
+          <TouchableOpacity 
+            key={auction.id}
+            style={styles.auctionCard}
+            onPress={() => router.push(`/(agency)/product/${auction.id}`)}
+            activeOpacity={0.7}
+          >
             {!auction.isHighestBidder && (
-              <TouchableOpacity 
-                style={styles.topRightBidButton}
-                onPress={() => router.push({
-                  pathname: '/product/[id]',
-                  params: { id: auction.id }
-                })}
-              >
+              <View style={styles.topRightBidButton}>
                 <Text style={styles.bidButtonText}>{t.bidNow}</Text>
-              </TouchableOpacity>
+              </View>
             )}
             <View style={styles.auctionHeader}>
               <View style={styles.auctionTitleContainer}>
@@ -659,7 +706,7 @@ const AgencyDashboard = () => {
                 <Text style={styles.highestBidderText}>Current Highest Bidder</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         ))
       ) : (
         <View style={styles.noAuctionsContainer}>

@@ -112,12 +112,9 @@ const OrdersTab = () => {
     pendingOrders: 0,
     completedOrders: 0,
     cancelledOrders: 0,
-    monthlyData: {
-      all: [],
-      pending: [],
-      completed: [],
-      cancelled: []
-    }
+    monthlyData: [],
+    currentMonthWeeklyData: [0, 0, 0, 0],
+    lastMonthWeeklyData: [0, 0, 0, 0]
   });
   const [activeDotIndex, setActiveDotIndex] = useState(0);
 
@@ -137,28 +134,16 @@ const OrdersTab = () => {
         setOrders(ordersResponse.orders);
       }
 
-      if (statsResponse.success) {
+      if (statsResponse.success && statsResponse.stats) {
         const { stats } = statsResponse;
         setOrderStats({
-          totalOrders: stats.totalOrders,
-          pendingOrders: stats.pendingOrders,
-          completedOrders: stats.completedOrders,
-          cancelledOrders: stats.cancelledOrders,
-          monthlyData: {
-            all: stats.monthlyData,
-            pending: stats.monthlyData.map(month => ({
-              ...month,
-              totalOrders: month.pendingOrders
-            })),
-            completed: stats.monthlyData.map(month => ({
-              ...month,
-              totalOrders: month.completedOrders
-            })),
-            cancelled: stats.monthlyData.map(month => ({
-              ...month,
-              totalOrders: month.cancelledOrders
-            }))
-          }
+          totalOrders: stats.totalOrders || 0,
+          pendingOrders: stats.pendingOrders || 0,
+          completedOrders: stats.completedOrders || 0,
+          cancelledOrders: stats.cancelledOrders || 0,
+          monthlyData: stats.monthlyData || [],
+          currentMonthWeeklyData: stats.currentMonthWeeklyData || [0, 0, 0, 0],
+          lastMonthWeeklyData: stats.lastMonthWeeklyData || [0, 0, 0, 0]
         });
       }
     } catch (error) {
@@ -220,37 +205,23 @@ const OrdersTab = () => {
     };
   };
 
-  const getChartConfig = () => {
-    const colors = {
-      all: '#6C63FF',
-      pending: '#FFA500',
-      completed: '#4CAF50',
-      cancelled: '#FF0000'
-    };
-    
-    return {
-      backgroundColor: '#ffffff',
-      backgroundGradientFrom: '#ffffff',
-      backgroundGradientTo: '#ffffff',
-      decimalPlaces: 0,
-      color: () => colors[selectedTab],
-      labelColor: () => '#666666',
-      style: {
-        borderRadius: 16
-      },
-      propsForDots: {
-        r: '4',
-        strokeWidth: '2',
-        stroke: colors[selectedTab]
-      }
-    };
-  };
-
   const getCurrentMonthData = () => {
-    const data = orderStats.monthlyData.all || [];
-    const currentMonth = new Date().getMonth();
-    const currentMonthData = data.find(item => new Date(item.month).getMonth() === currentMonth) || { totalOrders: 0 };
-    
+    if (!orderStats || !orderStats.currentMonthWeeklyData) {
+      return {
+        labels: [
+          `${t.week} 1`, 
+          `${t.week} 2`, 
+          `${t.week} 3`, 
+          `${t.week} 4`
+        ],
+        datasets: [{
+          data: [0, 0, 0, 0],
+          color: (opacity = 1) => `rgba(108, 99, 255, ${opacity})`,
+          strokeWidth: 2
+        }]
+      };
+    }
+
     return {
       labels: [
         `${t.week} 1`, 
@@ -259,51 +230,136 @@ const OrdersTab = () => {
         `${t.week} 4`
       ],
       datasets: [{
-        data: [
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10)
-        ]
+        data: orderStats.currentMonthWeeklyData,
+        color: (opacity = 1) => `rgba(108, 99, 255, ${opacity})`,
+        strokeWidth: 2
       }]
     };
   };
 
   const getLastMonthData = () => {
-    const data = orderStats.monthlyData.all || [];
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const lastMonthData = data.find(item => new Date(item.month).getMonth() === lastMonth.getMonth()) || { totalOrders: 0 };
-    
-    // Get daily data for last month
+    if (!orderStats || !orderStats.lastMonthWeeklyData) {
+      return {
+        labels: [
+          `${t.week} 1`, 
+          `${t.week} 2`, 
+          `${t.week} 3`, 
+          `${t.week} 4`
+        ],
+        datasets: [{
+          data: [0, 0, 0, 0],
+          color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+          strokeWidth: 2
+        }]
+      };
+    }
+
     return {
-      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+      labels: [
+        `${t.week} 1`, 
+        `${t.week} 2`, 
+        `${t.week} 3`, 
+        `${t.week} 4`
+      ],
       datasets: [{
-        data: [
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10),
-          Math.floor(Math.random() * 10)
-        ]
+        data: orderStats.lastMonthWeeklyData,
+        color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+        strokeWidth: 2
       }]
     };
   };
 
   const getLast6MonthsData = () => {
-    const data = orderStats.monthlyData.all || [];
+    if (!orderStats || !orderStats.monthlyData) {
+      return {
+        labels: [],
+        datasets: [{
+          data: [],
+          color: (opacity = 1) => `rgba(255, 152, 0, ${opacity})`,
+          strokeWidth: 2
+        }]
+      };
+    }
+
+    const monthlyData = orderStats.monthlyData;
     return {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      labels: monthlyData.map(item => item?.month?.substring(0, 3) || ''),
       datasets: [{
-        data: [
-          Math.floor(Math.random() * 20),
-          Math.floor(Math.random() * 20),
-          Math.floor(Math.random() * 20),
-          Math.floor(Math.random() * 20),
-          Math.floor(Math.random() * 20),
-          Math.floor(Math.random() * 20)
-        ]
+        data: monthlyData.map(item => item?.totalOrders || 0),
+        color: (opacity = 1) => `rgba(255, 152, 0, ${opacity})`,
+        strokeWidth: 2
       }]
     };
+  };
+
+  const getChartConfig = () => {
+    return {
+      backgroundColor: '#ffffff',
+      backgroundGradientFrom: '#ffffff',
+      backgroundGradientTo: '#ffffff',
+      decimalPlaces: 0,
+      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+      style: {
+        borderRadius: 16,
+        paddingLeft: 0,
+        paddingRight: 15,
+        marginLeft: 0
+      },
+      propsForDots: {
+        r: '6',
+        strokeWidth: '2',
+        stroke: '#ffffff'
+      },
+      propsForLabels: {
+        fontSize: 12,
+        fontWeight: '600'
+      },
+      propsForVerticalLabels: {
+        fontSize: 12,
+        fontWeight: '600',
+        paddingRight: 5
+      },
+      propsForHorizontalLabels: {
+        fontSize: 12,
+        fontWeight: '600'
+      },
+      fillShadowGradient: 'rgba(108, 99, 255, 0.2)',
+      fillShadowGradientOpacity: 0.5,
+      useShadowColorFromDataset: false,
+      formatYLabel: (value) => Math.round(value).toString(),
+      yAxisInterval: 2,
+      yAxisSuffix: '',
+      yAxisLabel: '',
+      horizontalLabelRotation: 0,
+      verticalLabelRotation: 0
+    };
+  };
+
+  const renderChart = (data, height = 180) => {
+    return (
+      <LineChart
+        data={data}
+        width={width - 32}
+        height={height}
+        chartConfig={getChartConfig()}
+        bezier
+        style={[styles.chart]}
+        withVerticalLabels={true}
+        withHorizontalLabels={true}
+        withDots={true}
+        withShadow={false}
+        withScrollableDot={false}
+        yAxisInterval={2}
+        segments={4}
+        fromZero={true}
+        withInnerLines={true}
+        yAxisLabel=""
+        yAxisSuffix=""
+        horizontalLabelRotation={0}
+        verticalLabelRotation={0}
+      />
+    );
   };
 
   const renderOrderCard = (order) => (
@@ -423,136 +479,19 @@ const OrdersTab = () => {
           {/* Current Month Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
             <Text style={styles.chartTitle}>{t.ordersInCurrentMonth}</Text>
-            <LineChart
-              data={getCurrentMonthData()}
-              width={width - 64}
-              height={180}
-              yAxisInterval={1}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: () => '#6C63FF',
-                labelColor: () => '#666666',
-                style: { borderRadius: 16 },
-                propsForDots: {
-                  r: '6',
-                  strokeWidth: '2',
-                  stroke: '#ffffff'
-                },
-                propsForLabels: {
-                  fontSize: 12
-                },
-                formatYLabel: (value) => Math.round(value).toString(),
-                yAxisInterval: 1
-              }}
-              bezier
-              style={styles.chart}
-              withVerticalLabels={true}
-              withHorizontalLabels={true}
-              withDots={true}
-              withShadow={false}
-              withScrollableDot={false}
-              yAxisSuffix=""
-              yAxisLabel=""
-              segments={4}
-              fromZero={true}
-              withInnerLines={true}
-              paddingRight={32}
-              paddingLeft={32}
-              paddingTop={16}
-            />
+            {renderChart(getCurrentMonthData())}
           </View>
 
           {/* Last Month Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
             <Text style={styles.chartTitle}>Orders in Last Month</Text>
-            <LineChart
-              data={getLastMonthData()}
-              width={width - 64}
-              height={180}
-              yAxisInterval={1}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: () => '#4CAF50',
-                labelColor: () => '#666666',
-                style: { borderRadius: 16 },
-                propsForDots: {
-                  r: '6',
-                  strokeWidth: '2',
-                  stroke: '#ffffff'
-                },
-                propsForLabels: {
-                  fontSize: 12
-                },
-                formatYLabel: (value) => Math.round(value).toString(),
-                yAxisInterval: 1
-              }}
-              bezier
-              style={styles.chart}
-              withVerticalLabels={true}
-              withHorizontalLabels={true}
-              withDots={true}
-              withShadow={false}
-              withScrollableDot={false}
-              yAxisSuffix=""
-              yAxisLabel=""
-              segments={4}
-              fromZero={true}
-              withInnerLines={true}
-              paddingRight={32}
-              paddingLeft={32}
-              paddingTop={16}
-            />
+            {renderChart(getLastMonthData())}
           </View>
 
           {/* Last 6 Months Chart */}
           <View style={[styles.chartContainer, { width: width - 32 }]}>
             <Text style={styles.chartTitle}>Orders in Last 6 Months</Text>
-            <LineChart
-              data={getLast6MonthsData()}
-              width={width - 64}
-              height={180}
-              yAxisInterval={1}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: () => '#FF9800',
-                labelColor: () => '#666666',
-                style: { borderRadius: 16 },
-                propsForDots: {
-                  r: '6',
-                  strokeWidth: '2',
-                  stroke: '#ffffff'
-                },
-                propsForLabels: {
-                  fontSize: 12
-                },
-                formatYLabel: (value) => Math.round(value).toString(),
-                yAxisInterval: 1
-              }}
-              bezier
-              style={styles.chart}
-              withVerticalLabels={true}
-              withHorizontalLabels={true}
-              withDots={true}
-              withShadow={false}
-              withScrollableDot={false}
-              yAxisSuffix=""
-              yAxisLabel=""
-              segments={4}
-              fromZero={true}
-              withInnerLines={true}
-              paddingRight={32}
-              paddingLeft={32}
-              paddingTop={16}
-            />
+            {renderChart(getLast6MonthsData())}
           </View>
         </ScrollView>
       </View>
@@ -686,7 +625,8 @@ const styles = StyleSheet.create({
   },
   chart: {
     borderRadius: 12,
-    paddingRight: 16,
+    paddingRight: 10,
+    marginLeft: -25
   },
   chartDots: {
     flexDirection: 'row',

@@ -177,14 +177,14 @@ export const getMyBids = async (req, res) => {
         // Calculate skip for pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        // Get bids with expanded product details including stock and unitType
+        // Get bids
         const bids = await Bid.find(query)
             .sort({ bidTime: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .populate({
                 path: 'product',
-                select: 'name images minPrice maxPrice auctionEndDate currentHighestBid stock quantity unitType'
+                select: 'name images minPrice maxPrice auctionEndDate currentHighestBid'
             });
 
         // Get total bids count
@@ -399,13 +399,13 @@ export const getActiveAuctions = async (req, res) => {
 export const getActiveAuctionsProducts = async (req, res) => {
     try {
         const currentTime = new Date();
-        const { agencyId } = req.params;
+        const { agencyId } = req.params; // Get agencyId from URL params
 
         // Find all products with active auctions
         const activeProducts = await Product.find({
             auctionStatus: 'active',
             auctionEndDate: { $gt: currentTime }
-        }).select('name category subcategory images currentHighestBid currentHighestBidder auctionEndDate seller stock quantity unitType');
+        }).select('name category subcategory images currentHighestBid currentHighestBidder auctionEndDate seller');
 
         // Get total bids and bid changes for each active auction
         const productsWithDetails = await Promise.all(
@@ -413,16 +413,16 @@ export const getActiveAuctionsProducts = async (req, res) => {
                 // Get total bids for this product
                 const totalBids = await Bid.countDocuments({ product: product._id });
 
-                // Get agency's last bid for this product
-                const agencyLastBid = await Bid.findOne({ 
-                    product: product._id,
-                    bidder: agencyId 
-                }).sort({ bidTime: -1 });
-
                 // Get the last two bids to calculate bid change
                 const lastTwoBids = await Bid.find({ product: product._id })
                     .sort({ bidTime: -1 })
                     .limit(2);
+
+                // Get agency's last bid for this product
+                const agencyLastBid = await Bid.findOne({
+                    product: product._id,
+                    bidder: agencyId
+                }).sort({ bidTime: -1 });
 
                 // Calculate bid change
                 let bidChange = 0;
@@ -443,17 +443,37 @@ export const getActiveAuctionsProducts = async (req, res) => {
                     isCurrentAgencyHighestBidder: product.currentHighestBidder && 
                         product.currentHighestBidder.toString() === agencyId.toString(),
                     bidChange: bidChange,
-                    myLastBid: agencyLastBid ? agencyLastBid.amount : 0,
-                    stock: product.quantity || product.stock || 0,
-                    unitType: product.unitType || 'kg'
+                    yourLastBid: agencyLastBid ? agencyLastBid.amount : 0
                 };
             })
         );
 
+        // Sort products:
+        // 1. Products where agency is highest bidder first
+        // 2. Products where agency has placed bids
+        // 3. Products with no bids from agency
+        const sortedProducts = productsWithDetails.sort((a, b) => {
+            // First priority: Agency is highest bidder
+            if (a.isCurrentAgencyHighestBidder && !b.isCurrentAgencyHighestBidder) return -1;
+            if (!a.isCurrentAgencyHighestBidder && b.isCurrentAgencyHighestBidder) return 1;
+            
+            // Second priority: Agency has placed bids
+            if (a.yourLastBid > 0 && b.yourLastBid === 0) return -1;
+            if (a.yourLastBid === 0 && b.yourLastBid > 0) return 1;
+            
+            // Third priority: Sort by highest bid amount for products with agency bids
+            if (a.yourLastBid > 0 && b.yourLastBid > 0) {
+                return b.yourLastBid - a.yourLastBid;
+            }
+            
+            // Finally, sort remaining products by current highest bid
+            return b.currentHighestBid - a.currentHighestBid;
+        });
+
         res.status(200).json({
             success: true,
             totalActiveAuctions: activeProducts.length,
-            activeAuctions: productsWithDetails,
+            activeAuctions: sortedProducts,
             message: 'सक्रिय नीलामियां सफलतापूर्वक प्राप्त हुईं'
         });
 
@@ -466,4 +486,134 @@ export const getActiveAuctionsProducts = async (req, res) => {
         });
     }
 };
+
+export const getCategoryWiseAuctions = async (req, res) => {
+    try {
+        const { agencyId } = req.params;
+        
+        // Calculate date 1 month ago
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        // Get all B2B products from last month
+        const products = await Product.find({
+            platformType: 'b2b',
+            createdAt: { $gte: oneMonthAgo }
+        }).populate('seller', 'name');
+
+        // Get all bids by this agency
+        const agencyBids = await Bid.find({
+            bidder: agencyId,
+            bidTime: { $gte: oneMonthAgo }
+        });
+
+        // Create a map of product IDs to agency's bids
+        const agencyBidsMap = new Map();
+        agencyBids.forEach(bid => {
+            agencyBidsMap.set(bid.product.toString(), bid);
+        });
+
+        // Calculate total auctions count
+        const totalAuctions = await Product.countDocuments({
+            platformType: 'b2b'
+        });
+
+        // Process and categorize products
+        const categorizedProducts = {
+            won: [],
+            closed: [],
+            active: [],
+            totalAuctions: totalAuctions
+        };
+
+        // Group products by category
+        const categoryGroups = {};
+
+        for (const product of products) {
+            const currentTime = new Date();
+            const isActive = product.auctionStatus === 'active' && new Date(product.auctionEndDate) > currentTime;
+            const isWon = !isActive && product.currentHighestBidder?.toString() === agencyId;
+            const hasAgencyBid = agencyBidsMap.has(product._id.toString());
+
+            // Create category if it doesn't exist
+            if (!categoryGroups[product.category]) {
+                categoryGroups[product.category] = {
+                    won: [],
+                    closed: [],
+                    active: []
+                };
+            }
+
+            const productData = {
+                _id: product._id,
+                name: product.name,
+                category: product.category,
+                subcategory: product.subcategory,
+                images: product.images,
+                currentHighestBid: product.currentHighestBid || 0,
+                stock: product.stock || 0,
+                unitType: product.unitType || 'kg',
+                auctionEndDate: product.auctionEndDate,
+                seller: product.seller,
+                yourLastBid: hasAgencyBid ? agencyBidsMap.get(product._id.toString()).amount : 0
+            };
+
+            // Categorize the product
+            if (isWon) {
+                categorizedProducts.won.push(productData);
+                categoryGroups[product.category].won.push(productData);
+            } else if (!isActive) {
+                categorizedProducts.closed.push(productData);
+                categoryGroups[product.category].closed.push(productData);
+            } else {
+                categorizedProducts.active.push(productData);
+                categoryGroups[product.category].active.push(productData);
+            }
+        }
+
+        // Sort products within each category
+        Object.values(categoryGroups).forEach(category => {
+            // Sort won products by auction end date
+            category.won.sort((a, b) => new Date(b.auctionEndDate) - new Date(a.auctionEndDate));
+            
+            // Sort closed products - prioritize those with agency bids
+            category.closed.sort((a, b) => {
+                if (a.yourLastBid && !b.yourLastBid) return -1;
+                if (!a.yourLastBid && b.yourLastBid) return 1;
+                return new Date(b.auctionEndDate) - new Date(a.auctionEndDate);
+            });
+            
+            // Sort active products - prioritize those with agency bids
+            category.active.sort((a, b) => {
+                if (a.yourLastBid && !b.yourLastBid) return -1;
+                if (!a.yourLastBid && b.yourLastBid) return 1;
+                return new Date(a.auctionEndDate) - new Date(b.auctionEndDate);
+            });
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Category-wise auctions retrieved successfully',
+            data: {
+                totalAuctions: totalAuctions,
+                categorySummary: {
+                    won: categorizedProducts.won.length,
+                    closed: categorizedProducts.closed.length,
+                    active: categorizedProducts.active.length
+                },
+                categoryGroups: categoryGroups
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getCategoryWiseAuctions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving category-wise auctions',
+            error: error.message
+        });
+    }
+};
+
+
 

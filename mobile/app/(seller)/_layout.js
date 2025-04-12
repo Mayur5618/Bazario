@@ -18,12 +18,6 @@ export default function SellerLayout() {
         }}
       />
       <Stack.Screen 
-        name="b2b-products"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen 
         name="product-details/[id]"
         options={{
           headerShown: false,
@@ -70,6 +64,12 @@ export default function SellerLayout() {
       />
       <Stack.Screen 
         name="edit-product/[id]"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen 
+        name="b2b-product-details/[id]"
         options={{
           headerShown: false
         }}

@@ -13,11 +13,60 @@ import { Stack } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { sellerApi } from '../../src/api/sellerApi';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useLanguage } from '../../src/context/LanguageContext';
+
+// Translations for all UI text
+const translations = {
+  en: {
+    title: 'Pending Orders',
+    noOrders: 'No pending orders found',
+    orderId: 'Order #',
+    newCustomer: 'New Customer',
+    repeatCustomer: 'Repeat Customer',
+    qty: 'Qty:',
+    totalAmount: 'Total Amount',
+    viewDetails: 'View Details'
+  },
+  hi: {
+    title: 'लंबित आदेश',
+    noOrders: 'कोई लंबित आदेश नहीं मिला',
+    orderId: 'आदेश #',
+    newCustomer: 'नया ग्राहक',
+    repeatCustomer: 'नियमित ग्राहक',
+    qty: 'मात्रा:',
+    totalAmount: 'कुल राशि',
+    viewDetails: 'विवरण देखें'
+  },
+  mr: {
+    title: 'प्रलंबित ऑर्डर',
+    noOrders: 'कोणतेही प्रलंबित ऑर्डर सापडले नाही',
+    orderId: 'ऑर्डर #',
+    newCustomer: 'नवीन ग्राहक',
+    repeatCustomer: 'नियमित ग्राहक',
+    qty: 'नग:',
+    totalAmount: 'एकूण रक्कम',
+    viewDetails: 'तपशील पहा'
+  },
+  gu: {
+    title: 'બાકી ઓર્ડર',
+    noOrders: 'કોઈ બાકી ઓર્ડર મળ્યા નથી',
+    orderId: 'ઓર્ડર #',
+    newCustomer: 'નવા ગ્રાહક',
+    repeatCustomer: 'નિયમિત ગ્રાહક',
+    qty: 'જથ્થો:',
+    totalAmount: 'કુલ રકમ',
+    viewDetails: 'વિગતો જુઓ'
+  }
+};
 
 const PendingOrders = () => {
   const router = useRouter();
+  const { language } = useLanguage();
   const [orders, setOrders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get translations for current language
+  const t = translations[language] || translations.en;
 
   const fetchPendingOrders = async () => {
     try {
@@ -43,7 +92,7 @@ const PendingOrders = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
+    return date.toLocaleDateString(language === 'en' ? 'en-IN' : 'hi-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -58,7 +107,7 @@ const PendingOrders = () => {
       { backgroundColor: isRepeatCustomer ? '#4CAF50' : '#2196F3' }
     ]}>
       <Text style={styles.badgeText}>
-        {isRepeatCustomer ? 'Repeat Customer' : 'New Customer'}
+        {isRepeatCustomer ? t.repeatCustomer : t.newCustomer}
       </Text>
     </View>
   );
@@ -67,7 +116,7 @@ const PendingOrders = () => {
     <>
       <Stack.Screen 
         options={{
-          title: 'Pending Orders',
+          title: t.title,
           headerShown: true,
           headerTitleAlign: 'center',
           headerStyle: {
@@ -97,7 +146,7 @@ const PendingOrders = () => {
         {orders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="time-outline" size={64} color="#666" />
-            <Text style={styles.emptyText}>No pending orders found</Text>
+            <Text style={styles.emptyText}>{t.noOrders}</Text>
           </View>
         ) : (
           orders.map((order) => (
@@ -108,7 +157,7 @@ const PendingOrders = () => {
             >
               <View style={styles.orderHeader}>
                 <View style={styles.orderIdContainer}>
-                  <Text style={styles.orderId}>Order #{order._id.slice(-6)}</Text>
+                  <Text style={styles.orderId}>{t.orderId}{order._id.slice(-6)}</Text>
                   <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
                 </View>
                 <OrderStatusBadge isRepeatCustomer={order.buyer.orderCount > 1} />
@@ -149,7 +198,7 @@ const PendingOrders = () => {
                           {item.product.name}
                         </Text>
                         <View style={styles.itemMetrics}>
-                          <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+                          <Text style={styles.itemQuantity}>{t.qty} {item.quantity}</Text>
                           <Text style={styles.itemPrice}>₹{item.price}</Text>
                         </View>
                       </View>
@@ -160,7 +209,7 @@ const PendingOrders = () => {
 
               <View style={styles.totalContainer}>
                 <View>
-                  <Text style={styles.totalLabel}>Total Amount</Text>
+                  <Text style={styles.totalLabel}>{t.totalAmount}</Text>
                   <Text style={styles.totalAmount}>
                     ₹{order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
                   </Text>
@@ -169,7 +218,7 @@ const PendingOrders = () => {
                   style={styles.viewDetailsButton}
                   onPress={() => router.push(`/(seller)/order-details/${order._id}`)}
                 >
-                  <Text style={styles.viewDetailsText}>View Details</Text>
+                  <Text style={styles.viewDetailsText}>{t.viewDetails}</Text>
                   <Ionicons name="chevron-forward" size={20} color="#6C63FF" />
                 </TouchableOpacity>
               </View>
@@ -338,6 +387,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginRight: 4,
+  },
+  replySection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  replyCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  replyUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  replyUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+    marginBottom: 2,
+  },
+  replyDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  replyComment: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
 });
 

@@ -33,6 +33,8 @@ const categories = [
   'Handmade Beauty & Wellness Products',
   'Eco-Friendly & Recycled Products',
   'Creative & Artistic Products',
+  'Ready to Eat',
+  'Accessories',
   'Other'
 ];
 
@@ -48,7 +50,9 @@ const getSubcategories = (category) => {
     'Handmade Beauty & Wellness Products': ['Skincare', 'Haircare', 'Wellness'],
     'Eco-Friendly & Recycled Products': ['Home Decor', 'Accessories', 'Stationery'],
     'Creative & Artistic Products': ['Art', 'Crafts', 'Decor'],
-    'Other': []
+    'Ready to Eat': ['Thali-Special', 'Dal-Bati-Churma', 'Pasta', 'Other'],
+    'Accessories': ['Trendy touches', 'Grooming', 'Jewelry', 'Other']
+    // 'Other': []
   };
   return subcategories[category] || [];
 };

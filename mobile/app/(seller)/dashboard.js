@@ -398,7 +398,6 @@ const SellerDashboard = () => {
         return businessMode === 'business' ? <B2BDashboard /> : renderDashboardContent();
       case 'products':
         return businessMode === 'business' ? <B2BProductsTab /> : <ProductsTab />;
-        //return <ProductsTab />;
       case 'orders':
         return businessMode === 'business' ? null : <OrdersTab />;
       case 'reviews':
@@ -466,19 +465,21 @@ const SellerDashboard = () => {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'reviews' && styles.activeNavItem]}
-          onPress={() => setActiveTab('reviews')}
-        >
-          <Ionicons
-            name={activeTab === 'reviews' ? 'star' : 'star-outline'}
-            size={24}
-            color={activeTab === 'reviews' ? '#6C63FF' : '#666'}
-          />
-          <Text style={[styles.navText, activeTab === 'reviews' && styles.activeNavText]}>
-            {t.reviews}
-          </Text>
-        </TouchableOpacity>
+        {businessMode !== 'business' && (
+          <TouchableOpacity
+            style={[styles.navItem, activeTab === 'reviews' && styles.activeNavItem]}
+            onPress={() => setActiveTab('reviews')}
+          >
+            <Ionicons
+              name={activeTab === 'reviews' ? 'star' : 'star-outline'}
+              size={24}
+              color={activeTab === 'reviews' ? '#6C63FF' : '#666'}
+            />
+            <Text style={[styles.navText, activeTab === 'reviews' && styles.activeNavText]}>
+              {t.reviews}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.navItem, activeTab === 'profile' && styles.activeNavItem]}

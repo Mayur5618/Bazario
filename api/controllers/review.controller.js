@@ -303,6 +303,7 @@ export const getProductReviews = async (req, res) => {
 
         const reviews = await Review.find({ product: productId })
             .populate('buyer', 'firstname lastname profileImage')
+            .populate('replies.user', 'firstname lastname profileImage shopName')
             .sort({ createdAt: -1 }); // Most recent first
 
         // Calculate review statistics

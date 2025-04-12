@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import userRoutes from './routes/user.route.js';
 import {errorMiddleware} from'./middleware/errorMiddleware.js';
 import productRoutes from './routes/product.route.js';
-import requestRoutes from './routes/request.route.js';
 import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import cookieParser from "cookie-parser";
@@ -11,7 +10,6 @@ import cors from "cors";
 import searchRoutes from './routes/search.route.js';
 import reviewRoutes from './routes/review.routes.js';
 import bodyParser from 'body-parser';
-import otpRoutes from './routes/otp.route.js';
 import shippingAddressRoutes from './routes/shippingAddress.routes.js';
 import mobileSearchRoutes from './routes/Mobile_search.routes.js';
 import wishlistRoutes from './routes/wishlist.route.js';
@@ -23,11 +21,11 @@ import bidRoutes from './routes/bid.route.js';
 import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
 import './models/agency.model.js'; // Import Agency model to register it
-import recentlyViewedRoutes from './routes/recentlyViewed.js';
 import buyerRoutes from './routes/buyer.route.js';
 
 mongoose
-  .connect("mongodb://localhost:27017/Purity-Path")
+  .connect("mongodb+srv://mayur:mayur566@bazario.vhylnpt.mongodb.net/test?retryWrites=true&w=majority&appName=Bazario")
+  // .connect("mongodb://localhost:27017/Purity-Path")
   .then(() => {
     console.log("mongodb is connected");
   })
@@ -56,19 +54,16 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 // Define routes AFTER middleware
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/requests', requestRoutes); 
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/otp', otpRoutes);
 app.use('/api', shippingAddressRoutes);
 app.use('/api/search', mobileSearchRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/agency', agencyRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/recently-viewed', recentlyViewedRoutes);
 app.use('/api/buyer', buyerRoutes);
 app.use('/api/b2b', b2bProductRoutes);
 app.use('/api/bids', bidRoutes);

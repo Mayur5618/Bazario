@@ -1535,35 +1535,37 @@ const ProductDetail = () => {
                 <button 
                   onClick={() => {
                     const container = document.getElementById('related-products-container');
-                    container.scrollLeft -= 240; // Scroll by card width
+                    const scrollAmount = window.innerWidth < 640 ? 160 : 240; // Smaller scroll for mobile
+                    container.scrollLeft -= scrollAmount;
                   }}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ transform: 'translate(-10px, -50%)' }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ transform: 'translate(-5px, -50%)' }}
                 >
-                  <FaChevronLeft className="w-5 h-5 text-gray-600" />
+                  <FaChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                 </button>
                 <button 
                   onClick={() => {
                     const container = document.getElementById('related-products-container');
-                    container.scrollLeft += 240; // Scroll by card width
+                    const scrollAmount = window.innerWidth < 640 ? 160 : 240; // Smaller scroll for mobile
+                    container.scrollLeft += scrollAmount;
                   }}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ transform: 'translate(10px, -50%)' }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ transform: 'translate(5px, -50%)' }}
                 >
-                  <FaChevronRight className="w-5 h-5 text-gray-600" />
+                  <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                 </button>
               </>
             )}
             
             <div 
               id="related-products-container"
-              className="flex overflow-x-auto hide-scrollbar scroll-smooth gap-4 pb-4"
+              className="flex overflow-x-auto hide-scrollbar scroll-smooth gap-2 sm:gap-4 pb-4"
               style={{ scrollBehavior: 'smooth' }}
             >
               {product.relatedProducts?.map((relatedProduct) => (
                 <div 
                   key={relatedProduct._id}
-                  className="flex-shrink-0 w-[240px] bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all"
+                  className="flex-shrink-0 w-[160px] sm:w-[240px] bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all"
                 >
                   <Link to={`/product/${relatedProduct._id}`} className="block">
                     <div className="relative pt-[100%] overflow-hidden rounded-t-lg">
@@ -1574,17 +1576,17 @@ const ProductDetail = () => {
                       />
                       {relatedProduct.stock <= 0 && (
                         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">Out of Stock</span>
+                          <span className="text-white text-xs sm:text-sm font-medium">Out of Stock</span>
                         </div>
                       )}
                     </div>
-                    <div className="p-3">
-                      <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">
+                    <div className="p-2 sm:p-3">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem]">
                         {relatedProduct.name}
                       </h3>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-bold text-gray-900">₹{relatedProduct.price}</span>
+                          <span className="text-sm sm:text-lg font-bold text-gray-900">₹{relatedProduct.price}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 mb-1">
@@ -1592,17 +1594,17 @@ const ProductDetail = () => {
                           {[...Array(5)].map((_, index) => (
                             <FaStar
                               key={index}
-                              className={`w-3 h-3 ${
+                              className={`w-2 h-2 sm:w-3 sm:h-3 ${
                                 index < (relatedProduct.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
                               }`}
                             />
                           ))}
                         </div>
-                        <span className="text-xs text-gray-600">
+                        <span className="text-[10px] sm:text-xs text-gray-600">
                           ({relatedProduct.reviews?.length || 0})
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
                         <span className={`font-medium ${relatedProduct.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {relatedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
                         </span>

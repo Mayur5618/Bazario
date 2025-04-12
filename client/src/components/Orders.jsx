@@ -100,21 +100,36 @@ const Orders = () => {
     }
   };
 
-  // Group orders by date and status
+  // Modified groupOrdersByDateAndStatus function
   const groupOrdersByDateAndStatus = (orders) => {
     const groups = {
       pending: {},
+      cancelled: {},
       completed: {}
     };
     
-    orders.forEach(order => {
+    // Sort orders by date (newest first)
+    const sortedOrders = [...orders].sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    
+    sortedOrders.forEach(order => {
       const date = new Date(order.createdAt).toLocaleDateString();
-      const status = order.status === 'completed' ? 'completed' : 'pending';
+      let statusGroup;
       
-      if (!groups[status][date]) {
-        groups[status][date] = [];
+      // Group by status
+      if (order.status === 'pending' || order.status === 'processing' || order.status === 'shipped') {
+        statusGroup = 'pending';
+      } else if (order.status === 'cancelled') {
+        statusGroup = 'cancelled';
+      } else {
+        statusGroup = 'completed';
       }
-      groups[status][date].push(order);
+      
+      if (!groups[statusGroup][date]) {
+        groups[statusGroup][date] = [];
+      }
+      groups[statusGroup][date].push(order);
     });
     
     return groups;
@@ -157,7 +172,7 @@ const Orders = () => {
               <p className="mt-1 text-xs sm:text-sm text-gray-500">View and manage all your orders</p>
             </div>
             <Link 
-              to="/products" 
+              to="/" 
               className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
             >
               <FaBox className="mr-2 text-sm sm:text-base" />
@@ -179,7 +194,7 @@ const Orders = () => {
             <p className="mt-4 text-lg sm:text-xl font-semibold text-gray-600">No orders found</p>
             <p className="mt-2 text-sm sm:text-base text-gray-500">Looks like you haven't placed any orders yet</p>
             <Link 
-              to="/products" 
+              to="/" 
               className="mt-4 sm:mt-6 inline-block px-4 py-2 sm:px-6 sm:py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
             >
               Start Shopping
@@ -285,10 +300,103 @@ const Orders = () => {
               </div>
             )}
 
+            {/* Cancelled Orders */}
+            {Object.keys(groupedOrders.cancelled).length > 0 && (
+              <div className="mt-8 sm:mt-12">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-red-600 flex items-center">
+                  <FaTimes className="mr-2 text-base sm:text-lg" />
+                  Cancelled Orders
+                </h2>
+                <div className="space-y-4 sm:space-y-6">
+                  {Object.entries(groupedOrders.cancelled).map(([date, dateOrders]) => (
+                    <div key={date}>
+                      <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-700">
+                        {new Date(date).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </h3>
+                      <div className="space-y-3 sm:space-y-4">
+                        {dateOrders.map((order) => (
+                          <div
+                            key={order._id}
+                            className="bg-gray-50 rounded-lg shadow-sm overflow-hidden border border-gray-200 opacity-80"
+                          >
+                            <div className="p-4 sm:p-6">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-4">
+                                <div>
+                                  <h3 className="text-base sm:text-lg font-semibold text-gray-700">
+                                    Order #{order._id.slice(-8)}
+                                  </h3>
+                                  <p className="text-xs sm:text-sm text-gray-500">
+                                    Placed on {new Date(order.createdAt).toLocaleTimeString('en-IN')}
+                                  </p>
+                                </div>
+                                <div className={`self-start sm:self-auto px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(order.status)}`}>
+                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 sm:space-y-4">
+                                {order.items.map((item, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-start sm:items-center gap-3 sm:gap-4 border-b pb-3 sm:pb-4 border-gray-200"
+                                  >
+                                    <img
+                                      src={item.product?.images?.[0] || '/placeholder-image.jpg'}
+                                      alt={item.product?.name || 'Product'}
+                                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded opacity-80"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-sm sm:text-base font-medium text-gray-600 truncate">
+                                        {item.product?.name || 'Product Unavailable'}
+                                      </h4>
+                                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                                        Quantity: {item.quantity} × ₹{item.price}
+                                      </p>
+                                      <p className="text-xs sm:text-sm text-gray-500">
+                                        Seller: {item.seller?.firstname || ''} {item.seller?.lastname || ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 border-t pt-4 border-gray-200">
+                                <div>
+                                  <p className="text-xs sm:text-sm text-gray-500">Total Amount</p>
+                                  <p className="text-lg sm:text-xl font-bold text-gray-600">
+                                    ₹{order.total}
+                                  </p>
+                                </div>
+                                <div>
+                                  <Link
+                                    to={`/orders/${order._id}`}
+                                    className="w-full sm:w-auto px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg font-medium hover:bg-blue-50 text-center block"
+                                  >
+                                    View Details
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Completed Orders */}
             {Object.keys(groupedOrders.completed).length > 0 && (
               <div className="mt-8 sm:mt-12">
-                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-green-600">Completed Orders</h2>
+                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-green-600 flex items-center">
+                  <FaCheck className="mr-2 text-base sm:text-lg" />
+                  Completed Orders
+                </h2>
                 <div className="space-y-4 sm:space-y-6">
                   {Object.entries(groupedOrders.completed).map(([date, dateOrders]) => (
                     <div key={date}>

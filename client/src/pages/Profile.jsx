@@ -318,19 +318,6 @@ const Profile = () => {
               </button>
 
               <button 
-                onClick={() => navigate('/settings')}
-                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-50 flex items-center justify-center">
-                    <FaCog className="text-gray-600 text-sm sm:text-base" />
-                  </div>
-                  <span className="text-sm sm:text-base font-medium text-gray-900">Account Settings</span>
-                </div>
-                <FaChevronRight className="text-gray-400 w-4 h-4" />
-              </button>
-
-              <button 
                 onClick={() => setShowLogoutConfirm(true)}
                 className="w-full flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-red-50 transition-colors"
               >

@@ -1,6 +1,6 @@
 import express from 'express';
 import { verifyToken, agency } from '../middleware/authMiddleware.js';
-import { placeBid, getBidHistory, getMyBids, getHighestBidder, getActiveAuctions, getAgencyActiveBids, getActiveAuctionsProducts } from '../controllers/bid.controller.js';
+import { placeBid, getBidHistory, getMyBids, getHighestBidder, getActiveAuctions, getAgencyActiveBids, getActiveAuctionsProducts, getCategoryWiseAuctions } from '../controllers/bid.controller.js';
 
 const router = express.Router();
 
@@ -23,5 +23,8 @@ router.get('/active-auctions/:agencyId', getActiveAuctionsProducts);
 
 // Get agency's active bid products (public)
 router.get('/agency-active-bids/:agencyId', getAgencyActiveBids);
+
+// Get category-wise auctions for last month
+router.get('/category-wise-auctions/:agencyId', getCategoryWiseAuctions);
 
 export default router;

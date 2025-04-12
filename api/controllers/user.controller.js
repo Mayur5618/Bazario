@@ -613,7 +613,7 @@ export const getSellerData = async (req, res) => {
     
     // Find seller and populate necessary fields
     const seller = await Seller.findById(sellerId)
-      .select('firstname lastname shopName profileImage businessType city state createdAt rating mobileno address pincode');
+      .select('firstname lastname shopName profileImage businessType city state createdAt rating mobileno address pincode userType');
     
     if (!seller) {
       return res.status(404).json({ 
@@ -622,20 +622,26 @@ export const getSellerData = async (req, res) => {
       });
     }
 
-    // Get seller's products with essential details
-    const products = await Product.find({ seller: sellerId })
-      .select('name images price stock rating numReviews category subCategory')
+    // Get seller's products excluding B2B products
+    const products = await Product.find({ 
+      seller: sellerId,
+      platformType: { $ne: 'b2b' } // Exclude B2B products
+    })
+      .select('name images price stock rating numReviews category subCategory negotiationEnabled currentHighestBid auctionStatus auctionEndDate minPrice maxPrice unitPrice currentHighestBidder')
       .sort('-createdAt');
 
-    // Get seller's stats
+    // Get seller's stats (excluding B2B products)
     const stats = {
-      totalProducts: await Product.countDocuments({ seller: sellerId }),
+      totalProducts: await Product.countDocuments({ 
+        seller: sellerId,
+        platformType: { $ne: 'b2b' }
+      }),
       totalOrders: await Order.countDocuments({ 'items.seller': sellerId }),
       averageRating: 0,
       totalReviews: 0
     };
 
-    // Calculate average rating from reviews
+    // Calculate average rating from reviews (for non-B2B products only)
     const reviews = await Review.find({ 
       product: { $in: products.map(p => p._id) }
     });
@@ -646,7 +652,7 @@ export const getSellerData = async (req, res) => {
       stats.totalReviews = reviews.length;
     }
 
-    // Categorize products by their category and subcategory
+    // Categorize products by their category and subcategory (B2C products only)
     const categorizedProducts = {
       all: products,
       byCategory: {}
@@ -662,20 +668,6 @@ export const getSellerData = async (req, res) => {
         categorizedProducts.byCategory[category].push(product);
       }
     });
-
-    // Group products by subcategory if available
-    if (products.some(p => p.subCategory)) {
-      categorizedProducts.bySubCategory = {};
-      products.forEach(product => {
-        if (product.subCategory) {
-          const subCategory = product.subCategory.toLowerCase();
-          if (!categorizedProducts.bySubCategory[subCategory]) {
-            categorizedProducts.bySubCategory[subCategory] = [];
-          }
-          categorizedProducts.bySubCategory[subCategory].push(product);
-        }
-      });
-    }
 
     res.status(200).json({ 
       success: true,

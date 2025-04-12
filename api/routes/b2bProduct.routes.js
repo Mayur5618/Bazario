@@ -4,7 +4,8 @@ import {
     getActiveB2BAuctions, 
     getSellerB2BProducts, 
     updateB2BProduct, 
-    cancelB2BAuction 
+    cancelB2BAuction,
+    getWonAuctions
 } from '../controllers/b2bProduct.controller.js';
 import { verifyToken as isAuthenticated, checkRole } from '../middleware/authMiddleware.js';
 
@@ -44,5 +45,8 @@ router.post(
     checkRole(['seller']),
     cancelB2BAuction
 );
+
+// Get won auctions for an agency
+router.get('/won-auctions/:agencyId', getWonAuctions);
 
 export default router; 

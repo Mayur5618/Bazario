@@ -461,25 +461,25 @@ const Checkout = () => {
 
   // Update AutoLocateButton to include profile loading state
   const AutoLocateButton = () => (
-    <div className="flex gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6">
       <button
         type="button"
         onClick={fetchLocationFromIP}
         disabled={isLocationLoading}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+        className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm"
       >
         <FaMapMarkerAlt className={isLocationLoading ? 'animate-pulse' : ''} />
-        {isLocationLoading ? 'Detecting location...' : 'Auto-detect my location'}
+        {isLocationLoading ? 'Detecting...' : 'Auto-detect location'}
       </button>
 
       <button
         type="button"
         onClick={fetchUserProfile}
         disabled={isProfileLoading}
-        className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+        className="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm"
       >
         <FaUser className={isProfileLoading ? 'animate-pulse' : ''} />
-        {isProfileLoading ? 'Loading profile...' : 'Auto-fill my details'}
+        {isProfileLoading ? 'Loading...' : 'Auto-fill details'}
       </button>
     </div>
   );
@@ -494,30 +494,73 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center mb-8 text-gray-500 text-sm">
+        <nav className="flex items-center mb-4 sm:mb-8 text-gray-500 text-xs sm:text-sm">
           <button onClick={() => navigate('/cart')} className="flex items-center hover:text-gray-700">
             <FaArrowLeft className="mr-2" /> Back to Cart
           </button>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Order Summary for Mobile - Shown at top */}
+        <div className="lg:hidden mb-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <FaShoppingBag className="mr-2 text-blue-600" /> Order Summary
+            </h2>
+            <div className="space-y-2 text-sm">
+              {orderItems.map(item => (
+                <div key={item.product._id} className="flex justify-between">
+                  <span className="flex-1">{item.product.name} x {item.quantity}</span>
+                  <span className="ml-2">₹{(item.product.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 font-semibold">
+                <div className="flex justify-between">
+                  <span>Total</span>
+                  <span>₹{totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                <FaTruck className="mr-3 text-blue-600" /> Shipping Details
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 flex items-center">
+                <FaTruck className="mr-2 sm:mr-3 text-blue-600" /> Shipping Details
               </h2>
               
-              {/* Add Auto-locate button here */}
-              <AutoLocateButton />
+              {/* Auto-locate buttons - Mobile optimized */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6">
+                <button
+                  type="button"
+                  onClick={fetchLocationFromIP}
+                  disabled={isLocationLoading}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm"
+                >
+                  <FaMapMarkerAlt className={isLocationLoading ? 'animate-pulse' : ''} />
+                  {isLocationLoading ? 'Detecting...' : 'Auto-detect location'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={fetchUserProfile}
+                  disabled={isProfileLoading}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm"
+                >
+                  <FaUser className={isProfileLoading ? 'animate-pulse' : ''} />
+                  {isProfileLoading ? 'Loading...' : 'Auto-fill details'}
+                </button>
+              </div>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       First Name *
                     </label>
                     <input
@@ -525,13 +568,13 @@ const Checkout = () => {
                       name="firstName"
                       value={formData.shippingAddress.firstName}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter first name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Last Name *
                     </label>
                     <input
@@ -539,13 +582,13 @@ const Checkout = () => {
                       name="lastName"
                       value={formData.shippingAddress.lastName}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter last name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Email Address *
                     </label>
                     <input
@@ -553,13 +596,13 @@ const Checkout = () => {
                       name="email"
                       value={formData.shippingAddress.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter email address"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Phone Number *
                     </label>
                     <input
@@ -567,13 +610,13 @@ const Checkout = () => {
                       name="phone"
                       value={formData.shippingAddress.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter 10-digit phone number"
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Street Address *
                     </label>
                     <textarea
@@ -581,20 +624,20 @@ const Checkout = () => {
                       value={formData.shippingAddress.street}
                       onChange={handleInputChange}
                       rows="3"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter your street address"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       State *
                     </label>
                     <select
                       name="state"
                       value={formData.shippingAddress.state}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select State</option>
                       {states.map(state => (
@@ -604,7 +647,7 @@ const Checkout = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       City *
                     </label>
                     <div className="relative">
@@ -615,16 +658,16 @@ const Checkout = () => {
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
                         placeholder="Type to search city"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autoComplete="off"
                       />
                       
                       {citySearchTerm && filteredCities.length > 0 && !formData.shippingAddress.city && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 sm:max-h-60 overflow-y-auto">
                           {filteredCities.map((city, index) => (
                             <div
                               key={city}
-                              className={`px-4 py-2 cursor-pointer ${
+                              className={`px-3 sm:px-4 py-2 cursor-pointer text-sm ${
                                 index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-100'
                               }`}
                               onClick={() => handleCitySelect(city)}
@@ -636,7 +679,7 @@ const Checkout = () => {
                       )}
 
                       {formData.shippingAddress.city && (
-                        <div className="mt-1 text-sm text-gray-500">
+                        <div className="mt-1 text-xs sm:text-sm text-gray-500">
                           Selected: {formData.shippingAddress.city}
                         </div>
                       )}
@@ -644,7 +687,7 @@ const Checkout = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Pincode *
                     </label>
                     <input
@@ -652,16 +695,16 @@ const Checkout = () => {
                       name="pincode"
                       value={formData.shippingAddress.pincode}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter 6-digit pincode"
                     />
                   </div>
                 </div>
 
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-medium mb-4">Payment Method</h3>
+                <div className="border-t pt-4 sm:pt-6">
+                  <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Payment Method</h3>
                   <div className="space-y-4">
-                    <label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <label className="flex items-center space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -673,7 +716,7 @@ const Checkout = () => {
                         }))}
                         className="h-4 w-4 text-blue-600"
                       />
-                      <span>Cash on Delivery</span>
+                      <span className="text-sm">Cash on Delivery</span>
                     </label>
                   </div>
                 </div>
@@ -681,7 +724,7 @@ const Checkout = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 text-sm sm:text-base font-medium"
                 >
                   {loading ? 'Processing...' : 'Place Order'}
                 </button>
@@ -689,8 +732,8 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
+          {/* Order Summary - Hidden on mobile as it's shown at top */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-semibold mb-6 flex items-center">
                 <FaShoppingBag className="mr-3 text-blue-600" /> Order Summary

@@ -20,6 +20,12 @@ const WelcomeScreen = () => {
         />
       )}
       
+      <View style={styles.welcomeContainer}>
+        <Image source={require('../../assets/logo.png')} style={styles.logo} />
+        <Text style={styles.title}>Welcome to Bazario</Text>
+        <Text style={styles.subtitle}>Your trusted service partner</Text>
+      </View>
+      
       <Text style={styles.welcomeText}>
         Hello, {firstname} {lastname}!
       </Text>
@@ -52,6 +58,52 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     marginBottom: 20,
   },
+  welcomeContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  userType: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+  },
+  logoutButton: {
+    backgroundColor: '#4f46e5',
+    padding: 15,
+    borderRadius: 8,
+    width: '100%',
+    marginTop: 20,
+  },
+  logoutText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+});
+
+export default WelcomeScreen; 
   welcomeText: {
     fontSize: 24,
     fontWeight: 'bold',

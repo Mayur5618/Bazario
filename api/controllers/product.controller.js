@@ -30,7 +30,9 @@ export const createProduct = async (req, res) => {
             unitSize,
             unitType,
             subUnitPrices,
-            availableLocations
+            availableLocations,
+            minOrderQuantity,
+            maxOrderQuantity
         } = req.body;
 
         // Validate required fields
@@ -130,16 +132,27 @@ export const createProduct = async (req, res) => {
             seller: req.user._id,
             availableLocations,
             primaryLocation: req.user.city,
-            ...(productPlatformType.includes('b2b') && {
-                minOrderQuantity,
-                maxOrderQuantity: maxOrderQuantity || null
-            }),
             ...(productPlatformType.includes('b2c') && {
                 unitSize: Number(unitSize) || 1,
                 unitType
             }),
             subUnitPrices: subUnitPrices || {}
         };
+
+        // Only add B2B fields if it's a B2B product
+        if (productPlatformType.includes('b2b')) {
+            Object.assign(productData, {
+                minOrderQuantity,
+                maxOrderQuantity: maxOrderQuantity || null,
+                negotiationEnabled: true,
+                currentHighestBid: 0,
+                auctionStatus: 'active',
+                auctionEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                minPrice: Number(price),
+                maxPrice: Number(price) * 1.5,
+                unitPrice: Number(price)
+            });
+        }
 
         console.log('Final Product Data:', productData);
 
@@ -176,6 +189,7 @@ export const createB2BProduct = async (req, res) => {
 
         const {
             name,
+            description = '',
             category,
             subcategory,
             minPrice,
@@ -184,8 +198,8 @@ export const createB2BProduct = async (req, res) => {
             Price,  // Frontend field
             Stock,  // Frontend field
             auctionEndDate,
-            negotiationEnabled,
-            images
+            negotiationEnabled = true,
+            images = []
         } = req.body;
 
         // Map frontend fields to backend fields
@@ -247,10 +261,14 @@ export const createB2BProduct = async (req, res) => {
             });
         }
 
-        // Prepare product data with default values
+        // Set default auction end date to 7 days from now if not provided
+        const defaultAuctionEndDate = new Date();
+        defaultAuctionEndDate.setDate(defaultAuctionEndDate.getDate() + 7);
+
+        // Prepare product data with all required fields
         const productData = {
             name,
-            description: '', // Default empty description
+            description,
             category,
             subcategory,
             minPrice: Number(minPrice),
@@ -258,21 +276,25 @@ export const createB2BProduct = async (req, res) => {
             unitType,
             unitPrice: Number(unitPrice),
             totalStock: Number(totalStock),
-            // Set price and stock for B2B products
-            price: Number(minPrice), // Using minPrice as base price
-            stock: Number(totalStock), // Using totalStock as stock
-            auctionEndDate: auctionEndDate || null,
-            negotiationEnabled: negotiationEnabled || false,
-            images: images || [],
-            youtubeLink: '', // Default empty youtube link
+            price: Number(minPrice), // Use minPrice as base price
+            stock: Number(totalStock),
+            images,
+            youtubeLink: '',
             platformType: ['b2b'],
             seller: req.user._id,
-            availableLocations: [req.user.city], // Default to seller's city
+            availableLocations: [req.user.city],
             primaryLocation: req.user.city,
-            minOrderQuantity: 1, // Default minimum order quantity
-            maxOrderQuantity: totalStock, // Default maximum order quantity to total stock
-            tags: [], // Default empty tags
-            status: 'active'
+            minOrderQuantity: 1,
+            maxOrderQuantity: totalStock,
+            tags: [],
+            // B2B specific fields
+            auctionEndDate: auctionEndDate || defaultAuctionEndDate,
+            negotiationEnabled: negotiationEnabled,
+            auctionStatus: 'active',
+            currentHighestBid: 0,
+            currentHighestBidder: null,
+            rating: 0,
+            numReviews: 0
         };
 
         console.log('Final B2B Product Data:', productData);
@@ -840,7 +862,8 @@ export const getProductsByCategory = async (req, res) => {
 // Get all unique categories
 export const getCategories = async (req, res) => {
     try {
-        const categories = await Product.distinct('category');
+        // Only get categories from products that have platformType b2c
+        const categories = await Product.distinct('category', { platformType: 'b2c' });
         res.status(200).json({
             success: true,
             categories
@@ -1238,8 +1261,7 @@ export const getB2BProductsByCategory = async (req, res) => {
       {
         $match: {
           category: { $regex: new RegExp(`^${category}$`, 'i') },
-          platformType: 'b2b',
-          auctionStatus: 'active' // Only show active auctions
+          platformType: 'b2b'
         }
       },
       {
@@ -1988,5 +2010,3 @@ export const getSellerB2BProductsByStatus = async (req, res) => {
     });
   }
 };
-
-export default router;

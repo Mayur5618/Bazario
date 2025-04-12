@@ -133,10 +133,9 @@ const B2BProductsTab = () => {
     const isAuctionClosed = product.auctionStatus === 'closed';
     
     return (
-      <TouchableOpacity
+      <View
         key={product._id}
         style={styles.productCard}
-        onPress={() => router.push(`/(seller)/b2b-product/${product._id}`)}
       >
         <View style={styles.imageContainer}>
           {product.images && product.images.length > 0 ? (
@@ -221,7 +220,7 @@ const B2BProductsTab = () => {
         >
           <Ionicons name="create-outline" size={20} color="#6C63FF" />
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 

@@ -55,9 +55,20 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userCity, setUserCity] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userData } = useSelector((state) => state.user);
+
+  // Add resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch user's city
   useEffect(() => {
@@ -464,7 +475,7 @@ const Home = () => {
       {categories.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {categories.map((category, index) => (
+            {categories.slice(0, isMobile ? 4 : categories.length).map((category, index) => (
               <motion.div
                 key={category.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -526,17 +537,17 @@ const Home = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 p-4"
               >
-                {category.products?.slice(0, 10).map((product) => (
+                {category.products?.slice(0, isMobile ? 4 : 10).map((product, index) => (
                   <motion.div
                     key={product._id}
                     variants={productCardVariants}
                     whileHover="hover"
                     className="cursor-pointer w-full"
                     style={{
-                      gridColumn: category.products.indexOf(product) >= 5 ? `span 1` : `span 1`,
-                      gridRow: category.products.indexOf(product) >= 5 ? '2' : '1'
+                      gridColumn: `span 1`,
+                      gridRow: isMobile ? (index < 2 ? '1' : '2') : 'auto'
                     }}
                   >
                     <Link 

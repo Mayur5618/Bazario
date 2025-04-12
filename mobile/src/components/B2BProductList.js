@@ -135,40 +135,55 @@ const B2BProductList = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+      </View>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="cube-outline" size={48} color="#666" />
+        <Text style={styles.emptyText}>No B2B products found</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Your B2B Products</Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Products</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => router.push('/(seller)/add-b2b-product')}
         >
-          <Ionicons name="add" size={24} color="#FFF" />
+          <View style={styles.addButtonCircle}>
+            <Ionicons name="add" size={24} color="#6B46C1" />
+          </View>
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#6C63FF" />
-        </View>
-      ) : products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="cube-outline" size={48} color="#666" />
-          <Text style={styles.emptyText}>No B2B products found</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={products}
-          renderItem={renderProduct}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.listContainer}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={item => item._id}
+        contentContainerStyle={styles.listContainer}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
     </View>
   );
 };
@@ -179,25 +194,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   header: {
+    backgroundColor: '#6B46C1',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFF',
-    elevation: 2,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  title: {
+  headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
+    fontWeight: '600',
+    color: '#fff',
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
   },
   addButton: {
-    backgroundColor: '#6C63FF',
+    padding: 8,
+    marginRight: -8,
+  },
+  addButtonCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   listContainer: {
     padding: 16,

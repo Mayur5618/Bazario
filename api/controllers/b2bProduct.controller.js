@@ -220,4 +220,46 @@ export const cancelB2BAuction = async (req, res) => {
             error: error.message
         });
     }
+};
+
+// Get won auctions for an agency
+export const getWonAuctions = async (req, res) => {
+    try {
+        const { agencyId } = req.params;
+
+        // Find all closed B2B auctions where the agency is the highest bidder
+        const wonAuctions = await Product.find({
+            platformType: 'b2b',
+            auctionStatus: 'closed',
+            currentHighestBidder: agencyId
+        }).populate('seller', 'name');
+
+        // Get total count of won auctions
+        const totalWonAuctions = wonAuctions.length;
+
+        res.status(200).json({
+            success: true,
+            totalWonAuctions,
+            wonAuctions: wonAuctions.map(auction => ({
+                _id: auction._id,
+                name: auction.name,
+                category: auction.category,
+                subcategory: auction.subcategory,
+                images: auction.images,
+                seller: auction.seller,
+                finalPrice: auction.currentHighestBid,
+                auctionEndDate: auction.auctionEndDate,
+                stock: auction.stock || 0,
+                unitType: auction.unitType || 'kg'
+            })),
+            message: 'Successfully retrieved won auctions'
+        });
+    } catch (error) {
+        console.error('Error in getWonAuctions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'नीलामी जीतने वाले उत्पाद प्राप्त करने में त्रुटि हुई',
+            error: error.message
+        });
+    }
 }; 

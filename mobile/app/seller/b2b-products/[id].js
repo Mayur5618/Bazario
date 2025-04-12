@@ -3,3 +3,4 @@ import SellerB2BProductDetailScreen from '../../../src/screens/SellerB2BProductD
 export default function ProductDetail() {
   return <SellerB2BProductDetailScreen />;
 } 
+
