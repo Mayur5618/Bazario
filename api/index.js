@@ -23,7 +23,7 @@ import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
 import './models/agency.model.js';// Import Agency model to register it
 import buyerRoutes from './routes/buyer.route.js';
-const path = require('path');
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
