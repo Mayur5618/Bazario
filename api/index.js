@@ -23,6 +23,7 @@ import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
 import './models/agency.model.js';// Import Agency model to register it
 import buyerRoutes from './routes/buyer.route.js';
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -70,6 +71,14 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/buyer', buyerRoutes);
 app.use('/api/b2b', b2bProductRoutes);
 app.use('/api/bids', bidRoutes);
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Handle React routing, return all requests to React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+});
 
 // Error handling middleware should be last
 app.use(errorMiddleware);
