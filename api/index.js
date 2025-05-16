@@ -23,10 +23,14 @@ import './models/baseUser.model.js'; // Import base User model first
 import './models/seller.model.js'; // Import Seller model to register it
 import './models/agency.model.js';// Import Agency model to register it
 import buyerRoutes from './routes/buyer.route.js';
+import { fileURLToPath } from 'url';
 import path from 'path';
 
 // Load environment variables
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 mongoose
   .connect(process.env.MONGODB_URI)
