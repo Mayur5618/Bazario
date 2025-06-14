@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const getDevelopmentUrl = () => {
   if (__DEV__) {
     // For both Android and iOS
-    return 'http://192.168.20.193:5000';  // Verify this IP is correct
+    return 'http://192.168.116.193:5000';  // Verify this IP is correct
   }
   return 'https://your-production-api.com'; // For production
 };

@@ -13,6 +13,7 @@
     "@reduxjs/toolkit": "^2.5.0",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
+    "caniuse-lite": "^1.0.30001723",
     "color-thief-browser": "^2.0.2",
     "date-fns": "^4.1.0",
     "flowbite": "^2.5.2",

@@ -89,7 +89,7 @@ const OrderSuccess = () => {
                 >
                     <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                         <p className="text-sm text-blue-600 font-medium">Order ID:</p>
-                        <p className="font-mono text-lg">{orderId}</p>
+                        <p className="font-mono text-sm sm:text-xl break-all">{orderId}</p>
                     </div>
 
                     <div className="space-y-4">

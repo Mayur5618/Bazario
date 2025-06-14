@@ -27,6 +27,7 @@ import AllProducts from './pages/AllProducts.jsx';
 import SellerAccount from './pages/SellerAccount.jsx';
 import Wishlist from './pages/Wishlist';
 import CategoryProducts from './components/CategoryProducts';
+import AllCategoriesPage from './pages/AllCategoriesPage.jsx';
 import SellerProfile from './pages/SellerProfile';
 
 const App = () => {
@@ -60,6 +61,7 @@ const App = () => {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/all-products" element={<AllProducts />} />
               <Route path="/products" element={<AllProducts />} />
+              <Route path="/categories/all" element={<AllCategoriesPage />} />
               <Route path="/users/sellers/:sellerId" element={<SellerAccount />} />
               <Route path="/sellers/:sellerId" element={<SellerProfile />} />
               <Route path="/seller/:sellerId" element={<SellerProfile />} />

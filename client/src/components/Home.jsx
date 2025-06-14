@@ -465,15 +465,16 @@ const Home = () => {
       )}
 
       {/* Recently Viewed Section */}
-      <div className="bg-purple-50 py-4">
+      <div className="bg-purple-50 py-0">
         <div className="max-w-7xl mx-auto px-4">
           <RecentlyViewed handleViewProduct={handleViewProduct} />
         </div>
       </div>
 
+
       {/* Dynamic Categories Grid */}
       {categories.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-12">
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {categories.slice(0, isMobile ? 4 : categories.length).map((category, index) => (
               <motion.div
