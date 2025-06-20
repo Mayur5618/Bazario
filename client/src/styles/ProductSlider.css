@@ -1,0 +1,107 @@
+.product-slider {
+  padding: 20px;
+  transition: background-color 0.3s ease; 
+  position: relative;
+}
+
+.product-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s, box-shadow 0.3s;
+  overflow: hidden; 
+  margin: 10px; 
+  padding: 10px;
+  width: 90%; 
+  max-width: 250px; 
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.product-image img {
+  border-radius: 10px 10px 0 0;
+  width: 100%; 
+  height: auto; 
+}
+
+.product-info {
+  text-align: center;
+}
+
+.add-to-cart {
+  margin-top: 10px;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.add-to-cart:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+.loading, .error {
+  text-align: center;
+  font-size: 18px;
+  color: #333;
+}
+
+.slider-navigation {
+  display: flex;
+  justify-content: center;
+  position: relative; 
+  width: 100%;
+  margin-top: 10px; 
+  z-index: 1; 
+}
+
+.nav-button {
+  background-color: rgba(0, 123, 255, 0.8); 
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin: 0 10px; 
+}
+
+@media (max-width: 1024px) {
+  .product-card {
+    max-width: 200px; 
+  }
+}
+
+@media (max-width: 600px) {
+  .product-card {
+    max-width: 90%;
+    margin: 5px; 
+  }
+
+  .slider-navigation {
+    display: none; 
+  }
+}
+
+/* method 3 */
+/* Add this to your CSS file */
+/* .loader {
+  border: 8px solid #f3f3f3; 
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+} */

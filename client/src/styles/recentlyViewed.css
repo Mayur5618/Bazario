@@ -1,0 +1,79 @@
+.recently-viewed {
+    padding: 2rem 0;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+#recently-viewed-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    padding: 0.5rem 2rem;
+    margin: 0 -1rem;
+}
+
+#recently-viewed-container::-webkit-scrollbar {
+    display: none;
+}
+
+.product-card {
+    transition: all 0.2s ease-in-out;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Add smooth mask for scroll fade effect */
+.recently-viewed::after,
+.recently-viewed::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3rem;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.recently-viewed::before {
+    left: 0;
+    background: linear-gradient(to right, #f9fafb 0%, transparent 100%);
+}
+
+.recently-viewed::after {
+    right: 0;
+    background: linear-gradient(to left, #f9fafb 0%, transparent 100%);
+}
+
+.product-image {
+    height: 10rem; /* Fixed height for uniformity */
+    object-fit: cover;
+    border-bottom: 1px solid #e5e7eb; /* Light border for separation */
+}
+
+.product-info {
+    padding: 0.75rem;
+}
+
+.product-name {
+    font-size: 1.1rem; /* Slightly larger font for emphasis */
+    font-weight: 600;
+    color: #1f2937; /* Dark gray for text */
+    margin-bottom: 0.5rem;
+}
+
+.product-price {
+    font-size: 0.9rem; /* Slightly larger font for price */
+    color: #4b5563; /* Medium gray for price */
+}
+
+.product-unit {
+    font-size: 0.875rem; /* Standard size for unit */
+    color: #6b7280; /* Light gray for unit */
+}
+
+.product-rating {
+    font-size: 0.875rem; /* Standard size for rating */
+    color: #f59e0b; /* Yellow for rating */
+}

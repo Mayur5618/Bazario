@@ -1,0 +1,61 @@
+/* Add this to your CSS file */
+.select-container {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .select-container select {
+    appearance: none; /* Remove default styling */
+    background-color: white; /* Background color */
+    padding: 10px 40px 10px 20px; /* Padding for the select box */
+    border: 1px solid #ccc; /* Border styling */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    cursor: pointer; /* Pointer cursor */
+    transition: border-color 0.3s; /* Smooth border transition */
+  }
+  
+  .select-container select:focus {
+    border-color: #007bff; /* Change border color on focus */
+    outline: none; /* Remove outline */
+  }
+  
+  .select-arrow {
+    position: absolute;
+    top: 50%;
+    right: px; /* Adjust as needed */
+    transform: translateY(-50%); /* Center vertically */
+    pointer-events: none; /* Prevent interaction */
+    font-size: 16px; /* Font size for the arrow */
+    color: #007bff; /* Color for the arrow */
+  }
+
+/* If you have a separate CSS file for header styles */
+.header {
+  padding: 0.5rem 1rem; /* Reduced padding */
+  height: 70px; /* Reduced fixed height */
+}
+
+/* Add these styles for the profile button */
+.profile-button {
+  outline: none !important; /* Remove default outline */
+  border: none;
+  transition: transform 0.2s;
+}
+
+.profile-button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.profile-button:active {
+  transform: scale(0.95); /* Optional: adds a slight press effect */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

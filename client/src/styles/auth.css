@@ -1,0 +1,124 @@
+/* styles/auth.css */
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    padding: 20px;
+  }
+  
+  .auth-box {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .auth-box h2 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 24px;
+  }
+  
+  .auth-box p {
+    color: #666;
+    margin-bottom: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .auth-button {
+    width: 100%;
+    padding: 14px;
+    background: #ff385c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .auth-button:hover {
+    background: #ff1f4c;
+  }
+  
+  .auth-links {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .auth-links a {
+    color: #666;
+    text-decoration: none;
+    margin: 0 10px;
+  }
+  
+  .auth-links a:hover {
+    color: #ff385c;
+  }
+  
+  .error-message {
+    background: #ffe5e5;
+    color: #ff385c;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+  
+  .user-type-options,
+  .platform-type-options {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .user-type-btn {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .user-type-btn.active {
+    background: #ff385c;
+    color: white;
+    border-color: #ff385c;
+  }
+  
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }

@@ -1,0 +1,40 @@
+{
+  "name": "purity-path",
+  "version": "1.0.0",
+  "description": "Purity Path E-commerce Platform",
+  "scripts": {
+    "dev":"nodemon api/index.js",
+    "start": "node api/index.js",
+    "build": "npm install && npm install --prefix client && npm run build --prefix client",
+    "install-all": "npm install && cd client && npm install && cd ../api && npm install"
+
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@firebase/storage": "^0.13.5",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "cloudinary": "^2.5.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-async-handler": "^1.2.0",
+    "firebase": "^11.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.0",
+    "msg91": "^2.2.4",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.9",
+    "react-paginate": "^8.2.0",
+    "twilio": "^5.4.0",
+    "util": "^0.12.5"
+
+  }
+}
